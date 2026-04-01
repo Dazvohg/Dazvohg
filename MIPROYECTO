@@ -1033,6 +1033,90 @@ def example_usage():
     print("\nModelo guardado en: zenith_v2_checkpoint.pt")
 
 
+# =============================================================================
+# MODEL ENDPOINT
+# =============================================================================
+
+try:
+    from fastapi import FastAPI, HTTPException
+    from pydantic import BaseModel
+    import uvicorn
+    _FASTAPI_AVAILABLE = True
+except ImportError:
+    _FASTAPI_AVAILABLE = False
+
+
+class PredictRequest(BaseModel):
+    price_seq: List[List[float]]        # [T, price_features]
+    volume_seq: List[List[float]]       # [T, volume_features]
+    microstructure: List[float]         # [microstructure_features]
+    indicators: List[float]             # [indicator_features]
+    context: List[float]                # [context_features]
+    cross_asset: List[float]            # [cross_asset_features]
+    symbol_id: int
+    regime_id: int
+    timeframe_id: int
+
+
+class PredictResponse(BaseModel):
+    probability: float
+    pnl: float
+    volatility: float
+    prob_uncertainty: float
+    pnl_uncertainty: float
+
+
+def create_app(trainer: "ZenithTrainer") -> "FastAPI":
+    """Creates a FastAPI app that serves ZenithNetV2 predictions."""
+    if not _FASTAPI_AVAILABLE:
+        raise ImportError("fastapi and uvicorn are required: pip install fastapi uvicorn")
+
+    app = FastAPI(title="ZenithNetV2 Model Endpoint", version="2.0")
+
+    @app.get("/health")
+    def health():
+        return {"status": "ok", "buffer_size": len(trainer.buffer), "step": trainer.step}
+
+    @app.post("/predict", response_model=PredictResponse)
+    def predict(request: PredictRequest):
+        try:
+            T = len(request.price_seq)
+            exp = Experience(
+                price_seq=np.array(request.price_seq, dtype=np.float32),
+                volume_seq=np.array(request.volume_seq, dtype=np.float32),
+                microstructure=np.array(request.microstructure, dtype=np.float32),
+                indicators=np.array(request.indicators, dtype=np.float32),
+                context=np.array(request.context, dtype=np.float32),
+                cross_asset=np.array(request.cross_asset, dtype=np.float32),
+                symbol_id=request.symbol_id,
+                regime_id=request.regime_id,
+                timeframe_id=request.timeframe_id,
+                win=0,
+                pnl_bps=0.0,
+                volatility=0.0,
+                timestamp=int(time.time() * 1000),
+            )
+            batch = trainer.collate_batch([exp])
+            result = trainer.predict(batch)
+            return PredictResponse(
+                probability=float(result["probability"][0]),
+                pnl=float(result["pnl"][0]),
+                volatility=float(result["volatility"][0]),
+                prob_uncertainty=float(result["prob_uncertainty"][0]),
+                pnl_uncertainty=float(result["pnl_uncertainty"][0]),
+            )
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+    return app
+
+
+def serve(trainer: "ZenithTrainer", host: str = "0.0.0.0", port: int = 8000):
+    """Start the model endpoint server."""
+    app = create_app(trainer)
+    uvicorn.run(app, host=host, port=port)
+
+
 if __name__ == '__main__':
     example_usage()
         self.regime_conditioning = RegimeConditioning(config.n_regimes, config.hidden_dim)
