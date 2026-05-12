@@ -5,6 +5,7 @@ import { useAuthStore } from '../../game/store/authStore'
 import { useGameStore } from '../../game/store/gameStore'
 import NavBar from '../../components/NavBar'
 import EventBanner from '../../game/components/EventBanner'
+import EconomyTicker from '../../game/components/EconomyTicker'
 
 export default function Game() {
   const { user } = useAuthStore()
@@ -21,6 +22,7 @@ export default function Game() {
       <NavBar />
 
       <div className="max-w-lg mx-auto px-4 pt-4 space-y-0">
+        <EconomyTicker />
         <EventBanner />
 
         {/* Passive income toast */}

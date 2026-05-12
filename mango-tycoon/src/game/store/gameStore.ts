@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { supabase } from '../../lib/supabase'
 import { calculatePassiveIncome } from '../engine/passiveIncome'
-import { calculateLevel, getRandomEvent } from '../engine/economy'
+import { calculateLevel } from '../engine/economy'
 import { MARKET_ASSETS } from '../data/assets'
 import { OBJECTIVES } from '../data/objectives'
 import type {
@@ -13,6 +13,22 @@ import type {
   MarketAsset,
   IncomeNotification,
 } from '../../types/game'
+
+// Maps DB row → MarketAsset
+function rowToAsset(row: any): MarketAsset {
+  return {
+    id:              row.id,
+    type:            row.type,
+    name:            row.name,
+    description:     row.description,
+    price:           row.price,
+    yieldRate:       row.yield_rate,
+    location:        row.location,
+    riskLevel:       row.risk_level,
+    educationalNote: row.educational_note,
+    icon:            row.icon,
+  }
+}
 
 interface GameState {
   profile: GameProfile | null
@@ -40,7 +56,7 @@ export const useGameStore = create<GameState>()(
       ownedAssets: [],
       playerObjectives: [],
       activeEvent: null,
-      marketAssets: MARKET_ASSETS,
+      marketAssets: MARKET_ASSETS,  // populated from DB on load
       incomeNotification: null,
       loading: false,
 
@@ -48,7 +64,7 @@ export const useGameStore = create<GameState>()(
       loadProfile: async (userId) => {
         set({ loading: true })
 
-        const [profileRes, assetsRes, objRes] = await Promise.all([
+        const [profileRes, assetsRes, objRes, marketRes, activeEventRes] = await Promise.all([
           supabase.from('profiles').select('*').eq('id', userId).single(),
           supabase
             .from('player_assets')
@@ -58,7 +74,82 @@ export const useGameStore = create<GameState>()(
             .from('player_objectives')
             .select('*')
             .eq('player_id', userId),
+          // Load all market assets with live prices from DB
+          supabase.from('market_assets').select('*'),
+          // Load the latest active economy event from DB
+          supabase
+            .from('economy_events')
+            .select('*')
+            .gt('active_to', new Date().toISOString())
+            .order('active_from', { ascending: false })
+            .limit(1)
+            .maybeSingle(),
         ])
+
+        // Update market assets from DB (live prices)
+        if (marketRes.data && marketRes.data.length > 0) {
+          set({ marketAssets: (marketRes.data as any[]).map(rowToAsset) })
+        }
+
+        // Set active economy event from DB
+        if (activeEventRes.data) {
+          const row = activeEventRes.data as any
+          set({
+            activeEvent: {
+              id:          row.id,
+              type:        row.type,
+              title:       row.title,
+              description: row.description,
+              impact:      row.impact,
+              activeFrom:  row.active_from,
+              activeTo:    row.active_to,
+            },
+          })
+        }
+
+        // Subscribe to real-time market price updates
+        supabase
+          .channel('market-assets-live')
+          .on(
+            'postgres_changes',
+            { event: 'UPDATE', schema: 'public', table: 'market_assets' },
+            (payload) => {
+              const updated = rowToAsset(payload.new)
+              set((state) => ({
+                marketAssets: state.marketAssets.map((a) =>
+                  a.id === updated.id ? updated : a,
+                ),
+                // Also refresh owned asset prices so portfolio value is live
+                ownedAssets: state.ownedAssets.map((oa) =>
+                  oa.assetId === updated.id ? { ...oa, asset: updated } : oa,
+                ),
+              }))
+            },
+          )
+          .subscribe()
+
+        // Subscribe to new economy events
+        supabase
+          .channel('economy-events-live')
+          .on(
+            'postgres_changes',
+            { event: 'INSERT', schema: 'public', table: 'economy_events' },
+            (payload) => {
+              const row = payload.new as any
+              set({
+                activeEvent: {
+                  id:          row.id,
+                  type:        row.type,
+                  title:       row.title,
+                  description: row.description,
+                  impact:      row.impact,
+                  activeFrom:  row.active_from,
+                  activeTo:    row.active_to,
+                },
+              })
+            },
+          )
+          .subscribe()
 
         const profile: GameProfile | null = profileRes.data
           ? {
@@ -75,18 +166,7 @@ export const useGameStore = create<GameState>()(
         const ownedAssets: OwnedAsset[] = ((assetsRes.data as any[]) ?? []).map((row) => ({
           id: row.id,
           assetId: row.asset_id,
-          asset: {
-            id: row.asset.id,
-            type: row.asset.type,
-            name: row.asset.name,
-            description: row.asset.description,
-            price: row.asset.price,
-            yieldRate: row.asset.yield_rate,
-            location: row.asset.location,
-            riskLevel: row.asset.risk_level,
-            educationalNote: row.asset.educational_note,
-            icon: row.asset.icon,
-          },
+          asset: rowToAsset(row.asset),
           quantity: row.quantity,
           boughtAt: row.bought_at,
           purchasedAt: row.purchased_at,
@@ -291,12 +371,8 @@ export const useGameStore = create<GameState>()(
 
       dismissIncomeNotification: () => set({ incomeNotification: null }),
 
-      // ─── EVENTS ───────────────────────────────────────────────────────────
-      triggerRandomEvent: () => {
-        const event = getRandomEvent()
-        set({ activeEvent: event })
-        setTimeout(() => set({ activeEvent: null }), 24 * 60 * 60 * 1000)
-      },
+      // Events now come from DB via real-time subscription — triggerRandomEvent is a no-op
+      triggerRandomEvent: () => {},
 
       // ─── CHECK OBJECTIVES ─────────────────────────────────────────────────
       checkObjectives: () => {

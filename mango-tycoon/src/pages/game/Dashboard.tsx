@@ -123,6 +123,12 @@ export default function Dashboard() {
                     ${(oa.asset.price * oa.quantity).toLocaleString('es-AR')} MC
                   </p>
                   <p className="text-xs text-green-400">+{oa.asset.yieldRate}%/día</p>
+                  {oa.asset.price !== oa.boughtAt && (
+                    <p className={`text-xs ${oa.asset.price > oa.boughtAt ? 'text-green-400' : 'text-red-400'}`}>
+                      {oa.asset.price > oa.boughtAt ? '▲' : '▼'}{' '}
+                      {Math.abs(((oa.asset.price - oa.boughtAt) / oa.boughtAt) * 100).toFixed(1)}%
+                    </p>
+                  )}
                 </div>
               </div>
             ))}
