@@ -136,8 +136,8 @@ export const OBJECTIVES: Objective[] = [
   // ─── EXPERTO ──────────────────────────────────────────────────────────────
   {
     id: 'superclasico',
-    title: 'El Superclásico',
-    description: 'Tené participación en Boca Y en River simultáneamente.',
+    title: 'El Gran Clásico',
+    description: 'Tené participación en los dos clubes más grandes del país simultáneamente.',
     reward: 15000,
     condition: { type: 'buy_asset', assetType: 'club', quantity: 2 },
     category: 'investment',

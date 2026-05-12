@@ -18,7 +18,7 @@ const supabase = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
 )
 
-// Map football-data.org team names → our asset IDs
+// Map football-data.org team names → our asset IDs (internal asset IDs only)
 const TEAM_TO_ASSET: Record<string, string> = {
   'Boca Juniors':        'boca',
   'River Plate':         'river',
@@ -26,6 +26,15 @@ const TEAM_TO_ASSET: Record<string, string> = {
   'San Lorenzo':         'san_lorenzo',
   'Talleres de Córdoba': 'talleres',
   'Talleres':            'talleres',
+}
+
+// Our display names for those clubs (used only in event descriptions)
+const ASSET_TO_DISPLAY: Record<string, string> = {
+  'boca':       'Club Atlético La Boca',
+  'river':      'Club Atlético Núñez',
+  'racing':     'Club Atlético Avellaneda',
+  'san_lorenzo':'Club Atlético Almagro',
+  'talleres':   'Club Atlético Nueva Córdoba',
 }
 
 // Liga Profesional Argentina competition code in football-data.org
@@ -78,9 +87,9 @@ function isPriceMovementWorthy(match: FDMatch): boolean {
   return TEAM_TO_ASSET[home] !== undefined || TEAM_TO_ASSET[away] !== undefined
 }
 
-function isSuperclasico(match: FDMatch): boolean {
-  const teams = [match.homeTeam.name, match.awayTeam.name]
-  return teams.includes('Boca Juniors') && teams.includes('River Plate')
+function isGrandClasico(match: FDMatch): boolean {
+  const assets = [TEAM_TO_ASSET[match.homeTeam.name], TEAM_TO_ASSET[match.awayTeam.name]]
+  return assets.includes('boca') && assets.includes('river')
 }
 
 /**
@@ -118,7 +127,7 @@ Deno.serve(async (req) => {
 
     if (existing) { skipped.push(match.id); continue }
 
-    const bigMatch = isSuperclasico(match)
+    const bigMatch = isGrandClasico(match)
 
     // Determine result for each team
     const teamResults: { assetId: string; result: 'win' | 'draw' | 'loss' }[] = []
@@ -173,24 +182,30 @@ Deno.serve(async (req) => {
       processed_at: new Date().toISOString(),
     })
 
-    // Superclásico event
+    // Gran Clásico event (using internal asset IDs to look up display names)
     if (bigMatch) {
-      const winner =
-        match.score.winner === 'HOME_TEAM' ? match.homeTeam.name
-        : match.score.winner === 'AWAY_TEAM' ? match.awayTeam.name
+      const homeAsset = TEAM_TO_ASSET[match.homeTeam.name]
+      const awayAsset = TEAM_TO_ASSET[match.awayTeam.name]
+      const winnerAsset =
+        match.score.winner === 'HOME_TEAM' ? homeAsset
+        : match.score.winner === 'AWAY_TEAM' ? awayAsset
         : null
 
-      const title = winner
-        ? `🏆 Superclásico: Ganó ${winner}`
-        : '🏆 Superclásico: Empate'
+      const winnerName = winnerAsset ? ASSET_TO_DISPLAY[winnerAsset] : null
 
-      const now     = new Date()
+      const title = winnerName
+        ? `🏆 El Gran Clásico: Ganó ${winnerName}`
+        : '🏆 El Gran Clásico: Empate épico'
+
+      const now      = new Date()
       const activeTo = new Date(now.getTime() + 12 * 60 * 60 * 1000)
+      const homeDisplay = ASSET_TO_DISPLAY[homeAsset] ?? match.homeTeam.name
+      const awayDisplay = ASSET_TO_DISPLAY[awayAsset] ?? match.awayTeam.name
       await supabase.from('economy_events').insert({
         type:        'boom',
         title,
-        description: `Boca vs River. ${match.score.fullTime.home ?? 0}−${match.score.fullTime.away ?? 0}. Los clubes se mueven.`,
-        impact:      { clubMultiplier: winner ? 1.15 : 1.05 },
+        description: `${homeDisplay} vs ${awayDisplay}. ${match.score.fullTime.home ?? 0}−${match.score.fullTime.away ?? 0}. El partido más importante del fútbol argentino.`,
+        impact:      { clubMultiplier: winnerName ? 1.15 : 1.05 },
         active_from: now.toISOString(),
         active_to:   activeTo.toISOString(),
       })
