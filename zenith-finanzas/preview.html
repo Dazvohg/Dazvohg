@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zenith Finanzas — Preview</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #030712; color: #f8fafc; font-family: system-ui,-apple-system,sans-serif; font-size: 14px; }
+  .mono { font-family: ui-monospace,Consolas,monospace; font-variant-numeric: tabular-nums; }
+
+  /* ── NAV ── */
+  nav { position: sticky; top: 0; z-index: 99; background: rgba(3,7,18,.9); border-bottom: 1px solid #1e293b; padding: 0 32px; height: 52px; display: flex; align-items: center; justify-content: space-between; backdrop-filter: blur(12px); }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-icon { width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg,#10b981,#6366f1); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 900; font-size: 13px; }
+  .logo-text { font-weight: 700; letter-spacing: .05em; }
+  .logo-sub { font-size: 9px; color: #10b981; letter-spacing: .15em; font-weight: 600; display: block; margin-top: -2px; }
+  .nav-links { display: flex; gap: 24px; font-size: 13px; color: #64748b; }
+  .nav-links a { color: inherit; text-decoration: none; }
+  .nav-links a:hover { color: #f8fafc; }
+  .btn-primary { background: #10b981; color: #000; padding: 6px 16px; border-radius: 8px; font-size: 13px; font-weight: 700; border: none; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+  .btn-outline { color: #64748b; background: none; border: 1px solid #1e293b; padding: 6px 14px; border-radius: 8px; font-size: 13px; cursor: pointer; margin-right: 8px; }
+
+  /* ── TICKER ── */
+  .ticker { background: #0c1221; border-bottom: 1px solid #1e293b; height: 30px; display: flex; align-items: center; overflow: hidden; }
+  .ticker-live { background: #10b981; color: #000; font-size: 10px; font-weight: 800; padding: 0 12px; height: 100%; display: flex; align-items: center; white-space: nowrap; }
+  .ticker-scroll { display: flex; overflow: hidden; flex: 1; }
+  .ticker-item { display: flex; align-items: center; gap: 8px; padding: 0 20px; font-size: 11px; border-right: 1px solid #1e293b; white-space: nowrap; }
+  .ticker-item .sym { color: #64748b; }
+  .ticker-item .price { color: #f8fafc; font-weight: 600; }
+  .green { color: #10b981; }
+  .red { color: #ef4444; }
+
+  /* ── APP LAYOUT ── */
+  .app { display: flex; height: calc(100vh - 82px); }
+
+  /* ── SIDEBAR ── */
+  .sidebar { width: 220px; background: #0c1221; border-right: 1px solid #1e293b; display: flex; flex-direction: column; flex-shrink: 0; }
+  .sidebar-logo { padding: 16px; border-bottom: 1px solid #1e293b; display: flex; align-items: center; gap: 10px; }
+  .model-pill { margin: 10px 10px 4px; background: rgba(6,78,59,.4); border: 1px solid rgba(16,185,129,.2); border-radius: 8px; padding: 8px 10px; display: flex; align-items: center; gap: 8px; }
+  .pulse { width: 8px; height: 8px; border-radius: 50%; background: #10b981; animation: pulse 2s infinite; flex-shrink: 0; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.8)} }
+  .model-pill .label { font-size: 9px; color: #10b981; font-weight: 700; letter-spacing: .1em; }
+  .model-pill .sub { font-size: 9px; color: #64748b; }
+  nav.sidenav { flex: 1; padding: 10px 8px; }
+  .navitem { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px; color: #64748b; font-size: 13px; cursor: pointer; margin-bottom: 2px; text-decoration: none; }
+  .navitem:hover { background: #1e293b; color: #f8fafc; }
+  .navitem.active { background: rgba(16,185,129,.1); color: #10b981; font-weight: 500; border: 1px solid rgba(16,185,129,.15); }
+  .navitem .icon { width: 16px; height: 16px; opacity: .8; }
+  .badge { margin-left: auto; background: #10b981; color: #000; font-size: 9px; font-weight: 800; padding: 2px 6px; border-radius: 99px; }
+
+  /* ── MAIN ── */
+  .main { flex: 1; overflow-y: auto; }
+  .page-header { height: 52px; background: rgba(12,18,33,.8); border-bottom: 1px solid #1e293b; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; position: sticky; top: 0; z-index: 10; backdrop-filter: blur(8px); }
+  .page-header h1 { font-size: 14px; font-weight: 600; }
+  .page-header p { font-size: 11px; color: #64748b; }
+  .header-right { display: flex; align-items: center; gap: 8px; }
+  .time-display .t { font-size: 11px; font-family: monospace; text-align: right; }
+  .time-display .d { font-size: 9px; color: #64748b; text-transform: capitalize; }
+  .icon-btn { width: 30px; height: 30px; border-radius: 8px; background: #1e293b; border: none; color: #64748b; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 13px; }
+  .avatar { width: 30px; height: 30px; border-radius: 8px; background: linear-gradient(135deg,#10b981,#6366f1); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 900; font-size: 13px; }
+
+  .content { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+
+  /* ── CARDS ── */
+  .card { background: #111827; border: 1px solid #1e293b; border-radius: 12px; }
+  .card-header { padding: 14px 18px; border-bottom: 1px solid #1e293b; display: flex; align-items: center; justify-content: space-between; }
+  .card-header .title { font-size: 13px; font-weight: 600; }
+  .card-body { padding: 16px; }
+
+  /* ── KPI ROW ── */
+  .kpi-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; }
+  .kpi { background: #111827; border: 1px solid #1e293b; border-radius: 12px; padding: 14px; }
+  .kpi-label { font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 10px; }
+  .kpi-val { font-size: 22px; font-weight: 900; font-family: monospace; }
+  .kpi-change { font-size: 11px; display: flex; align-items: center; gap: 4px; margin-top: 2px; }
+
+  /* ── CHART MOCK ── */
+  .chart-mock { position: relative; height: 180px; background: #0f172a; border-radius: 8px; overflow: hidden; }
+  .chart-mock svg { width: 100%; height: 100%; }
+
+  /* ── GRID 2+1 ── */
+  .grid-2-1 { display: grid; grid-template-columns: 1fr 320px; gap: 16px; align-items: start; }
+
+  /* ── SIGNAL CARD ── */
+  .signal { background: #111827; border: 1px solid #1e293b; border-radius: 12px; padding: 14px; }
+  .signal-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 10px; }
+  .signal-dir { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+  .signal-sym { font-size: 13px; font-weight: 800; font-family: monospace; }
+  .signal-name { font-size: 11px; color: #64748b; }
+  .dir-badge { font-size: 9px; font-weight: 800; padding: 2px 6px; border-radius: 4px; letter-spacing: .05em; }
+  .status-badge { font-size: 10px; font-weight: 600; padding: 3px 8px; border-radius: 99px; border: 1px solid; }
+  .prob-bar-wrap { margin-bottom: 10px; }
+  .prob-row { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px; color: #64748b; }
+  .prob-row span:last-child { font-family: monospace; color: #f8fafc; }
+  .bar { height: 4px; background: #1e293b; border-radius: 99px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 99px; }
+  .levels { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; margin-bottom: 10px; }
+  .level { background: #0f172a; border-radius: 6px; padding: 6px; text-align: center; }
+  .level-label { font-size: 9px; color: #64748b; margin-bottom: 2px; }
+  .level-val { font-size: 11px; font-family: monospace; font-weight: 600; }
+  .signal-bottom { display: flex; justify-content: space-between; align-items: center; font-size: 11px; }
+  .pnl { display: flex; align-items: center; gap: 6px; color: #64748b; }
+  .attention { margin-top: 10px; padding-top: 10px; border-top: 1px solid #1e293b; }
+  .att-label { font-size: 9px; color: #64748b; text-transform: uppercase; letter-spacing: .1em; margin-bottom: 6px; }
+  .att-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+  .att-tag { font-size: 9px; color: #6366f1; background: rgba(99,102,241,.12); border: 1px solid rgba(99,102,241,.2); padding: 2px 6px; border-radius: 4px; }
+
+  /* ── TABLE ── */
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { text-align: left; padding: 10px 16px; color: #64748b; font-weight: 500; border-bottom: 1px solid #1e293b; }
+  td { padding: 10px 16px; border-bottom: 1px solid rgba(30,41,59,.5); }
+  tr:hover td { background: rgba(15,23,42,.5); }
+  .type-badge { font-size: 9px; padding: 2px 8px; border-radius: 99px; }
+
+  /* ── REGIME ── */
+  .regime { background: #111827; border: 1px solid #1e293b; border-radius: 12px; padding: 14px; }
+  .regime-label { font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 10px; display: flex; justify-content: space-between; }
+  .regime-dot { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .regime-name { font-size: 13px; font-weight: 600; }
+  .regime-desc { font-size: 11px; color: #64748b; line-height: 1.5; margin-bottom: 10px; }
+
+  /* ── MODEL STATUS ── */
+  .model-status { background: #111827; border: 1px solid #1e293b; border-radius: 12px; padding: 14px; }
+  .ms-title { font-size: 13px; font-weight: 500; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+  .ms-row { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 7px; }
+  .ms-row .k { color: #64748b; }
+
+  /* ── SIGNAL GRID ── */
+  .signal-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
+
+  /* ── TABS ── */
+  .tabs { display: flex; gap: 4px; }
+  .tab { font-size: 12px; padding: 5px 10px; border-radius: 6px; cursor: pointer; border: none; background: none; color: #64748b; }
+  .tab.active { background: rgba(16,185,129,.15); color: #10b981; font-weight: 600; }
+
+  /* ── LANDING ── */
+  .landing { padding: 0; }
+  .hero { padding: 60px 40px 40px; text-align: center; position: relative; background-image: radial-gradient(circle at 1px 1px,#1e293b 1px,transparent 0); background-size: 32px 32px; }
+  .hero::before { content: ''; position: absolute; top: 50px; left: 30%; width: 300px; height: 300px; background: rgba(16,185,129,.05); border-radius: 50%; filter: blur(60px); pointer-events: none; }
+  .hero::after { content: ''; position: absolute; top: 80px; right: 25%; width: 200px; height: 200px; background: rgba(99,102,241,.06); border-radius: 50%; filter: blur(40px); pointer-events: none; }
+  .hero-badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(6,78,59,.5); border: 1px solid rgba(16,185,129,.2); border-radius: 99px; padding: 6px 14px; font-size: 11px; color: #10b981; margin-bottom: 20px; position: relative; }
+  h1.hero-title { font-size: 56px; font-weight: 900; line-height: 1.05; letter-spacing: -.03em; margin-bottom: 18px; position: relative; }
+  .gradient-text { background: linear-gradient(90deg,#10b981,#6366f1,#0ea5e9); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .hero-sub { color: #94a3b8; font-size: 17px; max-width: 600px; margin: 0 auto 32px; line-height: 1.6; position: relative; }
+  .hero-btns { display: flex; justify-content: center; gap: 12px; margin-bottom: 40px; position: relative; }
+  .btn-hero { padding: 12px 24px; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; border: none; display: flex; align-items: center; gap: 8px; }
+  .btn-hero-primary { background: #10b981; color: #000; }
+  .btn-hero-secondary { background: none; border: 1px solid #1e293b; color: #94a3b8; }
+  .stats-strip { display: grid; grid-template-columns: repeat(4,1fr); background: #0c1221; border: 1px solid #1e293b; border-radius: 14px; overflow: hidden; max-width: 700px; margin: 0 auto; position: relative; }
+  .stat-item { padding: 20px; text-align: center; border-right: 1px solid #1e293b; }
+  .stat-item:last-child { border-right: none; }
+  .stat-val { font-size: 28px; font-weight: 900; font-family: monospace; margin-bottom: 3px; }
+  .stat-lbl { font-size: 11px; color: #10b981; font-weight: 600; }
+  .stat-sub { font-size: 9px; color: #64748b; margin-top: 1px; }
+
+  /* ── ARCH SECTION ── */
+  .arch-section { background: #060910; border-top: 1px solid #1e293b; padding: 50px 40px; }
+  .section-badge { display: inline-flex; align-items: center; gap: 6px; border-radius: 99px; padding: 5px 12px; font-size: 10px; font-weight: 600; margin-bottom: 14px; letter-spacing: .05em; }
+  h2.section-title { font-size: 34px; font-weight: 900; margin-bottom: 10px; }
+  .section-sub { color: #64748b; max-width: 500px; font-size: 14px; line-height: 1.6; margin-bottom: 32px; }
+  .arch-diagram { background: #0c1221; border: 1px solid #1e293b; border-radius: 14px; padding: 24px; font-family: monospace; font-size: 11px; margin-bottom: 24px; }
+  .arch-row { display: flex; justify-content: center; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+  .arch-box { border-radius: 10px; padding: 10px 14px; text-align: center; border: 1px solid; }
+  .arch-arrow { color: #334155; font-size: 16px; }
+  .features-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
+  .feat-card { background: #0c1221; border: 1px solid #1e293b; border-radius: 12px; padding: 18px; }
+  .feat-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; font-size: 18px; border: 1px solid; }
+  .feat-title { font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+  .feat-desc { font-size: 11px; color: #64748b; line-height: 1.5; }
+
+  /* ── SCREEN TABS ── */
+  .screen-nav { display: flex; gap: 0; background: #0c1221; border-bottom: 1px solid #1e293b; }
+  .snav-item { padding: 10px 20px; font-size: 12px; cursor: pointer; color: #64748b; border-bottom: 2px solid transparent; }
+  .snav-item.active { color: #10b981; border-bottom-color: #10b981; background: rgba(16,185,129,.05); }
+  .screen { display: none; }
+  .screen.active { display: block; }
+</style>
+</head>
+<body>
+
+<!-- ──────────────────────── SCREEN SELECTOR ──────────────────── -->
+<div class="screen-nav">
+  <div class="snav-item active" onclick="showScreen('landing')">🏠 Landing</div>
+  <div class="snav-item" onclick="showScreen('dashboard')">📊 Dashboard</div>
+  <div class="snav-item" onclick="showScreen('terminal')">📈 Terminal</div>
+  <div class="snav-item" onclick="showScreen('signals')">⚡ Señales IA</div>
+  <div class="snav-item" onclick="showScreen('portfolio')">💼 Portfolio</div>
+</div>
+
+<!-- ═══════════════════════════════════════════ LANDING ══════════ -->
+<div id="screen-landing" class="screen active">
+  <nav>
+    <div class="logo">
+      <div class="logo-icon">Z</div>
+      <div>
+        <span class="logo-text">ZENITH</span>
+        <span class="logo-sub">FINANZAS</span>
+      </div>
+    </div>
+    <div class="nav-links">
+      <a href="#">Modelo</a>
+      <a href="#">Rendimiento</a>
+      <a href="#">Cómo funciona</a>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <button class="btn-outline">Ingresar</button>
+      <button class="btn-primary">Probar gratis →</button>
+    </div>
+  </nav>
+
+  <div class="hero">
+    <div class="hero-badge">
+      <div class="pulse"></div>
+      Modelo activo · zenith-v2.0 · Última señal hace 4 min
+    </div>
+    <h1 class="hero-title">
+      Deep Learning para<br>
+      <span class="gradient-text">mercados argentinos</span>
+    </h1>
+    <p class="hero-sub">
+      Zenith v2 combina Transformers, CNN multi-escala y Regime Conditioning
+      para generar señales de alta frecuencia con estimación de incertidumbre
+      sobre MERVAL, ADRs y bonos soberanos.
+    </p>
+    <div class="hero-btns">
+      <button class="btn-hero btn-hero-primary">Abrir plataforma →</button>
+      <button class="btn-hero btn-hero-secondary">Ver arquitectura &rsaquo;</button>
+    </div>
+    <div class="stats-strip">
+      <div class="stat-item">
+        <div class="stat-val">67.3%</div>
+        <div class="stat-lbl">Win Rate</div>
+        <div class="stat-sub">4.812 señales</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-val">2.84</div>
+        <div class="stat-lbl">Sharpe Ratio</div>
+        <div class="stat-sub">Anualizado</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-val">+142 bps</div>
+        <div class="stat-lbl">Avg P&amp;L</div>
+        <div class="stat-sub">Por señal</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-val" style="color:#ef4444">−620 bps</div>
+        <div class="stat-lbl">Max Drawdown</div>
+        <div class="stat-sub">Histórico</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="arch-section">
+    <div style="max-width:1000px;margin:0 auto">
+      <div class="section-badge" style="background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.2);color:#6366f1">🧠 Arquitectura Neuronal</div>
+      <h2 class="section-title">8M+ parámetros · 70+ features · 35+ capas</h2>
+      <p class="section-sub">El pipeline completo procesa simultáneamente precio, volumen, microestructura y contexto macroeconómico argentino.</p>
+
+      <div class="arch-diagram">
+        <div class="arch-row">
+          <div class="arch-box" style="background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.3);color:#10b981">
+            <div style="font-weight:700">Price Features</div><div style="opacity:.6;font-size:10px">15 dim</div>
+          </div>
+          <div class="arch-arrow">→</div>
+          <div class="arch-box" style="background:rgba(14,165,233,.1);border-color:rgba(14,165,233,.3);color:#0ea5e9">
+            <div style="font-weight:700">Volume Features</div><div style="opacity:.6;font-size:10px">10 dim</div>
+          </div>
+          <div class="arch-arrow">→</div>
+          <div class="arch-box" style="background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.3);color:#f59e0b">
+            <div style="font-weight:700">Microstructure</div><div style="opacity:.6;font-size:10px">37 dim</div>
+          </div>
+          <div class="arch-arrow">→</div>
+          <div class="arch-box" style="background:rgba(139,92,246,.1);border-color:rgba(139,92,246,.3);color:#8b5cf6">
+            <div style="font-weight:700">Context + Cross-Asset</div><div style="opacity:.6;font-size:10px">20 dim</div>
+          </div>
+        </div>
+        <div style="text-align:center;color:#334155;font-size:18px;margin:6px 0">↓</div>
+        <div class="arch-row">
+          <div class="arch-box" style="background:rgba(16,185,129,.08);border-color:rgba(16,185,129,.2);color:#10b981;flex:1;max-width:220px">
+            <div style="font-weight:700">Dual-Stream Encoder</div>
+            <div style="opacity:.6;font-size:10px;margin-top:4px">Transformer + MultiScale CNN · Cross-Modal Attention</div>
+          </div>
+          <div class="arch-arrow">→</div>
+          <div class="arch-box" style="background:rgba(99,102,241,.08);border-color:rgba(99,102,241,.2);color:#6366f1;flex:1;max-width:200px">
+            <div style="font-weight:700">Transformer Stack</div>
+            <div style="opacity:.6;font-size:10px;margin-top:4px">4 layers · 8 heads · Positional Encoding</div>
+          </div>
+          <div class="arch-arrow">→</div>
+          <div class="arch-box" style="background:rgba(245,158,11,.08);border-color:rgba(245,158,11,.2);color:#f59e0b;flex:1;max-width:200px">
+            <div style="font-weight:700">Regime Conditioning</div>
+            <div style="opacity:.6;font-size:10px;margin-top:4px">FiLM · 6 regímenes · Attention Pooling</div>
+          </div>
+        </div>
+        <div style="text-align:center;color:#334155;font-size:18px;margin:6px 0">↓</div>
+        <div class="arch-row">
+          <div class="arch-box" style="background:rgba(16,185,129,.08);border-color:rgba(16,185,129,.2);color:#10b981">
+            <div style="font-weight:700">Prob. Head</div><div style="opacity:.6;font-size:10px">P(ganancia) + σ</div>
+          </div>
+          <div style="width:30px"></div>
+          <div class="arch-box" style="background:rgba(14,165,233,.08);border-color:rgba(14,165,233,.2);color:#0ea5e9">
+            <div style="font-weight:700">P&amp;L Head</div><div style="opacity:.6;font-size:10px">bps esperados + σ</div>
+          </div>
+          <div style="width:30px"></div>
+          <div class="arch-box" style="background:rgba(139,92,246,.08);border-color:rgba(139,92,246,.2);color:#8b5cf6">
+            <div style="font-weight:700">Vol. Head</div><div style="opacity:.6;font-size:10px">σ implícita + σ</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="features-grid">
+        <div class="feat-card">
+          <div class="feat-icon" style="background:rgba(99,102,241,.12);border-color:rgba(99,102,241,.2)">🧠</div>
+          <div class="feat-title">Arquitectura Neuronal Completa</div>
+          <div class="feat-desc">Transformer encoder multi-head + CNN multi-escala con dilated convolutions. 8M+ parámetros entrenados sobre mercados emergentes.</div>
+        </div>
+        <div class="feat-card">
+          <div class="feat-icon" style="background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.2)">📊</div>
+          <div class="feat-title">Dual-Stream Price &amp; Volume</div>
+          <div class="feat-desc">Procesamiento simultáneo de precios y volumen con cross-modal attention. Detecta estructura de mercado en 5s, 15s y 60s.</div>
+        </div>
+        <div class="feat-card">
+          <div class="feat-icon" style="background:rgba(14,165,233,.12);border-color:rgba(14,165,233,.2)">🛡️</div>
+          <div class="feat-title">Uncertainty Estimation</div>
+          <div class="feat-desc">Cada señal incluye estimación de incertidumbre aleatórica (Kendall et al. 2018). Sabés cuándo el modelo sabe y cuándo no.</div>
+        </div>
+        <div class="feat-card">
+          <div class="feat-icon" style="background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.2)">📉</div>
+          <div class="feat-title">Regime-Aware Conditioning</div>
+          <div class="feat-desc">FiLM conditioning sobre 6 regímenes: tendencia alcista/bajista, lateral, alta/baja volatilidad y neutro.</div>
+        </div>
+        <div class="feat-card">
+          <div class="feat-icon" style="background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.2)">📈</div>
+          <div class="feat-title">Multi-Task Learning</div>
+          <div class="feat-desc">Predicción simultánea de probabilidad, P&amp;L esperado en bps y volatilidad implícita. Automatic uncertainty weighting.</div>
+        </div>
+        <div class="feat-card">
+          <div class="feat-icon" style="background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.2)">🌐</div>
+          <div class="feat-title">Mercados Argentinos</div>
+          <div class="feat-desc">Optimizado para MERVAL, ADRs argentinos, bonos soberanos. Features cruzados de soja, WTI y DXY.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ DASHBOARD ════════ -->
+<div id="screen-dashboard" class="screen">
+  <div class="ticker">
+    <div class="ticker-live">LIVE</div>
+    <div class="ticker-scroll">
+      <div class="ticker-item"><span class="sym">MERVAL</span><span class="price mono">1.852.340</span><span class="green">+1.57%</span></div>
+      <div class="ticker-item"><span class="sym">YPF</span><span class="price mono">$18.72</span><span class="green">+2.35%</span></div>
+      <div class="ticker-item"><span class="sym">GGAL</span><span class="price mono">$41.18</span><span class="red">−1.95%</span></div>
+      <div class="ticker-item"><span class="sym">BMA</span><span class="price mono">$72.45</span><span class="green">+1.73%</span></div>
+      <div class="ticker-item"><span class="sym">TGS</span><span class="price mono">$22.90</span><span class="green">+3.01%</span></div>
+      <div class="ticker-item"><span class="sym">AL30</span><span class="price mono">$67.85</span><span class="green">+0.52%</span></div>
+      <div class="ticker-item"><span class="sym">BTC</span><span class="price mono">$68.420</span><span class="green">+1.80%</span></div>
+      <div class="ticker-item"><span class="sym">SOY</span><span class="price mono">$447.50</span><span class="red">−0.61%</span></div>
+      <div class="ticker-item"><span class="sym">WTI</span><span class="price mono">$79.32</span><span class="green">+0.61%</span></div>
+    </div>
+  </div>
+  <div class="app">
+    <div class="sidebar">
+      <div class="sidebar-logo">
+        <div class="logo-icon">Z</div>
+        <div><span class="logo-text" style="font-size:13px">ZENITH</span><span class="logo-sub">FINANZAS</span></div>
+      </div>
+      <div class="model-pill">
+        <div class="pulse"></div>
+        <div><div class="label">MODELO ACTIVO</div><div class="sub">zenith-v2.0 · 8M params</div></div>
+      </div>
+      <nav class="sidenav">
+        <a class="navitem active" href="#"><span>⊞</span> Dashboard</a>
+        <a class="navitem" href="#"><span>∿</span> Terminal</a>
+        <a class="navitem" href="#"><span>⚡</span> Señales IA <span class="badge">4</span></a>
+        <a class="navitem" href="#"><span>💼</span> Portfolio</a>
+        <a class="navitem" href="#"><span>🎓</span> Academia</a>
+      </nav>
+      <div style="padding:10px 8px;border-top:1px solid #1e293b">
+        <a class="navitem" href="#"><span>⚙</span> Configuración</a>
+        <a class="navitem" style="color:#64748b" href="#"><span>→</span> Cerrar sesión</a>
+      </div>
+    </div>
+    <div class="main">
+      <div class="page-header">
+        <div><h1>Dashboard</h1><p>Resumen general del mercado y señales activas</p></div>
+        <div class="header-right">
+          <div class="time-display"><div class="t mono">17:34:22</div><div class="d">martes, 12 de mayo</div></div>
+          <button class="icon-btn">🔍</button>
+          <button class="icon-btn" style="position:relative">🔔<span style="position:absolute;top:6px;right:6px;width:6px;height:6px;background:#10b981;border-radius:50%"></span></button>
+          <div class="avatar">Z</div>
+        </div>
+      </div>
+      <div class="content">
+        <!-- KPIs -->
+        <div class="kpi-grid">
+          <div class="kpi">
+            <div class="kpi-label">Portfolio</div>
+            <div class="kpi-val mono">$55.828</div>
+            <div class="kpi-change green"><span>↑</span> +1.33%</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">P&amp;L Diario</div>
+            <div class="kpi-val mono green">+$734</div>
+            <div class="kpi-change green"><span>↑</span> +1.33%</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Señales Activas</div>
+            <div class="kpi-val mono" style="color:#6366f1">4</div>
+            <div class="kpi-change green">+2 hoy</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Win Rate (30d)</div>
+            <div class="kpi-val mono" style="color:#0ea5e9">67.3%</div>
+            <div class="kpi-change green">vs 62.1% mes ant.</div>
+          </div>
+        </div>
+
+        <!-- Chart + regime -->
+        <div class="grid-2-1">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="font-weight:800;font-family:monospace">MERVAL</span>
+                  <span style="font-size:11px;color:#64748b">Índice Merval Argentina</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;margin-top:4px">
+                  <span style="font-size:24px;font-weight:900;font-family:monospace">1.852.340</span>
+                  <span class="green" style="font-size:13px;display:flex;align-items:center;gap:4px">↑ +1.57%</span>
+                </div>
+              </div>
+              <div class="tabs">
+                <button class="tab">1H</button>
+                <button class="tab">4H</button>
+                <button class="tab active">1D</button>
+                <button class="tab">1W</button>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="chart-mock">
+                <svg viewBox="0 0 600 160" preserveAspectRatio="none">
+                  <defs>
+                    <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stop-color="#10b981" stop-opacity=".3"/>
+                      <stop offset="100%" stop-color="#10b981" stop-opacity=".01"/>
+                    </linearGradient>
+                  </defs>
+                  <path d="M0,140 L30,130 L60,120 L90,125 L120,110 L150,100 L180,108 L210,90 L240,85 L270,95 L300,75 L330,60 L360,70 L390,55 L420,45 L450,50 L480,35 L510,40 L540,25 L570,20 L600,15 L600,160 L0,160 Z" fill="url(#g1)"/>
+                  <path d="M0,140 L30,130 L60,120 L90,125 L120,110 L150,100 L180,108 L210,90 L240,85 L270,95 L300,75 L330,60 L360,70 L390,55 L420,45 L450,50 L480,35 L510,40 L540,25 L570,20 L600,15" fill="none" stroke="#10b981" stroke-width="2"/>
+                  <!-- Grid lines -->
+                  <line x1="0" y1="40" x2="600" y2="40" stroke="#1e293b" stroke-width="1" stroke-dasharray="4,3"/>
+                  <line x1="0" y1="80" x2="600" y2="80" stroke="#1e293b" stroke-width="1" stroke-dasharray="4,3"/>
+                  <line x1="0" y1="120" x2="600" y2="120" stroke="#1e293b" stroke-width="1" stroke-dasharray="4,3"/>
+                  <!-- X labels -->
+                  <text x="0" y="155" fill="#64748b" font-size="10" font-family="monospace">09:00</text>
+                  <text x="140" y="155" fill="#64748b" font-size="10" font-family="monospace">11:00</text>
+                  <text x="285" y="155" fill="#64748b" font-size="10" font-family="monospace">13:00</text>
+                  <text x="430" y="155" fill="#64748b" font-size="10" font-family="monospace">15:00</text>
+                  <text x="565" y="155" fill="#64748b" font-size="10" font-family="monospace">17:30</text>
+                  <!-- Dot at end -->
+                  <circle cx="600" cy="15" r="4" fill="#10b981" stroke="#0f172a" stroke-width="2"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div class="regime">
+              <div class="regime-label"><span>RÉGIMEN DETECTADO</span><span>zenith-v2.0</span></div>
+              <div class="regime-dot"><div class="dot pulse" style="background:#10b981"></div><div class="regime-name">Tendencia Alcista</div></div>
+              <div class="regime-desc">Momentum positivo sostenido con alta participación de volumen en ADRs argentinos.</div>
+              <div style="font-size:11px;color:#64748b;display:flex;justify-content:space-between;margin-bottom:5px">
+                <span>Confianza del modelo</span><span class="mono" style="color:#f8fafc">84.7%</span>
+              </div>
+              <div class="bar"><div class="bar-fill" style="width:84.7%;background:#10b981"></div></div>
+            </div>
+            <div class="model-status">
+              <div class="ms-title">∿ Estado del Modelo</div>
+              <div class="ms-row"><span class="k">Inferencia</span><span class="green mono">14 ms/pred</span></div>
+              <div class="ms-row"><span class="k">Buffer de replay</span><span class="green mono">87.4K muestras</span></div>
+              <div class="ms-row"><span class="k">Último training</span><span class="green mono">hace 23 min</span></div>
+              <div class="ms-row"><span class="k">Avg uncertainty</span><span class="green mono">9.8%</span></div>
+              <div class="ms-row"><span class="k">Señales hoy</span><span class="green mono">47 generadas</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Instruments table -->
+        <div class="card">
+          <div class="card-header">
+            <span class="title">Instrumentos Seguidos</span>
+            <span style="font-size:11px;color:#10b981">Ver terminal →</span>
+          </div>
+          <table>
+            <thead><tr><th>Símbolo</th><th>Nombre</th><th>Precio</th><th>Cambio</th><th>Cambio %</th><th>Volumen</th><th>Tipo</th></tr></thead>
+            <tbody>
+              <tr><td class="mono" style="font-weight:800;color:#f8fafc">MERVAL</td><td style="color:#94a3b8">Merval</td><td class="mono">1.852.340</td><td class="mono green">+28.610</td><td class="mono green">↑ +1.57%</td><td class="mono" style="color:#64748b">2.8B</td><td><span class="type-badge" style="background:rgba(99,102,241,.1);color:#6366f1">merval</span></td></tr>
+              <tr><td class="mono" style="font-weight:800;color:#f8fafc">YPF</td><td style="color:#94a3b8">YPF ADR</td><td class="mono">$18.72</td><td class="mono green">+0.43</td><td class="mono green">↑ +2.35%</td><td class="mono" style="color:#64748b">12.4M</td><td><span class="type-badge" style="background:rgba(16,185,129,.1);color:#10b981">adr</span></td></tr>
+              <tr><td class="mono" style="font-weight:800;color:#f8fafc">GGAL</td><td style="color:#94a3b8">Galicia ADR</td><td class="mono">$41.18</td><td class="mono red">−0.82</td><td class="mono red">↓ −1.95%</td><td class="mono" style="color:#64748b">8.2M</td><td><span class="type-badge" style="background:rgba(16,185,129,.1);color:#10b981">adr</span></td></tr>
+              <tr><td class="mono" style="font-weight:800;color:#f8fafc">BMA</td><td style="color:#94a3b8">Macro ADR</td><td class="mono">$72.45</td><td class="mono green">+1.23</td><td class="mono green">↑ +1.73%</td><td class="mono" style="color:#64748b">3.9M</td><td><span class="type-badge" style="background:rgba(16,185,129,.1);color:#10b981">adr</span></td></tr>
+              <tr><td class="mono" style="font-weight:800;color:#f8fafc">AL30</td><td style="color:#94a3b8">Bono AL30</td><td class="mono">$67.85</td><td class="mono green">+0.35</td><td class="mono green">↑ +0.52%</td><td class="mono" style="color:#64748b">420K</td><td><span class="type-badge" style="background:rgba(245,158,11,.1);color:#f59e0b">bond</span></td></tr>
+              <tr><td class="mono" style="font-weight:800;color:#f8fafc">BTC</td><td style="color:#94a3b8">Bitcoin</td><td class="mono">$68.420</td><td class="mono green">+1.210</td><td class="mono green">↑ +1.80%</td><td class="mono" style="color:#64748b">42.1B</td><td><span class="type-badge" style="background:rgba(139,92,246,.1);color:#8b5cf6">crypto</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Active signals -->
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <span style="font-weight:600">Señales Activas</span>
+            <span style="font-size:11px;color:#10b981">Ver todas →</span>
+          </div>
+          <div class="signal-grid">
+            <!-- Signal 1 -->
+            <div class="signal">
+              <div class="signal-top">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <div class="signal-dir" style="background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.2)">↑</div>
+                  <div>
+                    <div style="display:flex;align-items:center;gap:6px">
+                      <span class="signal-sym">YPF</span>
+                      <span class="dir-badge" style="color:#10b981;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.2)">LONG</span>
+                    </div>
+                    <div class="signal-name">YPF ADR</div>
+                  </div>
+                </div>
+                <span class="status-badge" style="color:#10b981;border-color:rgba(16,185,129,.3);background:rgba(6,78,59,.4)">Activa</span>
+              </div>
+              <div class="prob-bar-wrap">
+                <div class="prob-row"><span>Probabilidad modelo</span><span>84.7%</span></div>
+                <div class="bar"><div class="bar-fill" style="width:84.7%;background:#10b981"></div></div>
+                <div class="prob-row" style="margin-top:4px"><span>Incertidumbre: 6.2%</span><span>60s · Tendencia Alcista</span></div>
+              </div>
+              <div class="levels">
+                <div class="level"><div class="level-label">Entrada</div><div class="level-val mono">$18.29</div></div>
+                <div class="level"><div class="level-label" style="color:#10b981">Target</div><div class="level-val mono green">$19.10</div></div>
+                <div class="level"><div class="level-label" style="color:#ef4444">Stop</div><div class="level-val mono red">$17.85</div></div>
+              </div>
+              <div class="signal-bottom">
+                <div class="pnl">⚡ P&amp;L: <span class="green mono">+235 bps</span></div>
+                <span style="color:#64748b">⏱ 2h</span>
+              </div>
+              <div class="attention">
+                <div class="att-label">Top Attention Peaks</div>
+                <div class="att-tags">
+                  <span class="att-tag">Order flow imbalance</span>
+                  <span class="att-tag">RSI divergence</span>
+                  <span class="att-tag">Volume spike t-3</span>
+                </div>
+              </div>
+            </div>
+            <!-- Signal 2 -->
+            <div class="signal">
+              <div class="signal-top">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <div class="signal-dir" style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.2)">↓</div>
+                  <div>
+                    <div style="display:flex;align-items:center;gap:6px">
+                      <span class="signal-sym">GGAL</span>
+                      <span class="dir-badge" style="color:#ef4444;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.2)">SHORT</span>
+                    </div>
+                    <div class="signal-name">Galicia ADR</div>
+                  </div>
+                </div>
+                <span class="status-badge" style="color:#10b981;border-color:rgba(16,185,129,.3);background:rgba(6,78,59,.4)">Activa</span>
+              </div>
+              <div class="prob-bar-wrap">
+                <div class="prob-row"><span>Probabilidad modelo</span><span>73.1%</span></div>
+                <div class="bar"><div class="bar-fill" style="width:73.1%;background:#ef4444"></div></div>
+                <div class="prob-row" style="margin-top:4px"><span>Incertidumbre: 11.8%</span><span>15s · Alta Volatilidad</span></div>
+              </div>
+              <div class="levels">
+                <div class="level"><div class="level-label">Entrada</div><div class="level-val mono">$41.95</div></div>
+                <div class="level"><div class="level-label" style="color:#10b981">Target</div><div class="level-val mono green">$40.20</div></div>
+                <div class="level"><div class="level-label" style="color:#ef4444">Stop</div><div class="level-val mono red">$42.80</div></div>
+              </div>
+              <div class="signal-bottom">
+                <div class="pnl">⚡ P&amp;L: <span class="green mono">+184 bps</span></div>
+                <span style="color:#64748b">⏱ 45m</span>
+              </div>
+              <div class="attention">
+                <div class="att-label">Top Attention Peaks</div>
+                <div class="att-tags">
+                  <span class="att-tag">Bid-ask spread widening</span>
+                  <span class="att-tag">Microstructure toxicity</span>
+                </div>
+              </div>
+            </div>
+            <!-- Signal 3 -->
+            <div class="signal">
+              <div class="signal-top">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <div class="signal-dir" style="background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.2)">↑</div>
+                  <div>
+                    <div style="display:flex;align-items:center;gap:6px">
+                      <span class="signal-sym">BMA</span>
+                      <span class="dir-badge" style="color:#10b981;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.2)">LONG</span>
+                    </div>
+                    <div class="signal-name">Macro ADR</div>
+                  </div>
+                </div>
+                <span class="status-badge" style="color:#f59e0b;border-color:rgba(245,158,11,.3);background:rgba(120,53,15,.4)">Pendiente</span>
+              </div>
+              <div class="prob-bar-wrap">
+                <div class="prob-row"><span>Probabilidad modelo</span><span>79.2%</span></div>
+                <div class="bar"><div class="bar-fill" style="width:79.2%;background:#10b981"></div></div>
+                <div class="prob-row" style="margin-top:4px"><span>Incertidumbre: 8.9%</span><span>60s · Tendencia Alcista</span></div>
+              </div>
+              <div class="levels">
+                <div class="level"><div class="level-label">Entrada</div><div class="level-val mono">$71.22</div></div>
+                <div class="level"><div class="level-label" style="color:#10b981">Target</div><div class="level-val mono green">$73.80</div></div>
+                <div class="level"><div class="level-label" style="color:#ef4444">Stop</div><div class="level-val mono red">$70.10</div></div>
+              </div>
+              <div class="signal-bottom">
+                <div class="pnl">⚡ P&amp;L: <span class="green mono">+173 bps</span></div>
+                <span style="color:#64748b">⏱ 1h 30m</span>
+              </div>
+              <div class="attention">
+                <div class="att-label">Top Attention Peaks</div>
+                <div class="att-tags">
+                  <span class="att-tag">MERVAL momentum transfer</span>
+                  <span class="att-tag">Institutional flow</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════ TERMINAL (simplified) ══════════ -->
+<div id="screen-terminal" class="screen">
+  <div class="ticker">
+    <div class="ticker-live">LIVE</div>
+    <div class="ticker-scroll">
+      <div class="ticker-item"><span class="sym">MERVAL</span><span class="price mono">1.852.340</span><span class="green">+1.57%</span></div>
+      <div class="ticker-item"><span class="sym">YPF</span><span class="price mono">$18.72</span><span class="green">+2.35%</span></div>
+      <div class="ticker-item"><span class="sym">GGAL</span><span class="price mono">$41.18</span><span class="red">−1.95%</span></div>
+      <div class="ticker-item"><span class="sym">BMA</span><span class="price mono">$72.45</span><span class="green">+1.73%</span></div>
+      <div class="ticker-item"><span class="sym">BTC</span><span class="price mono">$68.420</span><span class="green">+1.80%</span></div>
+    </div>
+  </div>
+  <div class="app">
+    <div class="sidebar">
+      <div class="sidebar-logo">
+        <div class="logo-icon">Z</div>
+        <div><span class="logo-text" style="font-size:13px">ZENITH</span><span class="logo-sub">FINANZAS</span></div>
+      </div>
+      <div class="model-pill">
+        <div class="pulse"></div>
+        <div><div class="label">MODELO ACTIVO</div><div class="sub">zenith-v2.0 · 8M params</div></div>
+      </div>
+      <nav class="sidenav">
+        <a class="navitem" href="#"><span>⊞</span> Dashboard</a>
+        <a class="navitem active" href="#"><span>∿</span> Terminal</a>
+        <a class="navitem" href="#"><span>⚡</span> Señales IA <span class="badge">4</span></a>
+        <a class="navitem" href="#"><span>💼</span> Portfolio</a>
+        <a class="navitem" href="#"><span>🎓</span> Academia</a>
+      </nav>
+    </div>
+    <div class="main">
+      <div class="page-header">
+        <div><h1>Terminal de Trading</h1><p>Análisis en tiempo real + señales Zenith</p></div>
+        <div class="header-right">
+          <div class="avatar">Z</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:12px;padding:16px;height:calc(100% - 52px)">
+        <!-- Instrument list -->
+        <div style="width:160px;flex-shrink:0">
+          <div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.05em;padding:0 8px 8px">Instrumentos</div>
+          <div style="display:flex;flex-direction:column;gap:2px">
+            <div style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.2);border-radius:8px;padding:7px 10px;display:flex;justify-content:space-between;font-size:12px">
+              <span class="mono" style="color:#10b981;font-weight:700">YPF</span><span class="green">+2.35%</span>
+            </div>
+            <div style="padding:7px 10px;display:flex;justify-content:space-between;font-size:12px;color:#64748b;border-radius:8px">
+              <span class="mono" style="font-weight:700">GGAL</span><span class="red">−1.95%</span>
+            </div>
+            <div style="padding:7px 10px;display:flex;justify-content:space-between;font-size:12px;color:#64748b;border-radius:8px">
+              <span class="mono" style="font-weight:700">BMA</span><span class="green">+1.73%</span>
+            </div>
+            <div style="padding:7px 10px;display:flex;justify-content:space-between;font-size:12px;color:#64748b;border-radius:8px">
+              <span class="mono" style="font-weight:700">TGS</span><span class="green">+3.01%</span>
+            </div>
+            <div style="padding:7px 10px;display:flex;justify-content:space-between;font-size:12px;color:#64748b;border-radius:8px">
+              <span class="mono" style="font-weight:700">AL30</span><span class="green">+0.52%</span>
+            </div>
+            <div style="padding:7px 10px;display:flex;justify-content:space-between;font-size:12px;color:#64748b;border-radius:8px">
+              <span class="mono" style="font-weight:700">BTC</span><span class="green">+1.80%</span>
+            </div>
+          </div>
+        </div>
+        <!-- Chart area -->
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:10px">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div style="display:flex;align-items:center;gap:10px">
+                  <span style="font-weight:900;font-family:monospace;font-size:20px">YPF</span>
+                  <span style="color:#64748b;font-size:12px">YPF ADR</span>
+                  <span class="type-badge" style="background:rgba(16,185,129,.1);color:#10b981">adr</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;margin-top:4px">
+                  <span style="font-size:28px;font-weight:900;font-family:monospace">$18.72</span>
+                  <span class="green" style="font-size:13px">↑ +2.35% (+0.43)</span>
+                </div>
+              </div>
+              <div class="tabs">
+                <button class="tab">5s</button>
+                <button class="tab">15s</button>
+                <button class="tab active">1m</button>
+                <button class="tab">5m</button>
+                <button class="tab">15m</button>
+                <button class="tab">1h</button>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="chart-mock" style="height:220px">
+                <svg viewBox="0 0 700 200" preserveAspectRatio="none">
+                  <defs>
+                    <linearGradient id="g2" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stop-color="#10b981" stop-opacity=".25"/>
+                      <stop offset="100%" stop-color="#10b981" stop-opacity=".01"/>
+                    </linearGradient>
+                  </defs>
+                  <line x1="0" y1="50" x2="700" y2="50" stroke="#1e293b" stroke-width="1" stroke-dasharray="4,3"/>
+                  <line x1="0" y1="100" x2="700" y2="100" stroke="#1e293b" stroke-width="1" stroke-dasharray="4,3"/>
+                  <line x1="0" y1="150" x2="700" y2="150" stroke="#1e293b" stroke-width="1" stroke-dasharray="4,3"/>
+                  <path d="M0,170 L40,165 L80,155 L120,160 L160,145 L200,135 L240,140 L280,120 L320,110 L360,115 L400,95 L440,80 L480,90 L520,70 L560,55 L600,60 L640,45 L680,30 L700,25 L700,200 L0,200 Z" fill="url(#g2)"/>
+                  <path d="M0,170 L40,165 L80,155 L120,160 L160,145 L200,135 L240,140 L280,120 L320,110 L360,115 L400,95 L440,80 L480,90 L520,70 L560,55 L600,60 L640,45 L680,30 L700,25" fill="none" stroke="#10b981" stroke-width="2"/>
+                  <circle cx="700" cy="25" r="5" fill="#10b981" stroke="#0f172a" stroke-width="2"/>
+                  <text x="5" y="48" fill="#64748b" font-size="10" font-family="monospace">$19.10</text>
+                  <text x="5" y="98" fill="#64748b" font-size="10" font-family="monospace">$18.90</text>
+                  <text x="5" y="148" fill="#64748b" font-size="10" font-family="monospace">$18.50</text>
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+            <div class="card" style="padding:10px;text-align:center"><div style="font-size:10px;color:#64748b;margin-bottom:4px">Apertura</div><div class="mono" style="font-weight:600">$18.13</div></div>
+            <div class="card" style="padding:10px;text-align:center"><div style="font-size:10px;color:#64748b;margin-bottom:4px">Máximo</div><div class="mono green" style="font-weight:600">$18.98</div></div>
+            <div class="card" style="padding:10px;text-align:center"><div style="font-size:10px;color:#64748b;margin-bottom:4px">Mínimo</div><div class="mono red" style="font-weight:600">$18.05</div></div>
+            <div class="card" style="padding:10px;text-align:center"><div style="font-size:10px;color:#64748b;margin-bottom:4px">Volumen</div><div class="mono" style="font-weight:600">12.4M</div></div>
+          </div>
+        </div>
+        <!-- Signals panel -->
+        <div style="width:280px;flex-shrink:0;display:flex;flex-direction:column;gap:10px">
+          <div class="regime">
+            <div class="regime-label"><span>RÉGIMEN</span><span>zenith-v2.0</span></div>
+            <div class="regime-dot"><div class="dot pulse" style="background:#10b981"></div><div class="regime-name">Tendencia Alcista</div></div>
+            <div class="regime-desc">Momentum positivo con alta participación de volumen.</div>
+            <div style="font-size:11px;display:flex;justify-content:space-between;margin-bottom:4px;color:#64748b">
+              <span>Confianza</span><span class="mono" style="color:#f8fafc">84.7%</span>
+            </div>
+            <div class="bar"><div class="bar-fill" style="width:84.7%;background:#10b981"></div></div>
+          </div>
+          <div class="signal">
+            <div class="signal-top">
+              <div style="display:flex;align-items:center;gap:8px">
+                <div class="signal-dir" style="background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.2);font-size:14px">↑</div>
+                <div><div style="display:flex;align-items:center;gap:6px"><span class="signal-sym">YPF</span><span class="dir-badge" style="color:#10b981;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.2)">LONG</span></div><div class="signal-name">YPF ADR</div></div>
+              </div>
+              <span class="status-badge" style="color:#10b981;border-color:rgba(16,185,129,.3);background:rgba(6,78,59,.4)">Activa</span>
+            </div>
+            <div class="prob-bar-wrap">
+              <div class="prob-row"><span>Prob. modelo</span><span>84.7%</span></div>
+              <div class="bar"><div class="bar-fill" style="width:84.7%;background:#10b981"></div></div>
+            </div>
+            <div class="levels">
+              <div class="level"><div class="level-label">Entrada</div><div class="level-val mono">$18.29</div></div>
+              <div class="level"><div class="level-label" style="color:#10b981">Target</div><div class="level-val mono green">$19.10</div></div>
+              <div class="level"><div class="level-label" style="color:#ef4444">Stop</div><div class="level-val mono red">$17.85</div></div>
+            </div>
+            <div class="signal-bottom">
+              <div class="pnl">⚡ <span class="green mono">+235 bps</span></div>
+              <span style="color:#64748b">2h</span>
+            </div>
+          </div>
+          <div class="model-status">
+            <div class="ms-title">📐 Indicadores Técnicos</div>
+            <div class="ms-row"><span class="k">RSI (14)</span><span style="color:#f59e0b" class="mono">58.4 · neutral</span></div>
+            <div class="ms-row"><span class="k">MACD</span><span class="green mono">+0.018 · alcista</span></div>
+            <div class="ms-row"><span class="k">BB Width</span><span style="color:#0ea5e9" class="mono">0.043 · bajo</span></div>
+            <div class="ms-row"><span class="k">ATR (14)</span><span style="color:#64748b" class="mono">0.32</span></div>
+            <div class="ms-row"><span class="k">VWAP dev.</span><span class="green mono">+0.8% arriba</span></div>
+            <div class="ms-row"><span class="k">OBV trend</span><span class="green mono">↑ bullish</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════ SIGNALS & PORTFOLIO (stubs) ════════════════ -->
+<div id="screen-signals" class="screen">
+  <div style="padding:20px;color:#64748b;text-align:center;padding-top:60px">
+    <div style="font-size:48px;margin-bottom:12px">⚡</div>
+    <div style="font-size:18px;font-weight:700;color:#f8fafc;margin-bottom:6px">Señales Zenith IA</div>
+    <div>Filters · Cumulative P&amp;L chart · Grid de señales con attention peaks</div>
+    <div style="margin-top:16px;font-size:12px">Abrí la app React real para ver esta pantalla completa:<br><code style="background:#1e293b;padding:4px 8px;border-radius:4px;color:#10b981">cd zenith-finanzas &amp;&amp; npm run dev</code></div>
+  </div>
+</div>
+
+<div id="screen-portfolio" class="screen">
+  <div style="padding:20px;color:#64748b;text-align:center;padding-top:60px">
+    <div style="font-size:48px;margin-bottom:12px">💼</div>
+    <div style="font-size:18px;font-weight:700;color:#f8fafc;margin-bottom:6px">Portfolio</div>
+    <div>Pie chart · Barras P&amp;L diario · Tabla de posiciones con drawdown</div>
+    <div style="margin-top:16px;font-size:12px">Abrí la app React real para ver esta pantalla completa:<br><code style="background:#1e293b;padding:4px 8px;border-radius:4px;color:#10b981">cd zenith-finanzas &amp;&amp; npm run dev</code></div>
+  </div>
+</div>
+
+<script>
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.snav-item').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  event.target.classList.add('active');
+}
+</script>
+</body>
+</html>
