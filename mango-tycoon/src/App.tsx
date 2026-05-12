@@ -12,6 +12,7 @@ import Objectives from './pages/game/Objectives'
 import Leaderboard from './pages/game/Leaderboard'
 import Map from './pages/game/Map'
 import Company from './pages/game/Company'
+import Academia from './pages/game/Academia'
 
 export default function App() {
   const { initialize } = useAuthStore()
@@ -32,6 +33,7 @@ export default function App() {
         <Route path="leaderboard" element={<Leaderboard />} />
         <Route path="mapa"        element={<Map />} />
         <Route path="empresa"     element={<Company />} />
+        <Route path="academia"    element={<Academia />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

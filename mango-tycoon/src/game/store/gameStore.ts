@@ -62,6 +62,7 @@ interface GameState {
   checkObjectives: () => void
   foundCompany: (name: string, type: string, sector: RepSector, capital: number) => Promise<void>
   expandCompany: (additionalCapital: number) => Promise<void>
+  completeLesson: (lessonId: string) => Promise<void>
 }
 
 export const useGameStore = create<GameState>()(
@@ -458,6 +459,19 @@ export const useGameStore = create<GameState>()(
         })
 
         get().checkObjectives()
+      },
+
+      // ─── EXPAND COMPANY ───────────────────────────────────────────────────
+      // ─── COMPLETE LESSON ──────────────────────────────────────────────────
+      completeLesson: async (lessonId) => {
+        const { profile } = get()
+        if (!profile) return
+        const reward = 650
+        const newCash = profile.mangoCash + reward
+        await supabase.from('profiles').update({ mango_cash: newCash }).eq('id', profile.id)
+        set((state) => ({
+          profile: state.profile ? { ...state.profile, mangoCash: newCash } : null,
+        }))
       },
 
       // ─── EXPAND COMPANY ───────────────────────────────────────────────────

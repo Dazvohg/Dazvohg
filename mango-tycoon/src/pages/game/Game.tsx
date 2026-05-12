@@ -1,21 +1,31 @@
 import { Outlet, useNavigate } from 'react-router-dom'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAuthStore } from '../../game/store/authStore'
 import { useGameStore } from '../../game/store/gameStore'
 import NavBar from '../../components/NavBar'
 import EventBanner from '../../game/components/EventBanner'
 import EconomyTicker from '../../game/components/EconomyTicker'
+import S from '../../lib/sound'
 
 export default function Game() {
   const { user } = useAuthStore()
   const { loadProfile, incomeNotification, dismissIncomeNotification } = useGameStore()
   const navigate = useNavigate()
+  const prevIncome = useRef<number | null>(null)
 
   useEffect(() => {
     if (user) loadProfile(user.id)
     else navigate('/login')
   }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Play income sound when notification arrives
+  useEffect(() => {
+    if (incomeNotification && incomeNotification.total > 0 && prevIncome.current !== incomeNotification.total) {
+      prevIncome.current = incomeNotification.total
+      S.income()
+    }
+  }, [incomeNotification])
 
   return (
     <div className="min-h-screen bg-gray-950 pb-24 pt-16">

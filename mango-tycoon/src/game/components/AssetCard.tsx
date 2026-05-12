@@ -5,6 +5,7 @@ import type { MarketAsset, OwnedAsset } from '../../types/game'
 import { useGameStore } from '../store/gameStore'
 import { canBuyAsset, SECTOR_LABELS, SECTOR_ICONS } from '../engine/reputation'
 import { getCurrentSeason, getSeasonalMultiplier } from '../engine/seasonality'
+import S from '../../lib/sound'
 
 interface Props {
   asset: MarketAsset
@@ -46,19 +47,25 @@ export default function AssetCard({ asset, owned, mode }: Props) {
   const hasSeasonal = Math.abs(seasonMultiplier - 1) >= 0.01
 
   const handleBuy = async () => {
-    if (!unlocked) return
+    if (!unlocked) { S.error(); return }
     setBusy(true)
     setError('')
-    try { await buyAsset(asset.id) }
-    catch (e: any) { setError(e.message) }
-    finally { setBusy(false) }
+    try {
+      await buyAsset(asset.id)
+      S.buy()
+    } catch (e: any) {
+      setError(e.message)
+      S.error()
+    } finally { setBusy(false) }
   }
 
   const handleSell = async () => {
     if (!owned) return
     setBusy(true)
-    try { await sellAsset(owned.id) }
-    finally { setBusy(false) }
+    try {
+      await sellAsset(owned.id)
+      S.sell()
+    } finally { setBusy(false) }
   }
 
   return (

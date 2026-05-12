@@ -1,15 +1,16 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, ShoppingCart, Briefcase, Target, Trophy, Map, Building2, LogOut } from 'lucide-react'
+import { LayoutDashboard, ShoppingCart, Target, Map, Building2, GraduationCap, LogOut } from 'lucide-react'
 import { useAuthStore } from '../game/store/authStore'
 import { useGameStore } from '../game/store/gameStore'
+import S from '../lib/sound'
 
 const NAV_ITEMS = [
-  { to: '/game',             icon: LayoutDashboard, label: 'Inicio',    end: true },
-  { to: '/game/market',      icon: ShoppingCart,    label: 'Mercado',   end: false },
-  { to: '/game/mapa',        icon: Map,             label: 'Mapa',      end: false },
-  { to: '/game/empresa',     icon: Building2,       label: 'Empresa',   end: false },
-  { to: '/game/objectives',  icon: Target,          label: 'Objetivos', end: false },
-  { to: '/game/leaderboard', icon: Trophy,          label: 'Ranking',   end: false },
+  { to: '/game',            icon: LayoutDashboard, label: 'Inicio',   end: true },
+  { to: '/game/market',     icon: ShoppingCart,    label: 'Mercado',  end: false },
+  { to: '/game/mapa',       icon: Map,             label: 'Mapa',     end: false },
+  { to: '/game/empresa',    icon: Building2,       label: 'Empresa',  end: false },
+  { to: '/game/objectives', icon: Target,          label: 'Objetivos',end: false },
+  { to: '/game/academia',   icon: GraduationCap,   label: 'Academia', end: false },
 ]
 
 export default function NavBar() {
@@ -63,7 +64,7 @@ export default function NavBar() {
 
       {/* ── Bottom nav ──────────────────────────────────────────────────── */}
       <nav className="fixed bottom-0 inset-x-0 z-50 bg-gray-950/95 backdrop-blur border-t border-gray-800 safe-area-pb">
-        <div className="flex items-center justify-around py-1.5 px-1 max-w-lg mx-auto">
+        <div className="flex items-center justify-around py-1 px-1 max-w-lg mx-auto overflow-x-auto scrollbar-hide">
           {NAV_ITEMS.map(({ to, icon: Icon, label, end }) => {
             const isObjectives = to === '/game/objectives'
             return (
@@ -71,16 +72,17 @@ export default function NavBar() {
                 key={to}
                 to={to}
                 end={end}
+                onClick={() => S.nav()}
                 className={({ isActive }) =>
-                  `relative flex flex-col items-center gap-0.5 px-2 py-1 rounded-xl transition-all duration-200 ${
+                  `relative flex flex-col items-center gap-0.5 px-2 py-1 rounded-xl transition-all duration-200 shrink-0 ${
                     isActive
                       ? 'text-mango-400 bg-mango-400/10'
                       : 'text-gray-500 hover:text-gray-300'
                   }`
                 }
               >
-                <Icon size={18} />
-                <span className="text-[10px]">{label}</span>
+                <Icon size={16} />
+                <span className="text-[9px]">{label}</span>
                 {isObjectives && readyCount > 0 && (
                   <span className="absolute -top-0.5 right-0.5 bg-mango-500 text-gray-900 text-[9px] font-bold
                                    rounded-full w-4 h-4 flex items-center justify-center">

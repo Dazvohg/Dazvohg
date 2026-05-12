@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { CheckCircle, Clock, Gift } from 'lucide-react'
 import type { PlayerObjective } from '../../types/game'
 import { useGameStore } from '../store/gameStore'
+import S from '../../lib/sound'
 
 export default function ObjectiveCard({ po }: { po: PlayerObjective }) {
   const { claimObjective } = useGameStore()
@@ -13,6 +14,7 @@ export default function ObjectiveCard({ po }: { po: PlayerObjective }) {
   const handleClaim = async () => {
     setBusy(true)
     await claimObjective(po.objective.id)
+    S.complete()
     setBusy(false)
   }
 

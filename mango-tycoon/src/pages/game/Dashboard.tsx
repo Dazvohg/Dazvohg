@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { TrendingUp, Building2, Target, Star, MapPin } from 'lucide-react'
+import { TrendingUp, Building2, Target, Star, MapPin, GraduationCap } from 'lucide-react'
 import { useGameStore } from '../../game/store/gameStore'
 import { xpToNextLevel } from '../../game/engine/economy'
 import PortfolioChart from '../../game/components/PortfolioChart'
@@ -168,6 +168,23 @@ export default function Dashboard() {
         <Link to="/game/mapa"       className="btn-secondary text-center text-sm flex items-center justify-center gap-1"><MapPin size={14} /> Mapa</Link>
         <Link to="/game/leaderboard" className="btn-secondary text-center text-sm">🏆 Ranking</Link>
       </div>
+
+      {/* Academia promo card */}
+      <Link
+        to="/game/academia"
+        className="block card bg-gradient-to-r from-green-900/25 to-gray-900 border-green-700/40 hover:border-green-600/50 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-green-400/10 border border-green-400/20 flex items-center justify-center shrink-0">
+            <GraduationCap size={18} className="text-green-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-white">Academia Financiera</p>
+            <p className="text-xs text-gray-500">Aprendé y ganá <span className="text-mango-400 font-bold">650 MC</span> por lección completada</p>
+          </div>
+          <span className="text-xs text-green-400 font-bold shrink-0">Ver →</span>
+        </div>
+      </Link>
 
       {/* Recent assets */}
       {ownedAssets.length > 0 && (
