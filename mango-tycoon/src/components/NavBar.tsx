@@ -1,20 +1,23 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, ShoppingCart, Briefcase, Target, Trophy, LogOut } from 'lucide-react'
+import { LayoutDashboard, ShoppingCart, Briefcase, Target, Trophy, Map, Building2, LogOut } from 'lucide-react'
 import { useAuthStore } from '../game/store/authStore'
 import { useGameStore } from '../game/store/gameStore'
 
 const NAV_ITEMS = [
-  { to: '/game',            icon: LayoutDashboard, label: 'Inicio',   end: true },
-  { to: '/game/market',     icon: ShoppingCart,    label: 'Mercado',  end: false },
-  { to: '/game/portfolio',  icon: Briefcase,       label: 'Portfolio',end: false },
-  { to: '/game/objectives', icon: Target,          label: 'Objetivos',end: false },
-  { to: '/game/leaderboard',icon: Trophy,          label: 'Ranking',  end: false },
+  { to: '/game',             icon: LayoutDashboard, label: 'Inicio',    end: true },
+  { to: '/game/market',      icon: ShoppingCart,    label: 'Mercado',   end: false },
+  { to: '/game/mapa',        icon: Map,             label: 'Mapa',      end: false },
+  { to: '/game/empresa',     icon: Building2,       label: 'Empresa',   end: false },
+  { to: '/game/objectives',  icon: Target,          label: 'Objetivos', end: false },
+  { to: '/game/leaderboard', icon: Trophy,          label: 'Ranking',   end: false },
 ]
 
 export default function NavBar() {
   const { signOut } = useAuthStore()
-  const { profile } = useGameStore()
+  const { profile, playerObjectives } = useGameStore()
   const navigate = useNavigate()
+
+  const readyCount = playerObjectives.filter((po) => po.readyToClaim && !po.completedAt).length
 
   const handleSignOut = async () => {
     await signOut()
@@ -60,24 +63,33 @@ export default function NavBar() {
 
       {/* ── Bottom nav ──────────────────────────────────────────────────── */}
       <nav className="fixed bottom-0 inset-x-0 z-50 bg-gray-950/95 backdrop-blur border-t border-gray-800 safe-area-pb">
-        <div className="flex items-center justify-around py-2 px-2 max-w-lg mx-auto">
-          {NAV_ITEMS.map(({ to, icon: Icon, label, end }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={end}
-              className={({ isActive }) =>
-                `flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all duration-200 ${
-                  isActive
-                    ? 'text-mango-400 bg-mango-400/10'
-                    : 'text-gray-500 hover:text-gray-300'
-                }`
-              }
-            >
-              <Icon size={20} />
-              <span className="text-xs">{label}</span>
-            </NavLink>
-          ))}
+        <div className="flex items-center justify-around py-1.5 px-1 max-w-lg mx-auto">
+          {NAV_ITEMS.map(({ to, icon: Icon, label, end }) => {
+            const isObjectives = to === '/game/objectives'
+            return (
+              <NavLink
+                key={to}
+                to={to}
+                end={end}
+                className={({ isActive }) =>
+                  `relative flex flex-col items-center gap-0.5 px-2 py-1 rounded-xl transition-all duration-200 ${
+                    isActive
+                      ? 'text-mango-400 bg-mango-400/10'
+                      : 'text-gray-500 hover:text-gray-300'
+                  }`
+                }
+              >
+                <Icon size={18} />
+                <span className="text-[10px]">{label}</span>
+                {isObjectives && readyCount > 0 && (
+                  <span className="absolute -top-0.5 right-0.5 bg-mango-500 text-gray-900 text-[9px] font-bold
+                                   rounded-full w-4 h-4 flex items-center justify-center">
+                    {readyCount}
+                  </span>
+                )}
+              </NavLink>
+            )
+          })}
         </div>
       </nav>
     </>

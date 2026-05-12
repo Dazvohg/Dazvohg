@@ -10,6 +10,8 @@ import Market from './pages/game/Market'
 import Portfolio from './pages/game/Portfolio'
 import Objectives from './pages/game/Objectives'
 import Leaderboard from './pages/game/Leaderboard'
+import Map from './pages/game/Map'
+import Company from './pages/game/Company'
 
 export default function App() {
   const { initialize } = useAuthStore()
@@ -28,6 +30,8 @@ export default function App() {
         <Route path="portfolio"   element={<Portfolio />} />
         <Route path="objectives"  element={<Objectives />} />
         <Route path="leaderboard" element={<Leaderboard />} />
+        <Route path="mapa"        element={<Map />} />
+        <Route path="empresa"     element={<Company />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

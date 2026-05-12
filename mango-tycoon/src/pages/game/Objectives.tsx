@@ -3,10 +3,12 @@ import ObjectiveCard from '../../game/components/ObjectiveCard'
 import type { ObjectiveCategory } from '../../types/game'
 
 const CATEGORY_LABEL: Record<ObjectiveCategory, string> = {
-  investment: '💼 Inversiones',
-  trading:    '💰 Ahorro y Trading',
-  level:      '⭐ Subir de Nivel',
-  portfolio:  '📊 Patrimonio',
+  investment:  '💼 Inversiones',
+  trading:     '💰 Ahorro y Trading',
+  level:       '⭐ Subir de Nivel',
+  portfolio:   '📊 Patrimonio',
+  regional:    '🗺️ Regional',
+  reputation:  '🏅 Reputación',
 }
 
 export default function Objectives() {

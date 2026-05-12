@@ -27,6 +27,7 @@ export const MARKET_ASSETS: MarketAsset[] = [
     educationalNote:
       'MercadoLibre cotiza en NASDAQ. Incluye MercadoPago, MercadoEnvíos y MercadoCredito: un ecosistema fintech completo.',
     icon: '🛒',
+    requiredRep: { sector: 'financial', points: 10 },
   },
   {
     id: 'arcor',
@@ -67,6 +68,33 @@ export const MARKET_ASSETS: MarketAsset[] = [
       'Los bancos argentinos tienen alta rentabilidad pero están muy expuestos al riesgo soberano y cambios regulatorios del BCRA.',
     icon: '🏦',
   },
+  {
+    id: 'loma_negra',
+    type: 'company',
+    name: 'Loma Negra',
+    description: 'La mayor cementera de Argentina. Cimiento de toda obra de infraestructura.',
+    price: 9800,
+    yieldRate: 0.7,
+    location: 'Córdoba',
+    riskLevel: 'medium',
+    educationalNote:
+      'Loma Negra produce el 40% del cemento argentino. Cada obra pública o privada en el país usa sus productos. Excelente proxy de la actividad de la construcción.',
+    icon: '🏗️',
+  },
+  {
+    id: 'globant',
+    type: 'company',
+    name: 'Globant',
+    description: 'Unicornio tecnológico argentino cotizando en NYSE. Software para el mundo.',
+    price: 62000,
+    yieldRate: 1.0,
+    location: 'Buenos Aires',
+    riskLevel: 'medium',
+    educationalNote:
+      'Globant fue fundada en Buenos Aires en 2003 y hoy vale más de 3.000 millones de dólares. Es el símbolo del sector tecnológico argentino exportador.',
+    icon: '💻',
+    requiredRep: { sector: 'financial', points: 15 },
+  },
 
   // ─── BIENES RAÍCES ───────────────────────────────────────────────────────────
   {
@@ -102,7 +130,7 @@ export const MARKET_ASSETS: MarketAsset[] = [
     description: 'Casa con pileta en barrio cerrado del delta del Tigre.',
     price: 150000,
     yieldRate: 0.35,
-    location: 'Tigre, GBA Norte',
+    location: 'Tigre, GBA',
     riskLevel: 'low',
     educationalNote:
       'Los countries del GBA Norte tuvieron revalorización post-pandemia por el boom del teletrabajo. El delta del Tigre es única en el mundo.',
@@ -120,6 +148,7 @@ export const MARKET_ASSETS: MarketAsset[] = [
     educationalNote:
       'Puerto Madero es el barrio más caro de Argentina. Las oficinas premium mantienen valor incluso en crisis gracias a contratos largos.',
     icon: '🏢',
+    requiredRep: { sector: 'real_estate', points: 20 },
   },
   {
     id: 'vinedo_mendoza',
@@ -133,6 +162,34 @@ export const MARKET_ASSETS: MarketAsset[] = [
     educationalNote:
       'Los viñedos en Mendoza se cotizan en dólares y generan exportaciones. El Malbec argentino es el más vendido del mundo en su varietal.',
     icon: '🍇',
+    requiredRep: { sector: 'real_estate', points: 25 },
+  },
+  {
+    id: 'loft_rosario',
+    type: 'real_estate',
+    name: 'Loft en Rosario',
+    description: 'Loft moderno en el barrio de Pichincha, la ciudad del Central y de Messi.',
+    price: 68000,
+    yieldRate: 0.5,
+    location: 'Rosario, Santa Fe',
+    riskLevel: 'low',
+    educationalNote:
+      'Rosario es la segunda ciudad más importante de Argentina y el mayor polo agroexportador del mundo. Sus propiedades ofrecen buena rentabilidad a precios accesibles.',
+    icon: '🏘️',
+  },
+  {
+    id: 'estancia_patagonia',
+    type: 'real_estate',
+    name: 'Estancia Patagónica',
+    description: '500 hectáreas de campo en la Patagonia con vista al lago y turismo rural.',
+    price: 480000,
+    yieldRate: 1.3,
+    location: 'Bariloche, Río Negro',
+    riskLevel: 'medium',
+    educationalNote:
+      'Las estancias patagónicas combinan ganadería ovina, caza deportiva y turismo de lujo. Son activos dolarizados con creciente demanda internacional.',
+    icon: '🏔️',
+    requiredRep: { sector: 'real_estate', points: 40 },
   },
 
   // ─── BONOS ───────────────────────────────────────────────────────────────────
@@ -143,7 +200,7 @@ export const MARKET_ASSETS: MarketAsset[] = [
     description: 'Bono soberano argentino bajo ley local con vencimiento en 2030.',
     price: 3200,
     yieldRate: 2.1,
-    location: 'BCBA',
+    location: 'Buenos Aires',
     riskLevel: 'high',
     educationalNote:
       'Los bonos soberanos argentinos tienen alto rendimiento por el riesgo de default. Argentina tuvo 9 defaults en su historia. Alto riesgo, alta ganancia potencial.',
@@ -156,11 +213,12 @@ export const MARKET_ASSETS: MarketAsset[] = [
     description: 'Global Bond argentino en dólares bajo ley extranjera, venc. 2035.',
     price: 4800,
     yieldRate: 2.8,
-    location: 'NYSE / BCBA',
+    location: 'Buenos Aires',
     riskLevel: 'high',
     educationalNote:
       'Los GD (Global Dollar) cotizan bajo ley de Nueva York, más protegidos que los AL (ley argentina). Mayor liquidez y demanda de inversores internacionales.',
     icon: '💵',
+    requiredRep: { sector: 'financial', points: 10 },
   },
   {
     id: 'lecap',
@@ -169,7 +227,7 @@ export const MARKET_ASSETS: MarketAsset[] = [
     description: 'Letra de Capitalización del Tesoro argentino. Corto plazo en pesos.',
     price: 1100,
     yieldRate: 1.5,
-    location: 'BCBA',
+    location: 'Buenos Aires',
     riskLevel: 'medium',
     educationalNote:
       'Las LECAPs son instrumentos de corto plazo en pesos. Sirven para preservar poder adquisitivo frente a la inflación en períodos de carry trade positivo.',
@@ -182,7 +240,7 @@ export const MARKET_ASSETS: MarketAsset[] = [
     description: 'Obligación Negociable de YPF en dólares a 5 años.',
     price: 9500,
     yieldRate: 1.8,
-    location: 'BCBA',
+    location: 'Buenos Aires',
     riskLevel: 'medium',
     educationalNote:
       'Las ONs corporativas tienen menor riesgo que los soberanos pero menor liquidez. YPF es cuasi-soberana: el Estado garantiza implícitamente su deuda.',
@@ -195,7 +253,7 @@ export const MARKET_ASSETS: MarketAsset[] = [
     description: 'Bono provincial respaldado por regalías de Vaca Muerta.',
     price: 7200,
     yieldRate: 2.3,
-    location: 'BCBA',
+    location: 'Neuquén',
     riskLevel: 'high',
     educationalNote:
       'Neuquén emite bonos respaldados por regalías de Vaca Muerta, el mayor yacimiento no convencional fuera de EEUU. El shale oil lo hace único en Sudamérica.',
@@ -215,6 +273,7 @@ export const MARKET_ASSETS: MarketAsset[] = [
     educationalNote:
       'Boca Juniors tiene 6 Copas Libertadores. Su economía depende de la venta de jugadores, derechos de TV y cuotas sociales de sus 300.000 socios.',
     icon: '💛',
+    requiredRep: { sector: 'sports', points: 30 },
   },
   {
     id: 'river',
@@ -228,6 +287,7 @@ export const MARKET_ASSETS: MarketAsset[] = [
     educationalNote:
       'River tiene la cantera más productiva de Argentina: De La Cruz, Álvarez, Beltrán. Exportar jugadores a Europa es su modelo de negocio principal.',
     icon: '❤️',
+    requiredRep: { sector: 'sports', points: 30 },
   },
   {
     id: 'racing',
@@ -262,10 +322,149 @@ export const MARKET_ASSETS: MarketAsset[] = [
     description: 'Club en ascenso con una de las mejores canchas del interior.',
     price: 95000,
     yieldRate: 1.0,
-    location: 'Córdoba Capital',
+    location: 'Córdoba',
     riskLevel: 'high',
     educationalNote:
       'Talleres modernizó el estadio Mario Kempes a 30.000 espectadores. Es el club más popular del interior argentino con proyección regional.',
     icon: '⚽',
+  },
+
+  // ─── AGRICULTURA ─────────────────────────────────────────────────────────────
+  {
+    id: 'soja_pampa',
+    type: 'agriculture',
+    name: 'Soja Pampeana',
+    description: 'Campos de soja en la pampa húmeda, el corazón agrícola de Argentina.',
+    price: 28000,
+    yieldRate: 0.9,
+    location: 'Rosario, Santa Fe',
+    riskLevel: 'medium',
+    educationalNote:
+      'Argentina es el tercer exportador mundial de soja. La cosecha gruesa (marzo-mayo) mueve 20.000 millones de dólares anuales y financia el 30% del gasto público.',
+    icon: '🌿',
+  },
+  {
+    id: 'bodega_lujan',
+    type: 'agriculture',
+    name: 'Bodega en Luján de Cuyo',
+    description: 'Bodega boutique con producción de Malbec premium para exportación.',
+    price: 95000,
+    yieldRate: 1.2,
+    location: 'Luján de Cuyo, Mendoza',
+    riskLevel: 'medium',
+    educationalNote:
+      'Mendoza produce el 75% del vino argentino. El Malbec de Luján de Cuyo gana premios internacionales y se vende a 50 dólares la botella en Europa y EEUU.',
+    icon: '🍷',
+  },
+  {
+    id: 'feedlot_pampas',
+    type: 'agriculture',
+    name: 'Feedlot Pampeano',
+    description: 'Engorde a corral de novillos en la provincia de Buenos Aires.',
+    price: 42000,
+    yieldRate: 0.8,
+    location: 'Buenos Aires',
+    riskLevel: 'medium',
+    educationalNote:
+      'Argentina tiene la mayor cantidad de ganado vacuno per cápita del mundo. El asado es cultura y el ganado es inversión: cada novillo gordo vale 800 dólares en pie.',
+    icon: '🐄',
+  },
+  {
+    id: 'limon_tucuman',
+    type: 'agriculture',
+    name: 'Citricultura Tucumana',
+    description: 'Plantaciones de limón en Tucumán, el mayor productor mundial.',
+    price: 19500,
+    yieldRate: 0.7,
+    location: 'Tucumán',
+    riskLevel: 'low',
+    educationalNote:
+      'Tucumán produce el 80% del limón argentino y Argentina exporta el 30% de la producción mundial. El limón tucumano domina supermercados de Europa.',
+    icon: '🍋',
+  },
+
+  // ─── TURISMO ─────────────────────────────────────────────────────────────────
+  {
+    id: 'hotel_bariloche',
+    type: 'tourism',
+    name: 'Hotel Boutique Bariloche',
+    description: 'Hotel 5 estrellas con vista al lago Nahuel Huapi en San Carlos de Bariloche.',
+    price: 185000,
+    yieldRate: 1.1,
+    location: 'Bariloche, Río Negro',
+    riskLevel: 'medium',
+    educationalNote:
+      'Bariloche recibe 1 millón de turistas por año. La temporada de nieve (jul-ago) y el verano (ene-feb) son peak seasons. Los hoteles tienen ocupación del 85%.',
+    icon: '⛷️',
+  },
+  {
+    id: 'cataratas_lodge',
+    type: 'tourism',
+    name: 'Lodge en Cataratas',
+    description: 'Eco-lodge junto a las Cataratas del Iguazú, Patrimonio de la Humanidad.',
+    price: 220000,
+    yieldRate: 1.3,
+    location: 'Misiones',
+    riskLevel: 'medium',
+    educationalNote:
+      'Las Cataratas del Iguazú son el destino turístico más visitado de Argentina con 1,5M turistas anuales. El turismo en dólares es uno de los pocos ingresos genuinos de divisas.',
+    icon: '💧',
+    requiredRep: { sector: 'tourism', points: 15 },
+  },
+  {
+    id: 'tango_bar',
+    type: 'tourism',
+    name: 'Milonga en San Telmo',
+    description: 'Bar de tango con show nocturno en el barrio histórico de San Telmo.',
+    price: 55000,
+    yieldRate: 0.9,
+    location: 'San Telmo, CABA',
+    riskLevel: 'medium',
+    educationalNote:
+      'El tango es Patrimonio Inmaterial de la Humanidad (UNESCO) y genera 500 millones de dólares anuales en turismo cultural. San Telmo es el barrio más turístico de Buenos Aires.',
+    icon: '💃',
+  },
+
+  // ─── ENERGÍA ─────────────────────────────────────────────────────────────────
+  {
+    id: 'solar_san_juan',
+    type: 'energy',
+    name: 'Planta Solar en San Juan',
+    description: 'Parque fotovoltaico de 50MW en Zonda, zona de mayor irradiación solar del país.',
+    price: 145000,
+    yieldRate: 0.85,
+    location: 'San Juan',
+    riskLevel: 'low',
+    educationalNote:
+      'San Juan tiene 320 días de sol por año, la mayor irradiación solar de Argentina. Los parques solares bajo RenovAr ofrecen contratos de compra garantizados por 20 años en dólares.',
+    icon: '☀️',
+  },
+  {
+    id: 'eolico_chubut',
+    type: 'energy',
+    name: 'Parque Eólico Patagónico',
+    description: 'Aerogeneradores en la estepa chubutense con vientos constantes de 60km/h.',
+    price: 195000,
+    yieldRate: 1.0,
+    location: 'Chubut',
+    riskLevel: 'low',
+    educationalNote:
+      'La Patagonia tiene el mayor potencial eólico del hemisferio sur. El viento patagónico sopla 300 días al año. Argentina apunta al 30% de energía renovable para 2030.',
+    icon: '🌬️',
+    requiredRep: { sector: 'energy', points: 10 },
+  },
+  {
+    id: 'vaca_muerta_pozo',
+    type: 'energy',
+    name: 'Pozo en Vaca Muerta',
+    description: 'Participación en pozo de shale oil en la mayor reserva no convencional fuera de EEUU.',
+    price: 380000,
+    yieldRate: 1.8,
+    location: 'Neuquén',
+    riskLevel: 'high',
+    educationalNote:
+      'Vaca Muerta tiene 27.000 millones de barriles de petróleo y 23.000 TCF de gas. A plena producción puede convertir a Argentina en exportador neto de energía por 100 años.',
+    icon: '🔥',
+    requiredRep: { sector: 'energy', points: 30 },
   },
 ]
