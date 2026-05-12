@@ -1,0 +1,86 @@
+@import "tailwindcss";
+
+@theme {
+  --color-z-bg: #030712;
+  --color-z-surface: #0f172a;
+  --color-z-card: #111827;
+  --color-z-border: #1e293b;
+  --color-z-border-light: #334155;
+  --color-z-text: #f8fafc;
+  --color-z-muted: #64748b;
+  --color-z-faint: #1e293b;
+  --color-z-green: #10b981;
+  --color-z-green-dim: #064e3b;
+  --color-z-red: #ef4444;
+  --color-z-red-dim: #450a0a;
+  --color-z-indigo: #6366f1;
+  --color-z-indigo-dim: #1e1b4b;
+  --color-z-amber: #f59e0b;
+  --color-z-sky: #0ea5e9;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #030712;
+  color: #f8fafc;
+  font-family: system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  min-height: 100dvh;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: #0f172a; }
+::-webkit-scrollbar-thumb { background: #334155; border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+/* Monospace numbers everywhere */
+.mono { font-family: ui-monospace, Consolas, monospace; font-variant-numeric: tabular-nums; }
+
+/* Animated gradient border */
+.glow-border {
+  position: relative;
+}
+.glow-border::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, #10b981, #6366f1, #0ea5e9);
+  opacity: 0.4;
+  z-index: -1;
+}
+
+/* Pulse dot */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+.pulse-dot {
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+/* Ticker scroll */
+@keyframes ticker-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.ticker-track {
+  animation: ticker-scroll 60s linear infinite;
+  display: flex;
+  gap: 0;
+}
+.ticker-track:hover { animation-play-state: paused; }
+
+/* Neural network bg pattern */
+.neural-bg {
+  background-image: radial-gradient(circle at 1px 1px, #1e293b 1px, transparent 0);
+  background-size: 32px 32px;
+}
