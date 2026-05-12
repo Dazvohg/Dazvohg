@@ -1,15 +1,17 @@
 import { Link, useLocation } from 'react-router-dom'
 import {
-  LayoutDashboard, Activity, TrendingUp, Briefcase,
-  GraduationCap, Settings, LogOut, Zap,
+  LayoutDashboard, Activity, Zap, Briefcase,
+  GraduationCap, Wallet, BarChart3, Settings, LogOut,
 } from 'lucide-react'
 
 const NAV = [
-  { to: '/app/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/app/terminal',  icon: Activity,         label: 'Terminal' },
-  { to: '/app/signals',   icon: Zap,              label: 'Señales IA' },
-  { to: '/app/portfolio', icon: Briefcase,         label: 'Portfolio' },
-  { to: '/app/academia',  icon: GraduationCap,    label: 'Academia' },
+  { to: '/app/dashboard',  icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/app/terminal',   icon: Activity,        label: 'Terminal' },
+  { to: '/app/signals',    icon: Zap,             label: 'Señales IA',  badge: '4' },
+  { to: '/app/portfolio',  icon: Briefcase,        label: 'Portfolio' },
+  { to: '/app/finanzas',   icon: Wallet,           label: 'Finanzas' },
+  { to: '/app/simulador',  icon: BarChart3,        label: 'Simulador' },
+  { to: '/app/academia',   icon: GraduationCap,   label: 'Academia' },
 ]
 
 export default function Sidebar() {
@@ -30,7 +32,7 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {/* Model status pill */}
+      {/* Model status */}
       <div className="mx-3 mt-3 mb-1 px-3 py-2 rounded-lg bg-[#064e3b]/40 border border-[#10b981]/20 flex items-center gap-2">
         <span className="w-2 h-2 rounded-full bg-[#10b981] pulse-dot shrink-0" />
         <div className="min-w-0">
@@ -41,7 +43,7 @@ export default function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 px-2 py-3 space-y-0.5">
-        {NAV.map(({ to, icon: Icon, label }) => {
+        {NAV.map(({ to, icon: Icon, label, badge }) => {
           const active = pathname.startsWith(to)
           return (
             <Link
@@ -55,8 +57,10 @@ export default function Sidebar() {
             >
               <Icon size={16} />
               {label}
-              {to === '/app/signals' && (
-                <span className="ml-auto bg-[#10b981] text-black text-[10px] font-bold px-1.5 py-0.5 rounded-full">4</span>
+              {badge && (
+                <span className="ml-auto bg-[#10b981] text-black text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                  {badge}
+                </span>
               )}
             </Link>
           )

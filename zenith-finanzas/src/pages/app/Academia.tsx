@@ -1,151 +1,242 @@
-import { ExternalLink, GraduationCap, GamepadIcon, BookOpen, Trophy } from 'lucide-react'
+import { useState } from 'react'
+import { CheckCircle, Lock, Clock, Star, ChevronRight, X, ArrowLeft, ArrowRight, ExternalLink } from 'lucide-react'
+import { lessons, type Lesson } from '@/data/lessons'
 
-const MODULES = [
-  {
-    title: 'Mango Tycoon',
-    desc: 'Simulador de inversiones argentinas gamificado. Comprá activos, gestioná tu portfolio y aprendé economía jugando.',
-    icon: GamepadIcon,
-    color: '#10b981',
-    badge: 'Game',
-    href: '/',
-    cta: 'Jugar ahora',
-  },
-  {
-    title: 'Conceptos de Trading',
-    desc: 'Aprende los fundamentos: tipos de órdenes, gestión de riesgo, position sizing y psicología del trader.',
-    icon: BookOpen,
-    color: '#6366f1',
-    badge: 'Teoría',
-    href: '#',
-    cta: 'Próximamente',
-    disabled: true,
-  },
-  {
-    title: 'Deep Learning para Finanzas',
-    desc: 'Cómo funciona Zenith v2: Transformers, atención multi-cabeza, FiLM conditioning y estimación de incertidumbre.',
-    icon: GraduationCap,
-    color: '#0ea5e9',
-    badge: 'Avanzado',
-    href: '#',
-    cta: 'Próximamente',
-    disabled: true,
-  },
-  {
-    title: 'Mercados Argentinos 101',
-    desc: 'MERVAL, ADRs, bonos soberanos, contado con liquidación. Todo lo que necesitás saber para operar desde Argentina.',
-    icon: Trophy,
-    color: '#f59e0b',
-    badge: 'Local',
-    href: '#',
-    cta: 'Próximamente',
-    disabled: true,
-  },
-]
+const CATEGORY_COLORS: Record<string, string> = {
+  presupuesto: '#f59e0b',
+  deuda:       '#ef4444',
+  ahorro:      '#10b981',
+  inversión:   '#6366f1',
+  mercados:    '#0ea5e9',
+}
+
+const DIFFICULTY_LABEL: Record<string, string> = {
+  básico:      'Básico',
+  intermedio:  'Intermedio',
+  avanzado:    'Avanzado',
+}
+
+function useLessonProgress() {
+  const key = 'zenith_lessons_done'
+  const [done, setDone] = useState<Set<string>>(() => {
+    try { return new Set(JSON.parse(localStorage.getItem(key) ?? '[]')) }
+    catch { return new Set() }
+  })
+  function complete(id: string) {
+    setDone(prev => {
+      const next = new Set(prev)
+      next.add(id)
+      localStorage.setItem(key, JSON.stringify([...next]))
+      return next
+    })
+  }
+  return { done, complete }
+}
+
+interface LessonModalProps {
+  lesson: Lesson
+  isDone: boolean
+  onComplete: (id: string) => void
+  onClose: () => void
+}
+
+function LessonModal({ lesson, isDone, onComplete, onClose }: LessonModalProps) {
+  const [step, setStep] = useState(0)
+  const total = lesson.steps.length
+  const current = lesson.steps[step]
+  const color = CATEGORY_COLORS[lesson.category] ?? '#6366f1'
+  const isLast = step === total - 1
+
+  function handleFinish() {
+    if (!isDone) onComplete(lesson.id)
+    onClose()
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+      <div className="bg-[#0c1221] border border-[#1e293b] rounded-2xl w-full max-w-lg shadow-2xl flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between p-5 border-b border-[#1e293b]">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">{lesson.icon}</span>
+            <div>
+              <div className="text-[#f8fafc] font-bold text-sm">{lesson.title}</div>
+              <div className="text-[#64748b] text-xs">{step + 1} / {total}</div>
+            </div>
+          </div>
+          <button onClick={onClose} className="text-[#64748b] hover:text-[#f8fafc] transition-colors">
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Progress bar */}
+        <div className="h-1 bg-[#1e293b]">
+          <div
+            className="h-full transition-all duration-500"
+            style={{ width: `${((step + 1) / total) * 100}%`, background: color }}
+          />
+        </div>
+
+        {/* Content */}
+        <div className="p-6 flex-1">
+          <h2 className="text-[#f8fafc] font-bold text-base mb-3">{current.title}</h2>
+          <p className="text-[#94a3b8] text-sm leading-relaxed">{current.content}</p>
+          {current.tip && (
+            <div
+              className="mt-4 rounded-xl p-3 text-xs"
+              style={{ background: `${color}12`, border: `1px solid ${color}25`, color }}
+            >
+              💡 {current.tip}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 pb-6 flex items-center gap-3">
+          {step > 0 && (
+            <button
+              onClick={() => setStep(s => s - 1)}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm text-[#64748b] hover:text-[#f8fafc] bg-[#1e293b] hover:bg-[#334155] transition-colors"
+            >
+              <ArrowLeft size={14} /> Anterior
+            </button>
+          )}
+          <div className="flex-1" />
+          {isLast ? (
+            <button
+              onClick={handleFinish}
+              className="flex items-center gap-1.5 px-5 py-2 rounded-lg text-sm font-semibold text-black transition-colors"
+              style={{ background: color }}
+            >
+              <Star size={14} /> Completar +{lesson.xpReward} XP
+            </button>
+          ) : (
+            <button
+              onClick={() => setStep(s => s + 1)}
+              className="flex items-center gap-1.5 px-5 py-2 rounded-lg text-sm font-semibold text-black transition-colors"
+              style={{ background: color }}
+            >
+              Siguiente <ArrowRight size={14} />
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default function Academia() {
+  const { done, complete } = useLessonProgress()
+  const [active, setActive] = useState<Lesson | null>(null)
+
+  const totalXP = [...done].length * 650
+  const pct = Math.round((done.size / lessons.length) * 100)
+
   return (
     <div className="p-6 space-y-6">
-      <div className="px-0 py-0">
+      <div>
         <h1 className="text-[#f8fafc] font-semibold text-base">Academia Zenith</h1>
-        <p className="text-[#64748b] text-xs mt-0.5">Formación financiera y simuladores de práctica</p>
+        <p className="text-[#64748b] text-xs mt-0.5">Formación financiera argentina · {lessons.length} lecciones</p>
       </div>
 
-      <div className="bg-gradient-to-r from-[#064e3b]/30 to-[#1e1b4b]/30 border border-[#10b981]/20 rounded-2xl p-6 flex gap-5 items-center">
-        <div className="w-14 h-14 rounded-2xl bg-[#10b981]/20 border border-[#10b981]/30 flex items-center justify-center shrink-0 text-2xl">
-          🥭
+      {/* XP banner */}
+      <div className="bg-gradient-to-r from-[#1e1b4b]/60 to-[#064e3b]/30 border border-[#6366f1]/20 rounded-2xl p-5 flex gap-5 items-center">
+        <div className="w-12 h-12 rounded-2xl bg-[#6366f1]/20 border border-[#6366f1]/30 flex items-center justify-center text-2xl shrink-0">
+          🎓
         </div>
-        <div>
-          <div className="text-[#f8fafc] font-bold text-lg mb-1">Mango Tycoon — El juego financiero argentino</div>
-          <p className="text-[#94a3b8] text-sm max-w-xl">
-            Invertí en empresas, inmuebles, bonos, energía y turismo argentino. Manejá tu reputación
-            por sector, fundá tu propia empresa y competí en el ranking global.
-          </p>
-          <a
-            href="/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 mt-3 text-sm font-semibold text-[#10b981] hover:text-[#059669] transition-colors"
-          >
-            Abrir Mango Tycoon <ExternalLink size={14} />
-          </a>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[#f8fafc] font-bold">{totalXP.toLocaleString('es-AR')} XP acumulados</span>
+            <span className="text-[#64748b] text-xs">{done.size}/{lessons.length} completadas</span>
+          </div>
+          <div className="h-2 bg-[#1e293b] rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-[#6366f1] to-[#10b981] rounded-full transition-all duration-700"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+          <div className="text-[#64748b] text-xs mt-1">{pct}% completado</div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {MODULES.map(m => {
-          const Icon = m.icon
+      {/* Lessons grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {lessons.map((lesson, i) => {
+          const color = CATEGORY_COLORS[lesson.category] ?? '#6366f1'
+          const isDone = done.has(lesson.id)
+          const locked = i > done.size + 1
+
           return (
             <div
-              key={m.title}
-              className={`bg-[#111827] border rounded-xl p-5 transition-colors ${
-                m.disabled ? 'border-[#1e293b] opacity-60' : 'border-[#1e293b] hover:border-[#334155]'
+              key={lesson.id}
+              onClick={() => !locked && setActive(lesson)}
+              className={`bg-[#111827] border rounded-xl p-5 transition-all cursor-pointer ${
+                locked
+                  ? 'border-[#1e293b] opacity-40 cursor-not-allowed'
+                  : isDone
+                  ? 'border-[#10b981]/30 hover:border-[#10b981]/50'
+                  : 'border-[#1e293b] hover:border-[#334155]'
               }`}
             >
-              <div className="flex items-start gap-4">
-                <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                  style={{ background: `${m.color}15`, border: `1px solid ${m.color}25` }}
-                >
-                  <Icon size={18} style={{ color: m.color }} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-[#f8fafc] font-semibold text-sm">{m.title}</span>
-                    <span
-                      className="text-[10px] px-1.5 py-0.5 rounded font-medium"
-                      style={{ color: m.color, background: `${m.color}15` }}
-                    >
-                      {m.badge}
-                    </span>
-                  </div>
-                  <p className="text-[#64748b] text-xs leading-relaxed mb-3">{m.desc}</p>
-                  {m.disabled ? (
-                    <span className="text-xs text-[#334155]">{m.cta}</span>
-                  ) : (
-                    <a
-                      href={m.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 text-xs font-semibold transition-colors"
-                      style={{ color: m.color }}
-                    >
-                      {m.cta} <ExternalLink size={11} />
-                    </a>
-                  )}
-                </div>
+              <div className="flex items-start justify-between mb-3">
+                <span className="text-2xl">{lesson.icon}</span>
+                {isDone ? (
+                  <CheckCircle size={16} className="text-[#10b981] shrink-0" />
+                ) : locked ? (
+                  <Lock size={14} className="text-[#334155] shrink-0" />
+                ) : (
+                  <ChevronRight size={16} className="text-[#334155] shrink-0" />
+                )}
+              </div>
+
+              <div
+                className="text-[10px] font-semibold px-1.5 py-0.5 rounded mb-2 inline-block"
+                style={{ color, background: `${color}15` }}
+              >
+                {DIFFICULTY_LABEL[lesson.difficulty]}
+              </div>
+
+              <div className="text-[#f8fafc] font-semibold text-sm mb-1">{lesson.title}</div>
+              <p className="text-[#64748b] text-xs leading-relaxed mb-3">{lesson.description}</p>
+
+              <div className="flex items-center gap-3 text-[#475569] text-xs">
+                <span className="flex items-center gap-1"><Clock size={11} /> {lesson.estimatedMinutes}min</span>
+                <span className="flex items-center gap-1"><Star size={11} /> {lesson.xpReward} XP</span>
               </div>
             </div>
           )
         })}
       </div>
 
-      {/* Zenith model summary */}
-      <div className="bg-[#0c1221] border border-[#1e293b] rounded-xl p-6">
-        <div className="text-[#f8fafc] font-bold mb-3">Zenith v2.0 — Resumen de Arquitectura</div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs mb-4">
-          {[
-            { label: 'Parámetros',   value: '8M+' },
-            { label: 'Features',     value: '70+' },
-            { label: 'Capas',        value: '35+' },
-            { label: 'Regímenes',    value: '6' },
-            { label: 'Timeframes',   value: '3 (5s/15s/60s)' },
-            { label: 'Símbolos',     value: '20 simultáneos' },
-            { label: 'Buffer size',  value: '100K samples' },
-            { label: 'Train cada',   value: '500 steps' },
-          ].map(s => (
-            <div key={s.label} className="bg-[#111827] rounded-lg p-3">
-              <div className="text-[#64748b] mb-0.5">{s.label}</div>
-              <div className="font-mono text-[#f8fafc] font-bold">{s.value}</div>
-            </div>
-          ))}
+      {/* Mango Tycoon CTA */}
+      <div className="bg-gradient-to-r from-[#064e3b]/30 to-[#1e1b4b]/30 border border-[#10b981]/20 rounded-2xl p-5 flex gap-4 items-center">
+        <div className="w-12 h-12 rounded-2xl bg-[#10b981]/20 border border-[#10b981]/30 flex items-center justify-center text-2xl shrink-0">
+          🥭
         </div>
-        <p className="text-[#64748b] text-xs leading-relaxed">
-          Pipeline: Input Embeddings → Dual-Stream Encoder (Transformer price + CNN volume) →
-          Transformer Stack (4L, 8H) → Regime Conditioning FiLM → Attention Pooling →
-          Multi-Task Heads (probability + PnL + volatility) con Kendall uncertainty weighting.
-          Prioritized replay buffer con recency decay y curriculum learning en 3 etapas.
-        </p>
+        <div className="flex-1 min-w-0">
+          <div className="text-[#f8fafc] font-bold text-sm mb-1">Mango Tycoon — Aprendé jugando</div>
+          <p className="text-[#94a3b8] text-xs">
+            Invertí en empresas, bonos y activos argentinos en un simulador gamificado. Competí en el ranking global.
+          </p>
+        </div>
+        <a
+          href="/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold text-[#10b981] bg-[#10b981]/10 border border-[#10b981]/20 hover:bg-[#10b981]/20 transition-colors shrink-0"
+        >
+          Jugar <ExternalLink size={13} />
+        </a>
       </div>
+
+      {active && (
+        <LessonModal
+          lesson={active}
+          isDone={done.has(active.id)}
+          onComplete={complete}
+          onClose={() => setActive(null)}
+        />
+      )}
     </div>
   )
 }
