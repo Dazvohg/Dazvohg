@@ -205,6 +205,26 @@ export default function Dashboard() {
           ))}
         </div>
       </div>
+
+      {/* Mango Tycoon cross-promo */}
+      <a
+        href={import.meta.env.VITE_MANGO_URL ?? 'http://localhost:5173'}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center gap-4 bg-gradient-to-r from-[#78350f]/20 to-[#111827] border border-[#d97706]/25 rounded-xl p-5 hover:border-[#d97706]/50 transition-colors group"
+      >
+        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#d97706]/20 to-[#f59e0b]/10 border border-[#d97706]/30 flex items-center justify-center shrink-0 text-2xl">
+          🥭
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-0.5">
+            <span className="text-[#f8fafc] font-bold text-sm group-hover:text-[#fbbf24] transition-colors">Mango Tycoon</span>
+            <span className="text-[10px] bg-[#d97706]/15 text-[#d97706] border border-[#d97706]/20 px-1.5 py-0.5 rounded-full">Ecosistema Zenith</span>
+          </div>
+          <p className="text-[#64748b] text-xs">Practicá lo que aprendés acá. Invertí en Argentina como juego — activos reales, economía simulada.</p>
+        </div>
+        <ArrowRight size={16} className="text-[#d97706] shrink-0 group-hover:translate-x-1 transition-transform" />
+      </a>
     </div>
   )
 }

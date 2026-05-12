@@ -520,6 +520,58 @@ export default function Home() {
         </motion.div>
       </section>
 
+      {/* ── ZENITH ECOSYSTEM ──────────────────────────────────────────────── */}
+      <section className="px-4 py-14 border-t border-gray-800">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="max-w-sm mx-auto"
+        >
+          <div className="text-center mb-6">
+            <span className="inline-flex items-center gap-2 text-xs text-gray-500 bg-gray-900 border border-gray-700 px-3 py-1.5 rounded-full">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+              Ecosistema Zenith
+            </span>
+          </div>
+          <a
+            href={import.meta.env.VITE_ZENITH_URL ?? 'http://localhost:5174'}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block bg-gradient-to-br from-gray-900 to-gray-950 border border-indigo-700/30 rounded-3xl p-7 hover:border-indigo-500/50 transition-colors group"
+          >
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#10b981] to-[#6366f1] flex items-center justify-center shrink-0 shadow-lg shadow-indigo-900/40">
+                <span className="text-white text-lg font-black">Z</span>
+              </div>
+              <div>
+                <div className="text-white font-black text-base group-hover:text-[#10b981] transition-colors">ZENITH FINANZAS</div>
+                <div className="text-[10px] text-[#10b981] tracking-widest font-semibold">ANÁLISIS PRO CON IA →</div>
+              </div>
+            </div>
+            <p className="text-gray-400 text-sm leading-relaxed mb-5">
+              La herramienta profesional del ecosistema. Deep Learning sobre MERVAL, ADRs y bonos argentinos con estimación de incertidumbre por señal.
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { icon: '🤖', label: 'Señales IA', sub: '67.3% win rate' },
+                { icon: '📡', label: 'Terminal', sub: 'Tiempo real' },
+                { icon: '📊', label: 'Simulador', sub: '13 instrumentos' },
+                { icon: '🎓', label: 'Academia', sub: 'Mismas lecciones' },
+              ].map((item) => (
+                <div key={item.label} className="bg-gray-800/50 rounded-xl p-3 flex items-center gap-2.5">
+                  <span className="text-lg shrink-0">{item.icon}</span>
+                  <div>
+                    <div className="text-xs font-semibold text-gray-200">{item.label}</div>
+                    <div className="text-[10px] text-gray-500">{item.sub}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </a>
+        </motion.div>
+      </section>
+
       {/* ── FINAL CTA ─────────────────────────────────────────────────────── */}
       <section className="px-4 py-20 text-center">
         <motion.div

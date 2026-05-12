@@ -395,6 +395,88 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* ── Ecosystem ──────────────────────────────── */}
+      <section className="py-20 px-6 border-t border-[#1e293b] bg-[#060910]">
+        <div className="max-w-4xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-10"
+          >
+            <div className="inline-flex items-center gap-2 text-xs text-[#64748b] bg-[#1e293b]/50 border border-[#334155] px-3 py-1.5 rounded-full mb-4">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#10b981]" /> Ecosistema
+            </div>
+            <h2 className="text-3xl font-black text-[#f8fafc] mb-3">Dos apps. Una misión.</h2>
+            <p className="text-[#64748b] max-w-md mx-auto text-sm">
+              Zenith Finanzas y Mango Tycoon son parte del mismo ecosistema.
+              Aprendé finanzas con análisis de IA profesional y practicá con el juego.
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {/* Zenith card */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.1 }}
+              className="bg-[#0c1221] border-2 border-[#10b981]/40 rounded-2xl p-6"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#10b981] to-[#6366f1] flex items-center justify-center shrink-0">
+                  <span className="text-white text-base font-black">Z</span>
+                </div>
+                <div>
+                  <div className="text-[#f8fafc] font-bold text-sm">ZENITH FINANZAS</div>
+                  <div className="text-[10px] text-[#10b981] tracking-wide">ANÁLISIS PRO · ESTÁS AQUÍ</div>
+                </div>
+              </div>
+              <p className="text-[#64748b] text-xs leading-relaxed mb-4">
+                Deep Learning sobre MERVAL, ADRs y bonos. Señales con estimación de incertidumbre,
+                terminal de mercado, simulador de inversiones y Academia financiera.
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {['Señales IA', 'Terminal', 'Simulador', 'Academia', 'Portfolio'].map(tag => (
+                  <span key={tag} className="text-[10px] bg-[#10b981]/10 text-[#10b981] border border-[#10b981]/20 px-2 py-0.5 rounded-full">{tag}</span>
+                ))}
+              </div>
+            </motion.div>
+
+            {/* Mango card */}
+            <motion.a
+              href={import.meta.env.VITE_MANGO_URL ?? 'http://localhost:5173'}
+              target="_blank"
+              rel="noopener noreferrer"
+              initial={{ opacity: 0, x: 20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.2 }}
+              className="bg-[#0c1221] border border-[#d97706]/30 rounded-2xl p-6 hover:border-[#d97706]/60 transition-colors cursor-pointer group block"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#d97706] to-[#f59e0b] flex items-center justify-center shrink-0 text-xl">
+                  🥭
+                </div>
+                <div>
+                  <div className="text-[#f8fafc] font-bold text-sm group-hover:text-[#fbbf24] transition-colors">MANGO TYCOON</div>
+                  <div className="text-[10px] text-[#d97706] tracking-wide">JUEGO FINANCIERO →</div>
+                </div>
+              </div>
+              <p className="text-[#64748b] text-xs leading-relaxed mb-4">
+                Simulador de inversiones en Argentina como juego. Comprá activos reales (empresas,
+                bonos, inmuebles), construí tu empresa y aprendé finanzas jugando.
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {['50+ Activos', '8 Regiones', 'Empresa propia', 'Ranking', '650 MC/lección'].map(tag => (
+                  <span key={tag} className="text-[10px] bg-[#d97706]/10 text-[#d97706] border border-[#d97706]/20 px-2 py-0.5 rounded-full">{tag}</span>
+                ))}
+              </div>
+            </motion.a>
+          </div>
+        </div>
+      </section>
+
       {/* ── Footer ─────────────────────────────────── */}
       <footer className="border-t border-[#1e293b] py-8 px-6 text-center text-[#64748b] text-xs">
         <div className="flex items-center justify-center gap-2 mb-2">
@@ -402,6 +484,9 @@ export default function Landing() {
             <span className="text-white text-[10px] font-black">Z</span>
           </div>
           <span className="text-white font-bold text-sm">ZENITH FINANZAS</span>
+          <span className="text-[#334155] mx-2">·</span>
+          <span className="text-xl">🥭</span>
+          <span className="text-[#64748b] font-medium text-sm">Mango Tycoon</span>
         </div>
         <p>Señales generadas por IA con fines informativos. No constituye asesoría financiera.</p>
         <p className="mt-1 text-[#334155]">Rendimientos pasados no garantizan rendimientos futuros.</p>

@@ -51,6 +51,16 @@ export default function NavBar() {
                 </div>
               </>
             )}
+            <a
+              href={import.meta.env.VITE_ZENITH_URL ?? 'http://localhost:5174'}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hidden sm:flex items-center gap-1 bg-gray-900 rounded-xl px-2.5 py-1.5 border border-indigo-700/40 hover:border-indigo-500/60 transition-colors"
+              title="Zenith Finanzas"
+            >
+              <span className="text-xs font-black text-white">Z</span>
+              <span className="text-[10px] text-[#10b981] font-semibold tracking-wide">ZENITH</span>
+            </a>
             <button
               onClick={handleSignOut}
               className="p-2 text-gray-500 hover:text-red-400 transition-colors"

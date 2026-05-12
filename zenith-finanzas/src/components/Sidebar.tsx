@@ -67,6 +67,22 @@ export default function Sidebar() {
         })}
       </nav>
 
+      {/* Ecosystem cross-promo */}
+      <div className="px-2 py-2 border-t border-[#1e293b]">
+        <a
+          href={import.meta.env.VITE_MANGO_URL ?? 'http://localhost:5173'}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg hover:bg-[#1e293b] transition-colors group"
+        >
+          <span className="text-xl shrink-0">🥭</span>
+          <div className="min-w-0">
+            <div className="text-xs font-semibold text-[#f8fafc] group-hover:text-[#fbbf24] transition-colors">Mango Tycoon</div>
+            <div className="text-[10px] text-[#10b981] tracking-wide">Ecosistema Zenith →</div>
+          </div>
+        </a>
+      </div>
+
       {/* Bottom */}
       <div className="px-2 pb-4 space-y-0.5 border-t border-[#1e293b] pt-3">
         <Link

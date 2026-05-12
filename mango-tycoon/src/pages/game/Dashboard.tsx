@@ -186,6 +186,28 @@ export default function Dashboard() {
         </div>
       </Link>
 
+      {/* Zenith Finanzas cross-promo */}
+      <a
+        href={import.meta.env.VITE_ZENITH_URL ?? 'http://localhost:5174'}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block card bg-gradient-to-r from-indigo-900/20 to-gray-900 border-indigo-700/30 hover:border-indigo-600/50 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#10b981]/20 to-[#6366f1]/20 border border-[#10b981]/30 flex items-center justify-center shrink-0">
+            <span className="text-white text-sm font-black">Z</span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <p className="text-sm font-bold text-white">Zenith Finanzas</p>
+              <span className="text-[9px] bg-[#10b981]/15 text-[#10b981] px-1.5 py-0.5 rounded-full font-semibold">IA</span>
+            </div>
+            <p className="text-xs text-gray-500">Señales Deep Learning para MERVAL · Herramienta pro del ecosistema</p>
+          </div>
+          <span className="text-xs text-[#10b981] font-bold shrink-0">Abrir →</span>
+        </div>
+      </a>
+
       {/* Recent assets */}
       {ownedAssets.length > 0 && (
         <div className="card">
