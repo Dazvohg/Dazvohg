@@ -1033,6 +1033,291 @@ def example_usage():
     print("\nModelo guardado en: zenith_v2_checkpoint.pt")
 
 
+# =============================================================================
+# MODEL ENDPOINT
+# =============================================================================
+
+import logging
+import json
+import os
+import secrets
+import uuid
+from contextlib import asynccontextmanager
+
+try:
+    from fastapi import FastAPI, HTTPException, Security, Request, Response
+    from fastapi.security import APIKeyHeader
+    from fastapi.responses import PlainTextResponse
+    from pydantic import BaseModel, Field
+    import uvicorn
+    _FASTAPI_AVAILABLE = True
+except ImportError:
+    _FASTAPI_AVAILABLE = False
+
+try:
+    from prometheus_client import Counter, Histogram, Gauge, generate_latest, CONTENT_TYPE_LATEST
+    _PROMETHEUS_AVAILABLE = True
+except ImportError:
+    _PROMETHEUS_AVAILABLE = False
+
+
+# ---------------------------------------------------------------------------
+# Structured JSON logger
+# ---------------------------------------------------------------------------
+
+class _JSONFormatter(logging.Formatter):
+    def format(self, record: logging.LogRecord) -> str:
+        payload = {
+            "ts": self.formatTime(record, "%Y-%m-%dT%H:%M:%S"),
+            "level": record.levelname,
+            "msg": record.getMessage(),
+        }
+        if hasattr(record, "extra"):
+            payload.update(record.extra)
+        if record.exc_info:
+            payload["exc"] = self.formatException(record.exc_info)
+        return json.dumps(payload)
+
+
+def _make_logger(name: str = "zenith.endpoint") -> logging.Logger:
+    logger = logging.getLogger(name)
+    if not logger.handlers:
+        handler = logging.StreamHandler()
+        handler.setFormatter(_JSONFormatter())
+        logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
+    return logger
+
+
+_logger = _make_logger()
+
+
+# ---------------------------------------------------------------------------
+# Prometheus metrics (no-op stubs when library is absent)
+# ---------------------------------------------------------------------------
+
+if _PROMETHEUS_AVAILABLE:
+    _REQ_TOTAL   = Counter("zenith_requests_total",   "Total requests",      ["endpoint", "status"])
+    _REQ_LATENCY = Histogram("zenith_latency_seconds", "Request latency (s)", ["endpoint"],
+                             buckets=[.001, .005, .01, .025, .05, .1, .25, .5, 1])
+    _PROB_GAUGE  = Gauge("zenith_prediction_probability_mean", "Mean predicted probability")
+    _BUFFER_GAUGE= Gauge("zenith_buffer_size", "Replay buffer size")
+else:
+    class _Noop:
+        def labels(self, **_): return self
+        def inc(self, *a, **k): pass
+        def observe(self, *a, **k): pass
+        def set(self, *a, **k): pass
+        def time(self): return self
+        def __enter__(self): return self
+        def __exit__(self, *a): pass
+    _REQ_TOTAL = _REQ_LATENCY = _PROB_GAUGE = _BUFFER_GAUGE = _Noop()
+
+
+# ---------------------------------------------------------------------------
+# Pydantic schemas
+# ---------------------------------------------------------------------------
+
+class PredictRequest(BaseModel):
+    price_seq: List[List[float]]
+    volume_seq: List[List[float]]
+    microstructure: List[float]
+    indicators: List[float]
+    context: List[float]
+    cross_asset: List[float]
+    symbol_id: int
+    regime_id: int
+    timeframe_id: int
+
+
+class PredictResponse(BaseModel):
+    request_id: str
+    probability: float
+    pnl: float
+    volatility: float
+    prob_uncertainty: float
+    pnl_uncertainty: float
+    latency_ms: float
+
+
+class BatchPredictRequest(BaseModel):
+    items: List[PredictRequest] = Field(..., min_length=1, max_length=512)
+
+
+class BatchPredictResponse(BaseModel):
+    request_id: str
+    results: List[PredictResponse]
+    latency_ms: float
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+_API_KEY_HEADER = APIKeyHeader(name="X-API-Key", auto_error=True) if _FASTAPI_AVAILABLE else None
+
+
+def _verify_key(api_key: str, valid_key: str):
+    if not secrets.compare_digest(api_key, valid_key):
+        raise HTTPException(status_code=401, detail="Invalid API key")
+
+
+def _build_experience(req: "PredictRequest") -> Experience:
+    return Experience(
+        price_seq=np.array(req.price_seq, dtype=np.float32),
+        volume_seq=np.array(req.volume_seq, dtype=np.float32),
+        microstructure=np.array(req.microstructure, dtype=np.float32),
+        indicators=np.array(req.indicators, dtype=np.float32),
+        context=np.array(req.context, dtype=np.float32),
+        cross_asset=np.array(req.cross_asset, dtype=np.float32),
+        symbol_id=req.symbol_id,
+        regime_id=req.regime_id,
+        timeframe_id=req.timeframe_id,
+        win=0,
+        pnl_bps=0.0,
+        volatility=0.0,
+        timestamp=int(time.time() * 1000),
+    )
+
+
+def _run_inference(trainer: "ZenithTrainer", experiences: list) -> dict:
+    batch = trainer.collate_batch(experiences)
+    return trainer.predict(batch)
+
+
+# ---------------------------------------------------------------------------
+# App factory
+# ---------------------------------------------------------------------------
+
+def create_app(trainer: "ZenithTrainer", api_key: Optional[str] = None) -> "FastAPI":
+    """
+    Creates a production-ready FastAPI app for ZenithNetV2.
+
+    Args:
+        trainer:  Initialised ZenithTrainer instance.
+        api_key:  Secret key clients must pass via X-API-Key header.
+                  Defaults to the ZENITH_API_KEY env var, or a random key
+                  printed to stdout on startup (dev mode).
+    """
+    if not _FASTAPI_AVAILABLE:
+        raise ImportError("pip install fastapi uvicorn prometheus-client")
+
+    _key = api_key or os.environ.get("ZENITH_API_KEY") or secrets.token_hex(32)
+    if not (api_key or os.environ.get("ZENITH_API_KEY")):
+        _logger.info({"msg": "dev mode — generated API key", "key": _key})
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        _logger.info({"msg": "ZenithNetV2 endpoint starting", "step": trainer.step})
+        yield
+        _logger.info({"msg": "ZenithNetV2 endpoint stopped"})
+
+    app = FastAPI(title="ZenithNetV2 Model Endpoint", version="2.0", lifespan=lifespan)
+
+    # ------------------------------------------------------------------
+    # Middleware: request logging + latency tracking
+    # ------------------------------------------------------------------
+
+    @app.middleware("http")
+    async def logging_middleware(request: Request, call_next):
+        rid = str(uuid.uuid4())
+        request.state.request_id = rid
+        t0 = time.perf_counter()
+        response: Response = await call_next(request)
+        elapsed = (time.perf_counter() - t0) * 1000
+        status = str(response.status_code)
+        _logger.info({
+            "msg": "request",
+            "request_id": rid,
+            "method": request.method,
+            "path": request.url.path,
+            "status": status,
+            "latency_ms": round(elapsed, 2),
+        })
+        _REQ_TOTAL.labels(endpoint=request.url.path, status=status).inc()
+        _REQ_LATENCY.labels(endpoint=request.url.path).observe(elapsed / 1000)
+        response.headers["X-Request-Id"] = rid
+        return response
+
+    # ------------------------------------------------------------------
+    # Routes
+    # ------------------------------------------------------------------
+
+    @app.get("/health")
+    def health():
+        _BUFFER_GAUGE.set(len(trainer.buffer))
+        return {"status": "ok", "buffer_size": len(trainer.buffer), "step": trainer.step}
+
+    @app.get("/metrics", response_class=PlainTextResponse)
+    def metrics():
+        if not _PROMETHEUS_AVAILABLE:
+            raise HTTPException(status_code=501, detail="prometheus_client not installed")
+        return PlainTextResponse(generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
+    @app.post("/predict", response_model=PredictResponse)
+    def predict(request: Request, body: PredictRequest,
+                key: str = Security(_API_KEY_HEADER)):
+        _verify_key(key, _key)
+        rid = getattr(request.state, "request_id", str(uuid.uuid4()))
+        t0 = time.perf_counter()
+        try:
+            result = _run_inference(trainer, [_build_experience(body)])
+            elapsed = (time.perf_counter() - t0) * 1000
+            prob = float(result["probability"][0])
+            _PROB_GAUGE.set(prob)
+            return PredictResponse(
+                request_id=rid,
+                probability=prob,
+                pnl=float(result["pnl"][0]),
+                volatility=float(result["volatility"][0]),
+                prob_uncertainty=float(result["prob_uncertainty"][0]),
+                pnl_uncertainty=float(result["pnl_uncertainty"][0]),
+                latency_ms=round(elapsed, 2),
+            )
+        except Exception as e:
+            _logger.error({"msg": "predict error", "request_id": rid, "error": str(e)})
+            raise HTTPException(status_code=400, detail=str(e))
+
+    @app.post("/predict/batch", response_model=BatchPredictResponse)
+    def predict_batch(request: Request, body: BatchPredictRequest,
+                      key: str = Security(_API_KEY_HEADER)):
+        _verify_key(key, _key)
+        rid = getattr(request.state, "request_id", str(uuid.uuid4()))
+        t0 = time.perf_counter()
+        try:
+            experiences = [_build_experience(item) for item in body.items]
+            result = _run_inference(trainer, experiences)
+            elapsed = (time.perf_counter() - t0) * 1000
+            probs = result["probability"]
+            _PROB_GAUGE.set(float(probs.mean()))
+            responses = [
+                PredictResponse(
+                    request_id=f"{rid}:{i}",
+                    probability=float(probs[i]),
+                    pnl=float(result["pnl"][i]),
+                    volatility=float(result["volatility"][i]),
+                    prob_uncertainty=float(result["prob_uncertainty"][i]),
+                    pnl_uncertainty=float(result["pnl_uncertainty"][i]),
+                    latency_ms=round(elapsed, 2),
+                )
+                for i in range(len(experiences))
+            ]
+            return BatchPredictResponse(request_id=rid, results=responses,
+                                        latency_ms=round(elapsed, 2))
+        except Exception as e:
+            _logger.error({"msg": "batch predict error", "request_id": rid, "error": str(e)})
+            raise HTTPException(status_code=400, detail=str(e))
+
+    return app
+
+
+def serve(trainer: "ZenithTrainer", host: str = "0.0.0.0", port: int = 8000,
+          api_key: Optional[str] = None):
+    """Start the model endpoint server."""
+    app = create_app(trainer, api_key=api_key)
+    uvicorn.run(app, host=host, port=port)
+
+
 if __name__ == '__main__':
     example_usage()
         self.regime_conditioning = RegimeConditioning(config.n_regimes, config.hidden_dim)
