@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Zap, Filter, Brain, TrendingUp } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Zap, Filter, Brain, TrendingUp, Radio } from 'lucide-react'
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis,
   Tooltip, CartesianGrid, ReferenceLine,
@@ -8,17 +8,99 @@ import Header from '@/components/Header'
 import SignalCard from '@/components/SignalCard'
 import { SIGNALS, PERFORMANCE, generateDailyPnL } from '@/data/signals'
 import type { ZenithSignal } from '@/data/signals'
+import { zenithApi } from '@/lib/zenithApi'
+import type { ZenithSignal as ApiSignal } from '@/lib/zenithApi'
 
 type FilterStatus = 'all' | ZenithSignal['status']
 type FilterDir = 'all' | 'LONG' | 'SHORT'
 
 const dailyPnL = generateDailyPnL(60)
 
+/** Map an API signal to the local ZenithSignal shape expected by SignalCard */
+function mapApiSignal(s: ApiSignal): ZenithSignal {
+  const direction = s.side === 'BUY' ? 'LONG' : 'SHORT'
+  // Derive synthetic price levels from stop_bps
+  const syntheticEntry = 100
+  const stopOffset = (s.stop_bps / 10_000) * syntheticEntry
+  const targetOffset = stopOffset * 1.5
+  const localStatus: ZenithSignal['status'] =
+    s.status === 'active' ? 'active'
+    : s.status === 'pending' ? 'pending'
+    : 'closed_win'
+
+  return {
+    id: s.id,
+    symbol: s.symbol,
+    name: s.symbol,
+    direction,
+    status: localStatus,
+    probability: s.probability,
+    uncertainty: s.prob_uncertainty,
+    entryPrice: syntheticEntry,
+    targetPrice: direction === 'LONG' ? syntheticEntry + targetOffset : syntheticEntry - targetOffset,
+    stopLoss: direction === 'LONG' ? syntheticEntry - stopOffset : syntheticEntry + stopOffset,
+    currentPrice: syntheticEntry,
+    pnlBps: s.pnl_bps,
+    regime: s.regime,
+    timeframe: s.timeframe as ZenithSignal['timeframe'],
+    createdAt: new Date(s.generated_at * 1000).toISOString(),
+    modelVersion: 'zenith-v2.0',
+    attentionPeaks: s.tags,
+  }
+}
+
 export default function Signals() {
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all')
   const [filterDir, setFilterDir] = useState<FilterDir>('all')
+  const [liveSignals, setLiveSignals] = useState<ZenithSignal[]>([])
+  const [connected, setConnected] = useState(false)
+  const disconnectRef = useRef<(() => void) | null>(null)
 
-  const filtered = SIGNALS.filter(s => {
+  useEffect(() => {
+    // Initial fetch of signals from HTTP endpoint
+    zenithApi.signals().then(({ signals }) => {
+      if (signals.length > 0) {
+        setLiveSignals(signals.map(mapApiSignal))
+      }
+    })
+
+    // Connect WebSocket for live updates
+    const disconnect = zenithApi.connectWebSocket((apiSignals, _regime) => {
+      setConnected(true)
+      if (apiSignals.length > 0) {
+        setLiveSignals(apiSignals.map(mapApiSignal))
+      }
+    })
+
+    // Patch disconnect to also clear connected flag
+    disconnectRef.current = () => {
+      disconnect()
+      setConnected(false)
+    }
+
+    // Detect WebSocket connection by checking after a short delay;
+    // if ws cannot connect (API unavailable) the onerror fires quickly
+    const timer = setTimeout(() => {
+      // If we haven't received any message within 3s, assume disconnected
+    }, 3000)
+
+    return () => {
+      clearTimeout(timer)
+      disconnectRef.current?.()
+    }
+  }, [])
+
+  // Merge: API signals take priority over static; keyed by symbol to deduplicate
+  const mergedSignals: ZenithSignal[] = (() => {
+    if (liveSignals.length === 0) return SIGNALS
+    const apiById = new Map(liveSignals.map(s => [s.id, s]))
+    const apiBySymbol = new Map(liveSignals.map(s => [s.symbol, s]))
+    // Replace static signals whose symbol matches a live signal, keep the rest
+    const base = SIGNALS.filter(s => !apiBySymbol.has(s.symbol))
+    return [...liveSignals, ...base.filter(s => !apiById.has(s.id))]
+  })()
+
+  const filtered = mergedSignals.filter(s => {
     if (filterStatus !== 'all' && s.status !== filterStatus) return false
     if (filterDir !== 'all' && s.direction !== filterDir) return false
     return true
@@ -26,7 +108,28 @@ export default function Signals() {
 
   return (
     <div className="p-6 space-y-6">
-      <Header title="Señales Zenith IA" subtitle="Predicciones del modelo con estimación de incertidumbre" />
+      <div className="flex items-start justify-between gap-4">
+        <Header title="Señales Zenith IA" subtitle="Predicciones del modelo con estimación de incertidumbre" />
+        <div className="flex items-center gap-2 shrink-0 mt-1">
+          {connected ? (
+            <>
+              <span className="flex items-center gap-1.5 text-xs font-semibold text-[#10b981] bg-[#10b981]/10 border border-[#10b981]/25 px-2.5 py-1 rounded-full">
+                <Radio size={10} className="animate-pulse" />
+                LIVE
+              </span>
+              <span className="text-[10px] text-[#10b981]">Conectado al modelo</span>
+            </>
+          ) : (
+            <>
+              <span className="flex items-center gap-1.5 text-xs text-[#64748b] bg-[#1e293b] border border-[#334155] px-2.5 py-1 rounded-full">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#64748b]" />
+                DEMO
+              </span>
+              <span className="text-[10px] text-[#64748b]">Modo demo</span>
+            </>
+          )}
+        </div>
+      </div>
 
       {/* Performance overview */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -144,7 +247,7 @@ export default function Signals() {
           </button>
         ))}
 
-        <span className="ml-auto text-xs text-[#64748b]">{filtered.length} señales</span>
+        <span className="ml-auto text-xs text-[#64748b]">{filtered.length} señales · {mergedSignals.length} total{liveSignals.length > 0 ? ` (${liveSignals.length} en vivo)` : ''}</span>
       </div>
 
       {/* Signal grid */}

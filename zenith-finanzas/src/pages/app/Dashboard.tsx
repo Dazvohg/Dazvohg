@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   TrendingUp, TrendingDown, Zap, Activity,
@@ -11,12 +12,26 @@ import PriceChart from '@/components/PriceChart'
 import { INSTRUMENTS, REGIMES } from '@/data/market'
 import { SIGNALS, PERFORMANCE } from '@/data/signals'
 import { SUMMARY } from '@/data/portfolio'
+import { zenithApi, type ModelStatus, type ZenithRegime } from '@/lib/zenithApi'
 
-const currentRegime = { ...REGIMES[0], confidence: 0.847 }
+const staticRegime = { ...REGIMES[0], confidence: 0.847 }
 const activeSignals = SIGNALS.filter(s => s.status === 'active' || s.status === 'pending')
 const topInstruments = INSTRUMENTS.slice(0, 6)
 
 export default function Dashboard() {
+  const [modelStatus, setModelStatus] = useState<ModelStatus | null>(null)
+  const [liveRegime, setLiveRegime] = useState<ZenithRegime | null>(null)
+
+  useEffect(() => {
+    zenithApi.modelStatus().then(setModelStatus)
+    zenithApi.regime().then(setLiveRegime)
+  }, [])
+
+  // Merge live regime confidence into the static regime object for RegimeBadge
+  const currentRegime = liveRegime
+    ? { ...staticRegime, confidence: liveRegime.confidence }
+    : staticRegime
+
   return (
     <div className="p-6 space-y-6">
       <Header title="Dashboard" subtitle="Resumen general del mercado y señales activas" />
@@ -102,19 +117,48 @@ export default function Dashboard() {
         <div className="space-y-4">
           <RegimeBadge regime={currentRegime} confidence={currentRegime.confidence} />
 
-          {/* Model health */}
+          {/* Live model status from API */}
           <div className="bg-[#111827] border border-[#1e293b] rounded-xl p-4">
             <div className="flex items-center gap-2 mb-3">
-              <Activity size={14} className="text-[#10b981]" />
+              <span className={`w-2 h-2 rounded-full ${modelStatus?.mode === 'neural_net' ? 'bg-[#10b981]' : 'bg-[#f59e0b]'} animate-pulse`} />
               <span className="text-[#f8fafc] text-sm font-medium">Estado del Modelo</span>
+              <span className="ml-auto text-[10px] text-[#64748b]">
+                {modelStatus?.mode === 'neural_net' ? 'ZenithNetV2 activo' : 'Modo heurístico'}
+              </span>
             </div>
             <div className="space-y-2.5">
               {[
-                { label: 'Inferencia',         value: '14 ms/pred',    ok: true },
-                { label: 'Buffer de replay',   value: '87.4K muestras', ok: true },
-                { label: 'Último training',    value: 'hace 23 min',   ok: true },
-                { label: 'Avg uncertainty',    value: '9.8%',          ok: true },
-                { label: 'Señales hoy',        value: '47 generadas',  ok: true },
+                {
+                  label: 'Inferencia',
+                  value: modelStatus ? `${modelStatus.inference_ms} ms/pred` : '14 ms/pred',
+                  ok: true,
+                },
+                {
+                  label: 'Buffer de replay',
+                  value: modelStatus
+                    ? `${(modelStatus.buffer_size / 1000).toFixed(1)}K muestras`
+                    : '87.4K muestras',
+                  ok: true,
+                },
+                {
+                  label: 'Último training',
+                  value: modelStatus ? modelStatus.last_training : 'N/A',
+                  ok: true,
+                },
+                {
+                  label: 'Avg uncertainty',
+                  value: modelStatus
+                    ? `${(modelStatus.avg_uncertainty * 100).toFixed(1)}%`
+                    : '9.8%',
+                  ok: modelStatus ? modelStatus.avg_uncertainty < 0.2 : true,
+                },
+                {
+                  label: 'Régimen actual',
+                  value: liveRegime
+                    ? `${liveRegime.label} (${(liveRegime.confidence * 100).toFixed(1)}%)`
+                    : 'Neutro (84.7%)',
+                  ok: true,
+                },
               ].map(row => (
                 <div key={row.label} className="flex justify-between text-xs">
                   <span className="text-[#64748b]">{row.label}</span>
