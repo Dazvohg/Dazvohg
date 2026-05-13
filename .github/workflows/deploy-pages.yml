@@ -1,0 +1,66 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main, claude/add-model-endpoint-USRBM]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            mango-tycoon/package-lock.json
+            zenith-finanzas/package-lock.json
+
+      # ── Mango Tycoon ─────────────────────────────────────────────────────
+      - name: Install Mango Tycoon deps
+        run: npm ci
+        working-directory: mango-tycoon
+
+      - name: Build Mango Tycoon
+        run: npm run build
+        working-directory: mango-tycoon
+        env:
+          VITE_BASE_PATH: /Dazvohg/mango-tycoon/
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_ZENITH_URL: https://dazvohg.github.io/Dazvohg/zenith-finanzas/
+
+      # ── Zenith Finanzas ───────────────────────────────────────────────────
+      - name: Install Zenith Finanzas deps
+        run: npm ci
+        working-directory: zenith-finanzas
+
+      - name: Build Zenith Finanzas
+        run: npm run build
+        working-directory: zenith-finanzas
+        env:
+          VITE_BASE_PATH: /Dazvohg/zenith-finanzas/
+          VITE_MANGO_URL: https://dazvohg.github.io/Dazvohg/mango-tycoon/
+
+      # ── Assemble gh-pages ─────────────────────────────────────────────────
+      - name: Assemble gh-pages output
+        run: |
+          mkdir -p gh-pages/mango-tycoon
+          mkdir -p gh-pages/zenith-finanzas
+          cp -r mango-tycoon/dist/. gh-pages/mango-tycoon/
+          cp -r zenith-finanzas/dist/. gh-pages/zenith-finanzas/
+          # Root index redirects to Mango Tycoon
+          echo '<meta http-equiv="refresh" content="0;url=./mango-tycoon/">' > gh-pages/index.html
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./gh-pages
+          force_orphan: true
