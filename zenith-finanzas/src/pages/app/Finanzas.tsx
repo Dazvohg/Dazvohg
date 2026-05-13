@@ -376,7 +376,7 @@ export default function Finanzas() {
                 <Tooltip
                   contentStyle={{ background: '#0c1221', border: '1px solid #1e293b', borderRadius: 8, fontSize: 11 }}
                   labelStyle={{ color: '#94a3b8' }}
-                  formatter={(v: number) => [fmtARS(v), 'Gastos']}
+                  formatter={(v) => [fmtARS(Number(v ?? 0)), 'Gastos']}
                 />
                 <Bar dataKey="total" fill="#6366f1" radius={[4, 4, 0, 0]} />
               </BarChart>

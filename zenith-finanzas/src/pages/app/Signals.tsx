@@ -72,7 +72,7 @@ export default function Signals() {
               <Tooltip
                 contentStyle={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: '8px', fontSize: '11px' }}
                 labelStyle={{ color: '#64748b' }}
-                formatter={(v: number) => [`${v > 0 ? '+' : ''}${v} bps`, 'P&L acum.']}
+                formatter={(v) => { const n = Number(v ?? 0); return [`${n > 0 ? '+' : ''}${n} bps`, 'P&L acum.'] }}
               />
               <ReferenceLine y={0} stroke="#334155" strokeDasharray="4 2" />
               <Line

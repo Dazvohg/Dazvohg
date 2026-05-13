@@ -71,7 +71,7 @@ export default function Portfolio() {
               </Pie>
               <Tooltip
                 contentStyle={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: '8px', fontSize: '11px' }}
-                formatter={(v: number, name) => [`$${v.toLocaleString()}`, name]}
+                formatter={(v, name) => [`$${Number(v ?? 0).toLocaleString()}`, name ?? '']}
               />
             </PieChart>
           </ResponsiveContainer>
@@ -112,7 +112,7 @@ export default function Portfolio() {
               <Tooltip
                 contentStyle={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: '8px', fontSize: '11px' }}
                 labelStyle={{ color: '#64748b' }}
-                formatter={(v: number) => [`${v > 0 ? '+' : ''}${v} bps`, 'P&L']}
+                formatter={(v) => { const n = Number(v ?? 0); return [`${n > 0 ? '+' : ''}${n} bps`, 'P&L'] }}
               />
               <Bar dataKey="pnlBps" radius={[3, 3, 0, 0]}>
                 {daily.slice(-30).map((d, i) => (

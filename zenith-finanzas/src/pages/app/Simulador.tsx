@@ -275,7 +275,7 @@ export default function Simulador() {
                   <Tooltip
                     contentStyle={{ background: '#0c1221', border: '1px solid #1e293b', borderRadius: 8, fontSize: 11 }}
                     labelStyle={{ color: '#64748b' }}
-                    formatter={(v: number, name: string) => [fmtARS(v), name]}
+                    formatter={(v, name) => [fmtARS(Number(v ?? 0)), String(name ?? '')]}
                   />
                   <Legend wrapperStyle={{ fontSize: 11, color: '#64748b' }} />
                   {selectedInstruments.map(inst => (
