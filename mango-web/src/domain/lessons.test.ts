@@ -1,3 +1,4 @@
+import { initialSimulatorState } from './simulator';
 import { describe, expect, it } from "vitest";
 import { defaultRates } from "./finance";
 import { completeLesson, lessonReward, lessons } from "./lessons";
@@ -17,7 +18,8 @@ const state: AppState = {
     completedObjectiveIds: [],
     completedLessonIds: [],
   },
-  rates: defaultRates,
+  simulator: initialSimulatorState,
+    rates: defaultRates,
   live: {},
 };
 

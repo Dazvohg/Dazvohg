@@ -133,6 +133,32 @@ export type LiveData = {
   countryRisk?: number;
 };
 
+export type SimAssetCategory = "crypto" | "memecoin" | "stock" | "cedear";
+
+export type SimPosition = {
+  assetId: string;
+  quantity: number;
+  avgBuyPrice: number; // USD
+};
+
+export type SimTrade = {
+  id: string;
+  assetId: string;
+  side: "buy" | "sell";
+  quantity: number;
+  price: number;
+  total: number; // USD
+  date: string;
+};
+
+export type SimulatorState = {
+  cashUsd: number;
+  positions: SimPosition[];
+  trades: SimTrade[];
+  prices: Record<string, number>; // assetId → USD price
+  pricesUpdatedAt?: number;
+};
+
 export type AppState = {
   user: UserProfile | null;
   accounts: Account[];
@@ -142,6 +168,7 @@ export type AppState = {
   budgets: Budget[];
   goals: Goal[];
   tycoon: TycoonState;
+  simulator: SimulatorState;
   rates: Rates;
   live: LiveData;
 };

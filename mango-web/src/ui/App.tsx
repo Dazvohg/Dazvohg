@@ -5,21 +5,25 @@ import {
   Eye,
   EyeOff,
   Home,
-  Landmark,
   LineChart,
+  Lock,
   Plus,
   RefreshCw,
   ShieldCheck,
   Target,
   Trash2,
+  TrendingUp,
   UserRound,
   WalletCards,
   Building2,
   Coins,
   Trophy,
+  ArrowDownCircle,
+  ArrowUpCircle,
+  Zap,
 } from "lucide-react";
 import type React from "react";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   addToGoal,
   advice,
@@ -49,11 +53,30 @@ import {
   tycoonAssets,
   tycoonNetWorth,
 } from "../domain/tycoon";
+import {
+  SIM_ASSETS,
+  SIM_STARTING_USD,
+  CATEGORY_LABEL,
+  CATEGORY_COLOR,
+  buySimAsset,
+  sellSimAsset,
+  resetSimulator,
+  simPortfolioValue,
+  simTotalValue,
+  simPnl,
+  simPnlPct,
+  positionValue,
+  positionPnlPct,
+  formatSimPrice,
+  formatSimQty,
+  updateSimPrices,
+} from "../domain/simulator";
 import { fetchRates } from "../services/liveData";
+import { fetchSimPrices } from "../services/prices";
 import { resetState } from "../services/storage";
 import { usePersistentState } from "./usePersistentState";
 
-type Tab = "home" | "invest" | "learn" | "tycoon" | "expenses" | "goals" | "profile";
+type Tab = "home" | "simulador" | "learn" | "tycoon" | "expenses" | "goals" | "mercados" | "profile";
 
 const categoryOptions = Object.entries(categories) as Array<
   [ExpenseCategory, { label: string; color: string }]
@@ -76,13 +99,14 @@ export function App() {
     <div className="app-shell">
       <Header state={state} setState={setState} />
       <main className="content">
-        {tab === "home" && <HomeTab state={state} setState={setState} setTab={setTab} />}
-        {tab === "invest" && <InvestTab state={state} setState={setState} />}
-        {tab === "learn" && <LearnTab state={state} setState={setState} />}
-        {tab === "tycoon" && <TycoonTab state={state} setState={setState} />}
-        {tab === "expenses" && <ExpensesTab state={state} setState={setState} />}
-        {tab === "goals" && <GoalsTab state={state} setState={setState} />}
-        {tab === "profile" && <ProfileTab state={state} setState={setState} />}
+        {tab === "home"      && <HomeTab state={state} setState={setState} setTab={setTab} />}
+        {tab === "simulador" && <SimulatorTab state={state} setState={setState} />}
+        {tab === "learn"     && <LearnTab state={state} setState={setState} />}
+        {tab === "tycoon"    && <TycoonTab state={state} setState={setState} />}
+        {tab === "expenses"  && <ExpensesTab state={state} setState={setState} />}
+        {tab === "goals"     && <GoalsTab state={state} setState={setState} />}
+        {tab === "mercados"  && <MercadosTab setTab={setTab} />}
+        {tab === "profile"   && <ProfileTab state={state} setState={setState} />}
       </main>
       <TabBar tab={tab} setTab={setTab} />
     </div>
@@ -288,7 +312,7 @@ function HomeTab({
         <button className="quick-card" onClick={() => setTab("expenses")}>
           <Plus /> Cargar gasto
         </button>
-        <button className="quick-card" onClick={() => setTab("invest")}>
+        <button className="quick-card" onClick={() => setTab("simulador")}>
           <LineChart /> Simular cartera
         </button>
         <button className="quick-card" onClick={() => setTab("profile")}>
@@ -1272,13 +1296,14 @@ function CardForm({ setState }: { setState: React.Dispatch<React.SetStateAction<
 
 function TabBar({ tab, setTab }: { tab: Tab; setTab: (tab: Tab) => void }) {
   const tabs = [
-    { id: "home" as const, label: "Hoy", icon: Home },
-    { id: "expenses" as const, label: "Gastos", icon: CreditCard },
-    { id: "goals" as const, label: "Metas", icon: Target },
-    { id: "invest" as const, label: "Invertir", icon: LineChart },
-    { id: "learn" as const, label: "Aprender", icon: BookOpen },
-    { id: "tycoon" as const, label: "Juego", icon: Building2 },
-    { id: "profile" as const, label: "Yo", icon: UserRound },
+    { id: "home"      as const, label: "Hoy",       icon: Home },
+    { id: "expenses"  as const, label: "Gastos",    icon: CreditCard },
+    { id: "goals"     as const, label: "Metas",     icon: Target },
+    { id: "simulador" as const, label: "Simular",   icon: TrendingUp },
+    { id: "learn"     as const, label: "Aprender",  icon: BookOpen },
+    { id: "tycoon"    as const, label: "Juego",     icon: Building2 },
+    { id: "mercados"  as const, label: "Pro",       icon: Zap, premium: true },
+    { id: "profile"   as const, label: "Yo",        icon: UserRound },
   ];
   return (
     <nav className="tabbar">
@@ -1286,7 +1311,7 @@ function TabBar({ tab, setTab }: { tab: Tab; setTab: (tab: Tab) => void }) {
         const Icon = item.icon;
         return (
           <button
-            className={tab === item.id ? "active" : ""}
+            className={`${tab === item.id ? "active" : ""} ${item.premium ? "tab-premium" : ""}`}
             key={item.id}
             onClick={() => setTab(item.id)}
           >
@@ -1296,6 +1321,346 @@ function TabBar({ tab, setTab }: { tab: Tab; setTab: (tab: Tab) => void }) {
         );
       })}
     </nav>
+  );
+}
+
+// ─── Simulador ───────────────────────────────────────────────────────────────
+
+function SimulatorTab({
+  state,
+  setState,
+}: {
+  state: AppState;
+  setState: React.Dispatch<React.SetStateAction<AppState>>;
+}) {
+  const sim = state.simulator;
+  const [view, setView] = useState<"mercado" | "cartera" | "historial">("mercado");
+  const [buyAssetId, setBuyAssetId] = useState<string | null>(null);
+  const [buyAmount, setBuyAmount] = useState("100");
+  const [sellAssetId, setSellAssetId] = useState<string | null>(null);
+  const [loadingPrices, setLoadingPrices] = useState(false);
+  const [priceError, setPriceError] = useState(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const refreshPrices = useCallback(async () => {
+    setLoadingPrices(true);
+    setPriceError(false);
+    try {
+      const prices = await fetchSimPrices(sim.prices);
+      setState((cur) => updateSimPrices(cur, prices));
+    } catch {
+      setPriceError(true);
+    } finally {
+      setLoadingPrices(false);
+    }
+  }, [sim.prices, setState]);
+
+  useEffect(() => {
+    refreshPrices();
+    intervalRef.current = setInterval(refreshPrices, 60_000);
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+  }, []);
+
+  const totalValue  = simTotalValue(sim);
+  const pnl         = simPnl(sim);
+  const pnlPct      = simPnlPct(sim);
+  const portfolioVal = simPortfolioValue(sim);
+
+  const buyAssetObj  = SIM_ASSETS.find((a) => a.id === buyAssetId);
+  const buyUsd       = Number(buyAmount) || 0;
+  const buyQtyPreview = buyAssetObj && sim.prices[buyAssetId!]
+    ? buyUsd / sim.prices[buyAssetId!]
+    : 0;
+
+  function handleBuy(e: React.FormEvent) {
+    e.preventDefault();
+    if (!buyAssetId || buyUsd <= 0) return;
+    setState((cur) => buySimAsset(cur, buyAssetId, buyUsd));
+    setBuyAssetId(null);
+    setBuyAmount("100");
+  }
+
+  const ago = sim.pricesUpdatedAt
+    ? Math.round((Date.now() - sim.pricesUpdatedAt) / 1000)
+    : null;
+
+  return (
+    <>
+      <div className="page-intro">
+        <h2>Simulador</h2>
+        <p>Invertí con US$10.000 ficticios. Aprendé sin riesgo real.</p>
+      </div>
+
+      {/* Resumen */}
+      <section className="panel">
+        <div className="metric-grid">
+          <div className="metric">
+            <span>Capital total</span>
+            <strong>${totalValue.toLocaleString("en-US", { maximumFractionDigits: 2 })}</strong>
+          </div>
+          <div className={`metric ${pnl >= 0 ? "" : "warn"}`}>
+            <span>P&L total</span>
+            <strong style={{ color: pnl >= 0 ? "#10b981" : "#ef4444" }}>
+              {pnl >= 0 ? "+" : ""}{pnl.toFixed(2)} ({pnlPct.toFixed(2)}%)
+            </strong>
+          </div>
+          <div className="metric">
+            <span>Efectivo</span>
+            <strong>${sim.cashUsd.toLocaleString("en-US", { maximumFractionDigits: 2 })}</strong>
+          </div>
+          <div className="metric">
+            <span>En activos</span>
+            <strong>${portfolioVal.toFixed(2)}</strong>
+          </div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
+          <button className="ghost small" onClick={refreshPrices} disabled={loadingPrices}>
+            <RefreshCw size={13} /> {loadingPrices ? "Actualizando..." : "Precios"}
+          </button>
+          {ago !== null && !loadingPrices && (
+            <span className="fine-print">hace {ago < 60 ? `${ago}s` : `${Math.round(ago/60)}m`}</span>
+          )}
+          {priceError && <span className="fine-print" style={{ color: "#ef4444" }}>Sin conexión — precios demo</span>}
+        </div>
+      </section>
+
+      {/* Tabs internos */}
+      <div className="segmented" style={{ margin: "0 0 12px" }}>
+        {(["mercado", "cartera", "historial"] as const).map((v) => (
+          <button key={v} className={view === v ? "active" : ""} onClick={() => setView(v)} type="button">
+            {v === "mercado" ? "Mercado" : v === "cartera" ? "Mi cartera" : "Historial"}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Vista: Mercado ── */}
+      {view === "mercado" && (
+        <div className="asset-list">
+          {SIM_ASSETS.map((asset) => {
+            const price = sim.prices[asset.id] ?? asset.defaultPrice;
+            const pos   = sim.positions.find((p) => p.assetId === asset.id);
+            return (
+              <article className="asset-card" key={asset.id}>
+                <div className="asset-topline">
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <strong>{asset.symbol}</strong>
+                      <span
+                        className="eyebrow"
+                        style={{ color: CATEGORY_COLOR[asset.category], background: `${CATEGORY_COLOR[asset.category]}18`, padding: "1px 6px", borderRadius: 99 }}
+                      >
+                        {CATEGORY_LABEL[asset.category]}
+                      </span>
+                    </div>
+                    <span>{asset.name}</span>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <strong style={{ fontSize: 15 }}>{formatSimPrice(price)}</strong>
+                    {pos && (
+                      <div style={{ fontSize: 12, color: "#64748b" }}>
+                        Tenés {formatSimQty(pos.quantity, asset.id)}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <p style={{ fontSize: 12, color: "#64748b", margin: "6px 0 8px" }}>{asset.lesson}</p>
+                <button
+                  className="primary"
+                  onClick={() => { setBuyAssetId(asset.id); setBuyAmount("100"); }}
+                  disabled={sim.cashUsd < 1}
+                >
+                  <ArrowDownCircle size={14} /> Comprar
+                </button>
+              </article>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── Vista: Cartera ── */}
+      {view === "cartera" && (
+        <>
+          {sim.positions.length === 0 ? (
+            <p className="empty-note" style={{ textAlign: "center", padding: "32px 0" }}>
+              No tenés posiciones aún. Comprá algo en "Mercado".
+            </p>
+          ) : (
+            <div className="asset-list">
+              {sim.positions.map((pos) => {
+                const asset   = SIM_ASSETS.find((a) => a.id === pos.assetId)!;
+                const val     = positionValue(pos, sim.prices);
+                const pnlP    = positionPnlPct(pos, sim.prices);
+                const positive = pnlP >= 0;
+                return (
+                  <article className="asset-card owned" key={pos.assetId}>
+                    <div className="asset-topline">
+                      <div>
+                        <strong>{asset.symbol} — {asset.name}</strong>
+                        <span>{formatSimQty(pos.quantity, asset.id)} unidades</span>
+                        <span>Precio promedio: {formatSimPrice(pos.avgBuyPrice)}</span>
+                      </div>
+                      <div style={{ textAlign: "right" }}>
+                        <strong>${val.toFixed(2)}</strong>
+                        <div style={{ color: positive ? "#10b981" : "#ef4444", fontWeight: 600 }}>
+                          {positive ? "+" : ""}{pnlP.toFixed(2)}%
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+                      {[25, 50, 100].map((pct) => (
+                        <button
+                          key={pct}
+                          className="ghost small"
+                          onClick={() => setState((cur) => sellSimAsset(cur, pos.assetId, pct))}
+                        >
+                          <ArrowUpCircle size={12} /> {pct}%
+                        </button>
+                      ))}
+                    </div>
+                    <p style={{ fontSize: 11, color: "#64748b", marginTop: 6 }}>
+                      Vender: 25% · 50% · 100% de la posición
+                    </p>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+          <div style={{ marginTop: 12 }}>
+            <button
+              className="danger-button"
+              onClick={() => { if (confirm("¿Reiniciar simulador? Empezás de 0 con US$10.000.")) setState((cur) => resetSimulator(cur)); }}
+            >
+              Reiniciar simulador
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* ── Vista: Historial ── */}
+      {view === "historial" && (
+        <>
+          {sim.trades.length === 0 ? (
+            <p className="empty-note" style={{ textAlign: "center", padding: "32px 0" }}>
+              Sin operaciones todavía.
+            </p>
+          ) : (
+            <div className="list">
+              {sim.trades.slice(0, 30).map((trade) => {
+                const asset = SIM_ASSETS.find((a) => a.id === trade.assetId);
+                return (
+                  <article className="list-row" key={trade.id}>
+                    <div>
+                      <strong style={{ color: trade.side === "buy" ? "#10b981" : "#f59e0b" }}>
+                        {trade.side === "buy" ? "▲ COMPRA" : "▼ VENTA"} {trade.assetId}
+                      </strong>
+                      <span>{new Date(trade.date).toLocaleString("es-AR", { dateStyle: "short", timeStyle: "short" })}</span>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <strong>${trade.total.toFixed(2)}</strong>
+                      <span>{formatSimQty(trade.quantity, trade.assetId)} @ {formatSimPrice(trade.price)}</span>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ── Modal de compra ── */}
+      {buyAssetId && buyAssetObj && (
+        <div className="modal-overlay" onClick={() => setBuyAssetId(null)}>
+          <form className="panel modal-card" onSubmit={handleBuy} onClick={(e) => e.stopPropagation()}>
+            <p className="eyebrow">Comprar {buyAssetObj.symbol}</p>
+            <h3>{buyAssetObj.name}</h3>
+            <p style={{ fontSize: 13, color: "#64748b", marginBottom: 12 }}>
+              Precio actual: <strong>{formatSimPrice(sim.prices[buyAssetId] ?? buyAssetObj.defaultPrice)}</strong>
+            </p>
+            <label>
+              Monto en USD ficticio
+              <input
+                autoFocus
+                inputMode="numeric"
+                value={buyAmount}
+                onChange={(e) => setBuyAmount(e.target.value)}
+                placeholder="100"
+              />
+            </label>
+            {buyUsd > 0 && (
+              <p style={{ fontSize: 13, color: "#64748b" }}>
+                Recibirías ≈ {formatSimQty(buyQtyPreview, buyAssetId)} {buyAssetObj.symbol}
+              </p>
+            )}
+            <p style={{ fontSize: 12, color: "#64748b" }}>
+              Disponible: ${sim.cashUsd.toFixed(2)}
+            </p>
+            {buyUsd > sim.cashUsd && (
+              <p style={{ color: "#ef4444", fontSize: 13 }}>No tenés suficiente efectivo</p>
+            )}
+            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+              <button className="primary" type="submit" disabled={buyUsd <= 0 || buyUsd > sim.cashUsd}>
+                Confirmar compra
+              </button>
+              <button className="ghost" type="button" onClick={() => setBuyAssetId(null)}>
+                Cancelar
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+    </>
+  );
+}
+
+// ─── Mercados Premium ─────────────────────────────────────────────────────────
+
+function MercadosTab({ setTab }: { setTab: (tab: Tab) => void }) {
+  const features = [
+    { icon: "📡", title: "Señales IA en tiempo real", desc: "El modelo detecta régimen de mercado y genera señales sobre MERVAL, ADRs y bonos cada 30 segundos." },
+    { icon: "📊", title: "Terminal de trading", desc: "Gráficos de velas, volumen y análisis técnico sobre todos los instrumentos argentinos." },
+    { icon: "🤖", title: "Modelo ZenithNetV2", desc: "8.4M parámetros: Transformer + CNN multi-escala. Estimación de incertidumbre por señal." },
+    { icon: "💼", title: "Portfolio institucional", desc: "Seguimiento de cartera real con cálculo de Sharpe, drawdown y exposición por régimen." },
+  ];
+  return (
+    <>
+      <div className="page-intro">
+        <h2>Mercados Pro</h2>
+        <p>Herramientas avanzadas para cuando ya tengas base. Nada de esto es necesario para empezar.</p>
+      </div>
+
+      <section className="panel" style={{ textAlign: "center", padding: "24px 16px" }}>
+        <Lock size={32} style={{ color: "#f59e0b", margin: "0 auto 12px" }} />
+        <h3>Próximamente</h3>
+        <p style={{ color: "#64748b", fontSize: 14, marginBottom: 16 }}>
+          Estamos construyendo la plataforma premium. Mientras tanto, aprendé con el simulador gratuito y cuando te sientas listo, esto va a tener mucho más sentido.
+        </p>
+        <button className="ghost" onClick={() => setTab("simulador")}>
+          Ir al simulador gratuito →
+        </button>
+      </section>
+
+      <p className="eyebrow" style={{ padding: "0 4px", marginBottom: 8 }}>Qué incluye Pro</p>
+      <div className="asset-list">
+        {features.map((f) => (
+          <article className="asset-card" key={f.title} style={{ opacity: 0.7 }}>
+            <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+              <span style={{ fontSize: 24 }}>{f.icon}</span>
+              <div>
+                <strong>{f.title}</strong>
+                <p style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>{f.desc}</p>
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+
+      <section className="panel muted" style={{ marginTop: 8 }}>
+        <ShieldCheck size={18} style={{ color: "#10b981" }} />
+        <p style={{ fontSize: 13 }}>
+          Todo lo educativo — simulador, lecciones, tycoon, gestión de gastos — es y será siempre gratuito. Pro solo agrega herramientas para quienes ya operan en el mercado real.
+        </p>
+      </section>
+    </>
   );
 }
 

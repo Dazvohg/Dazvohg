@@ -1,3 +1,4 @@
+import { initialSimulatorState } from './simulator';
 import { describe, expect, it } from "vitest";
 import { defaultRates } from "./finance";
 import { availableObjectives, buyAsset, collectRent, completeObjective, tycoonAssets, tycoonNetWorth } from "./tycoon";
@@ -30,6 +31,7 @@ function makeState(): AppState {
     budgets: [{ id: "b", category: "super", monthlyLimit: 50000 }],
     goals: [],
     tycoon: { mangoCash: 10000, ownedAssets: [], completedObjectiveIds: [], completedLessonIds: [] },
+    simulator: initialSimulatorState,
     rates: defaultRates,
     live: {},
   };

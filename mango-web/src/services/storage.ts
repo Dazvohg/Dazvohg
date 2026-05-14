@@ -1,7 +1,9 @@
 import { defaultRates } from "../domain/finance";
+import { initialSimulatorState } from "../domain/simulator";
 import type { AppState } from "../domain/types";
 
-const KEY = "mango:state:v1";
+// v2: agrega SimulatorState
+const KEY = "mango:state:v2";
 
 export const initialState: AppState = {
   user: null,
@@ -17,6 +19,7 @@ export const initialState: AppState = {
     completedObjectiveIds: [],
     completedLessonIds: [],
   },
+  simulator: initialSimulatorState,
   rates: defaultRates,
   live: {},
 };
@@ -26,7 +29,12 @@ export function loadState(): AppState {
     const raw = localStorage.getItem(KEY);
     if (!raw) return initialState;
     const parsed = JSON.parse(raw);
-    return { ...initialState, ...parsed, tycoon: { ...initialState.tycoon, ...parsed.tycoon } };
+    return {
+      ...initialState,
+      ...parsed,
+      tycoon: { ...initialState.tycoon, ...parsed.tycoon },
+      simulator: { ...initialSimulatorState, ...parsed.simulator },
+    };
   } catch {
     return initialState;
   }

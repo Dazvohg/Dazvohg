@@ -1014,3 +1014,47 @@ button:disabled {
     grid-template-columns: 1fr;
   }
 }
+
+/* ── Simulador ── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 22, 40, 0.6);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 100;
+  padding: 16px;
+}
+
+.modal-card {
+  width: 100%;
+  max-width: 480px;
+  border-radius: 20px 20px 16px 16px;
+  animation: slideUp 0.2s ease;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(40px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+.tab-premium span {
+  color: #f59e0b;
+}
+
+.tab-premium.active {
+  color: #f59e0b;
+}
+
+/* tabbar scrollable en pantallas chicas */
+.tabbar {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tabbar::-webkit-scrollbar {
+  display: none;
+}
+.tabbar button {
+  flex-shrink: 0;
+}

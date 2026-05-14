@@ -1,3 +1,4 @@
+import { initialSimulatorState } from './simulator';
 import { describe, expect, it } from "vitest";
 import {
   advice,
@@ -28,7 +29,8 @@ const state: AppState = {
   budgets: [{ id: "b", category: "super", monthlyLimit: 20000 }],
   goals: [],
   tycoon: { mangoCash: 2500, ownedAssets: [], completedObjectiveIds: [], completedLessonIds: [] },
-  rates: defaultRates,
+  simulator: initialSimulatorState,
+    rates: defaultRates,
   live: {},
 };
 
