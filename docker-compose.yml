@@ -1,5 +1,3 @@
-version: "3.9"
-
 # Ecosistema Mango completo
 # Arrancá todo con: docker-compose up
 #
