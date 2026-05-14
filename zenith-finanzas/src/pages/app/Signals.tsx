@@ -52,7 +52,7 @@ function mapApiSignal(s: ApiSignal): ZenithSignal {
     regime: s.regime,
     timeframe: s.timeframe as ZenithSignal['timeframe'],
     createdAt: new Date(s.generated_at * 1000).toISOString(),
-    modelVersion: 'zenith-v2.0',
+    modelVersion: 'mango-v2.0',
     attentionPeaks: s.tags,
   }
 }
@@ -98,7 +98,7 @@ export default function Signals() {
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-start justify-between gap-4">
-        <Header title="Señales Zenith IA" subtitle="Predicciones del modelo con estimación de incertidumbre" />
+        <Header title="Señales Mango IA" subtitle="Predicciones del modelo con estimación de incertidumbre" />
         <div className="flex items-center gap-2 shrink-0 mt-1">
           {connected ? (
             <>
@@ -186,7 +186,7 @@ export default function Signals() {
           <Brain size={18} className="text-[#6366f1]" />
         </div>
         <div>
-          <div className="text-[#f8fafc] font-semibold text-sm mb-1">Cómo interpreta Zenith cada señal</div>
+          <div className="text-[#f8fafc] font-semibold text-sm mb-1">Cómo interpreta Mango cada señal</div>
           <p className="text-[#64748b] text-xs leading-relaxed">
             Cada señal incluye <span className="text-[#f8fafc]">probabilidad de ganancia</span> (Multi-Task Head),{' '}
             <span className="text-[#f8fafc]">P&L esperado en bps</span> y{' '}

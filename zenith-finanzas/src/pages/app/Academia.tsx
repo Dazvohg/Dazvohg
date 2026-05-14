@@ -135,7 +135,7 @@ export default function Academia() {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-[#f8fafc] font-semibold text-base">Academia Zenith</h1>
+        <h1 className="text-[#f8fafc] font-semibold text-base">Academia Mango</h1>
         <p className="text-[#64748b] text-xs mt-0.5">Formación financiera argentina · {lessons.length} lecciones</p>
       </div>
 

@@ -19,7 +19,7 @@ export default function Terminal() {
 
   return (
     <div className="p-6 space-y-4">
-      <Header title="Terminal de Trading" subtitle="Análisis de precio en tiempo real + señales Zenith" />
+      <Header title="Terminal de Trading" subtitle="Análisis de precio en tiempo real + señales Mango" />
 
       <div className="flex gap-4 items-start">
 
@@ -126,7 +126,7 @@ export default function Terminal() {
           <div className="bg-[#111827] border border-[#1e293b] rounded-xl overflow-hidden">
             <div className="flex items-center gap-2 px-4 py-3 border-b border-[#1e293b]">
               <Zap size={14} className="text-[#6366f1]" />
-              <span className="text-[#f8fafc] text-sm font-medium">Señales Zenith · {instrument.symbol}</span>
+              <span className="text-[#f8fafc] text-sm font-medium">Señales Mango · {instrument.symbol}</span>
             </div>
             {signalForSymbol.length === 0 ? (
               <div className="p-5 text-center text-[#64748b] text-sm">

@@ -54,7 +54,7 @@ const STATS = [
 
 const STEPS = [
   { n: '01', title: 'Conectá tu broker', desc: 'API key de Interactive Brokers, IOL o PPI. Modo solo-lectura disponible.' },
-  { n: '02', title: 'Zenith analiza tu portfolio', desc: 'El modelo audita exposición, correlaciones y riesgo ante cada régimen.' },
+  { n: '02', title: 'Mango analiza tu portfolio', desc: 'El modelo audita exposición, correlaciones y riesgo ante cada régimen.' },
   { n: '03', title: 'Recibí señales en tiempo real', desc: 'Notificaciones push con P&L esperado, stop sugerido e incertidumbre.' },
 ]
 
@@ -74,7 +74,7 @@ export default function Landing() {
             <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#10b981] to-[#6366f1] flex items-center justify-center">
               <span className="text-white text-xs font-black">Z</span>
             </div>
-            <span className="text-white font-bold tracking-wide">ZENITH</span>
+            <span className="text-white font-bold tracking-wide">MANGO</span>
             <span className="text-[10px] text-[#10b981] tracking-[0.15em] font-medium ml-0.5">FINANZAS</span>
           </div>
           <div className="hidden md:flex items-center gap-6 text-sm text-[#64748b]">
@@ -111,7 +111,7 @@ export default function Landing() {
             className="inline-flex items-center gap-2 text-xs text-[#10b981] bg-[#064e3b]/50 border border-[#10b981]/20 px-3 py-1.5 rounded-full mb-6"
           >
             <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] pulse-dot" />
-            Modelo activo · zenith-v2.0 · Última señal hace 4 min
+            Modelo activo · mango-v2.0 · Última señal hace 4 min
           </motion.div>
 
           <motion.h1
@@ -132,7 +132,7 @@ export default function Landing() {
             transition={{ delay: 0.25, duration: 0.5 }}
             className="text-[#94a3b8] text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed"
           >
-            Zenith v2 combina Transformers, CNN multi-escala y Regime Conditioning
+            Mango v2 combina Transformers, CNN multi-escala y Regime Conditioning
             para generar señales de alta frecuencia con estimación de incertidumbre
             sobre MERVAL, ADRs y bonos soberanos.
           </motion.p>
@@ -189,7 +189,7 @@ export default function Landing() {
               8M+ parámetros, 70+ features, 35+ capas
             </motion.h2>
             <motion.p variants={FADE_UP} custom={2} className="text-[#64748b] max-w-xl mx-auto">
-              La arquitectura completa de Zenith v2 procesa simultáneamente
+              La arquitectura completa de Mango v2 procesa simultáneamente
               precio, volumen, microestructura y contexto macroeconómico argentino.
             </motion.p>
           </motion.div>
@@ -311,7 +311,7 @@ export default function Landing() {
               Resultados verificables, señales honestas
             </motion.h2>
             <motion.p variants={FADE_UP} custom={2} className="text-[#64748b] max-w-xl mx-auto">
-              El modelo reporta incertidumbre explícita por señal. Cuando Zenith no está seguro, te lo dice.
+              El modelo reporta incertidumbre explícita por señal. Cuando Mango no está seguro, te lo dice.
               El win rate histórico es sobre señales con confianza {'>'} 65%.
             </motion.p>
           </motion.div>
@@ -382,7 +382,7 @@ export default function Landing() {
       <section className="py-20 px-6 border-t border-[#1e293b]">
         <div className="max-w-2xl mx-auto text-center">
           <div className="text-4xl md:text-5xl font-black mb-5">
-            Empezá con Zenith<br />
+            Empezá con Mango<br />
             <span className="bg-gradient-to-r from-[#10b981] to-[#6366f1] bg-clip-text text-transparent">hoy mismo</span>
           </div>
           <p className="text-[#64748b] mb-8">Sin tarjeta de crédito. Modo paper trading ilimitado.</p>
@@ -409,7 +409,7 @@ export default function Landing() {
             </div>
             <h2 className="text-3xl font-black text-[#f8fafc] mb-3">Dos apps. Una misión.</h2>
             <p className="text-[#64748b] max-w-md mx-auto text-sm">
-              Zenith Finanzas y Mango Tycoon son parte del mismo ecosistema.
+              Mango y Mango Tycoon son parte del mismo ecosistema.
               Aprendé finanzas con análisis de IA profesional y practicá con el juego.
             </p>
           </motion.div>
@@ -428,7 +428,7 @@ export default function Landing() {
                   <span className="text-white text-base font-black">Z</span>
                 </div>
                 <div>
-                  <div className="text-[#f8fafc] font-bold text-sm">ZENITH FINANZAS</div>
+                  <div className="text-[#f8fafc] font-bold text-sm">MANGO</div>
                   <div className="text-[10px] text-[#10b981] tracking-wide">ANÁLISIS PRO · ESTÁS AQUÍ</div>
                 </div>
               </div>
@@ -483,7 +483,7 @@ export default function Landing() {
           <div className="w-5 h-5 rounded-md bg-gradient-to-br from-[#10b981] to-[#6366f1] flex items-center justify-center">
             <span className="text-white text-[10px] font-black">Z</span>
           </div>
-          <span className="text-white font-bold text-sm">ZENITH FINANZAS</span>
+          <span className="text-white font-bold text-sm">MANGO</span>
           <span className="text-[#334155] mx-2">·</span>
           <span className="text-xl">🥭</span>
           <span className="text-[#64748b] font-medium text-sm">Mango Tycoon</span>

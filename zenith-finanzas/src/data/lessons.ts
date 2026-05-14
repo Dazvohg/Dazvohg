@@ -43,7 +43,7 @@ export const lessons: Lesson[] = [
       {
         title: 'Categorizá tus gastos',
         content:
-          'Anotá todos tus gastos del mes pasado en categorías. Verás claramente dónde se va tu plata. Usá la sección Finanzas de Zenith para hacerlo automáticamente.',
+          'Anotá todos tus gastos del mes pasado en categorías. Verás claramente dónde se va tu plata. Usá la sección Finanzas de Mango para hacerlo automáticamente.',
       },
       {
         title: 'Ajustá y repetí',

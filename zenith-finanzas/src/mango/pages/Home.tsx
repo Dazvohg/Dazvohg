@@ -520,7 +520,7 @@ export default function Home() {
         </motion.div>
       </section>
 
-      {/* ── ZENITH ECOSYSTEM ──────────────────────────────────────────────── */}
+      {/* ── MANGO ECOSYSTEM ──────────────────────────────────────────────── */}
       <section className="px-4 py-14 border-t border-gray-800">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -531,11 +531,11 @@ export default function Home() {
           <div className="text-center mb-6">
             <span className="inline-flex items-center gap-2 text-xs text-gray-500 bg-gray-900 border border-gray-700 px-3 py-1.5 rounded-full">
               <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-              Ecosistema Zenith
+              Ecosistema Mango
             </span>
           </div>
           <a
-            href={import.meta.env.VITE_ZENITH_URL ?? 'http://localhost:5174'}
+            href={import.meta.env.VITE_MANGO_URL ?? 'http://localhost:5174'}
             target="_blank"
             rel="noopener noreferrer"
             className="block bg-gradient-to-br from-gray-900 to-gray-950 border border-indigo-700/30 rounded-3xl p-7 hover:border-indigo-500/50 transition-colors group"
@@ -545,7 +545,7 @@ export default function Home() {
                 <span className="text-white text-lg font-black">Z</span>
               </div>
               <div>
-                <div className="text-white font-black text-base group-hover:text-[#10b981] transition-colors">ZENITH FINANZAS</div>
+                <div className="text-white font-black text-base group-hover:text-[#10b981] transition-colors">MANGO</div>
                 <div className="text-[10px] text-[#10b981] tracking-widest font-semibold">ANÁLISIS PRO CON IA →</div>
               </div>
             </div>
@@ -610,7 +610,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="border-t border-gray-800 py-8 text-center text-xs text-gray-600 px-4">
         <p className="mb-1">🥭 Mango Tycoon — 100% ficticio, precios simulados</p>
-        <p>Parte del ecosistema <span className="text-mango-400 font-semibold">Zenith Finanzas</span></p>
+        <p>Parte del ecosistema <span className="text-mango-400 font-semibold">Mango</span></p>
       </footer>
 
     </div>

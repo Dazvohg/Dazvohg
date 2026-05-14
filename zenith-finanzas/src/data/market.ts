@@ -25,7 +25,7 @@ export interface MarketRegime {
   confidence: number
 }
 
-// Argentine + global instruments tracked by Zenith
+// Argentine + global instruments tracked by Mango
 export const INSTRUMENTS: Instrument[] = [
   { symbol: 'MERVAL',  name: 'Merval',          price: 1_852_340, change: 28_610,  changePct:  1.57, volume: 2_841_000_000, type: 'merval' },
   { symbol: 'YPF',     name: 'YPF ADR',         price: 18.72,     change:  0.43,   changePct:  2.35, volume: 12_400_000,   type: 'adr'    },

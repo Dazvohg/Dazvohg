@@ -1,15 +1,16 @@
 version: "3.9"
 
-# Una sola app unificada: Zenith Finanzas + Mango Tycoon integrado.
+# Ecosistema Mango completo
 # Arrancá todo con: docker-compose up
 #
 # URLs:
-#   Zenith + Mango:  http://localhost:5173
-#   API backend:     http://localhost:8000
+#   Mango Plataforma (trading + Tycoon):  http://localhost:5173
+#   Mango Web (finanzas personales PWA):  http://localhost:5174
+#   API backend (señales IA):             http://localhost:8000
 
 services:
-  # ── Zenith AI Backend ─────────────────────────────────────────────────────
-  zenith-backend:
+  # ── Mango AI Backend ──────────────────────────────────────────────────────
+  mango-backend:
     build:
       context: ./zenith-backend
     ports:
@@ -27,8 +28,8 @@ services:
       retries: 3
       start_period: 5s
 
-  # ── App unificada: Zenith Finanzas + Mango Tycoon ────────────────────────
-  app:
+  # ── Mango Plataforma: trading + señales IA + Mango Tycoon ─────────────────
+  mango-platform:
     image: node:22-alpine
     working_dir: /app
     volumes:
@@ -42,5 +43,16 @@ services:
       VITE_SUPABASE_ANON_KEY: "${VITE_SUPABASE_ANON_KEY:-placeholder}"
     command: sh -c "npm ci && npm run dev -- --host 0.0.0.0 --port 5173"
     depends_on:
-      zenith-backend:
+      mango-backend:
         condition: service_healthy
+
+  # ── Mango Web: gestor de finanzas personales PWA ──────────────────────────
+  mango-web:
+    image: node:22-alpine
+    working_dir: /app
+    volumes:
+      - ./mango-web:/app
+      - /app/node_modules
+    ports:
+      - "5174:5174"
+    command: sh -c "npm ci && npm run dev -- --host 0.0.0.0 --port 5174"

@@ -28,7 +28,7 @@ export default function Login() {
             <span className="text-white text-sm font-black">Z</span>
           </div>
           <div>
-            <div className="text-white font-bold tracking-wide">ZENITH</div>
+            <div className="text-white font-bold tracking-wide">MANGO</div>
             <div className="text-[#10b981] text-[10px] tracking-[0.15em] font-medium -mt-0.5">FINANZAS</div>
           </div>
         </div>

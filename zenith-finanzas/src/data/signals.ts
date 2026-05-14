@@ -39,7 +39,7 @@ export const SIGNALS: ZenithSignal[] = [
     regime: 'Tendencia Alcista',
     timeframe: '60s',
     createdAt: new Date(Date.now() - 2 * 3600_000).toISOString(),
-    modelVersion: 'zenith-v2.0',
+    modelVersion: 'mango-v2.0',
     attentionPeaks: ['Order flow imbalance', 'RSI divergence', 'Volume spike t-3'],
   },
   {
@@ -58,7 +58,7 @@ export const SIGNALS: ZenithSignal[] = [
     regime: 'Alta Volatilidad',
     timeframe: '15s',
     createdAt: new Date(Date.now() - 45 * 60_000).toISOString(),
-    modelVersion: 'zenith-v2.0',
+    modelVersion: 'mango-v2.0',
     attentionPeaks: ['Bid-ask spread widening', 'Cross-asset correlation YPF', 'Microstructure toxicity'],
   },
   {
@@ -77,7 +77,7 @@ export const SIGNALS: ZenithSignal[] = [
     regime: 'Tendencia Alcista',
     timeframe: '60s',
     createdAt: new Date(Date.now() - 1.5 * 3600_000).toISOString(),
-    modelVersion: 'zenith-v2.0',
+    modelVersion: 'mango-v2.0',
     attentionPeaks: ['MERVAL momentum transfer', 'Vols term structure', 'Institutional flow'],
   },
   {
@@ -96,7 +96,7 @@ export const SIGNALS: ZenithSignal[] = [
     regime: 'Lateral / Chop',
     timeframe: '15s',
     createdAt: new Date(Date.now() - 8 * 60_000).toISOString(),
-    modelVersion: 'zenith-v2.0',
+    modelVersion: 'mango-v2.0',
     attentionPeaks: ['Energy sector rotation', 'Open interest build', 'VWAP reclaim'],
   },
   {
@@ -116,7 +116,7 @@ export const SIGNALS: ZenithSignal[] = [
     timeframe: '60s',
     createdAt: new Date(Date.now() - 6 * 3600_000).toISOString(),
     closedAt: new Date(Date.now() - 3 * 3600_000).toISOString(),
-    modelVersion: 'zenith-v2.0',
+    modelVersion: 'mango-v2.0',
     attentionPeaks: ['Duration compression', 'CDS tightening', 'Risk-on global'],
   },
   {
@@ -136,7 +136,7 @@ export const SIGNALS: ZenithSignal[] = [
     timeframe: '5s',
     createdAt: new Date(Date.now() - 10 * 3600_000).toISOString(),
     closedAt: new Date(Date.now() - 8 * 3600_000).toISOString(),
-    modelVersion: 'zenith-v2.0',
+    modelVersion: 'mango-v2.0',
     attentionPeaks: ['News surprise event', 'Gamma squeeze risk'],
   },
 ]

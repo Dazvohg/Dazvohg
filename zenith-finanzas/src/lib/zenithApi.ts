@@ -1,5 +1,5 @@
 // Cliente tipado para el backend Zenith
-const BASE = import.meta.env.VITE_ZENITH_API_URL ?? 'http://localhost:8000'
+const BASE = import.meta.env.VITE_MANGO_API_URL ?? 'http://localhost:8000'
 
 type Regime = 'trend_bull' | 'trend_bear' | 'chop' | 'high_vol' | 'low_vol' | 'neutral'
 

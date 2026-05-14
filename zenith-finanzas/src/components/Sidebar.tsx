@@ -27,7 +27,7 @@ export default function Sidebar() {
             <span className="text-white text-xs font-black">Z</span>
           </div>
           <div>
-            <div className="text-white text-sm font-bold tracking-wide">ZENITH</div>
+            <div className="text-white text-sm font-bold tracking-wide">MANGO</div>
             <div className="text-[#10b981] text-[10px] tracking-[0.15em] font-medium">FINANZAS</div>
           </div>
         </div>
@@ -38,7 +38,7 @@ export default function Sidebar() {
         <span className="w-2 h-2 rounded-full bg-[#10b981] pulse-dot shrink-0" />
         <div className="min-w-0">
           <div className="text-[#10b981] text-[10px] font-semibold tracking-wide">MODELO ACTIVO</div>
-          <div className="text-[#64748b] text-[10px] truncate">zenith-v2.0 · 8M params</div>
+          <div className="text-[#64748b] text-[10px] truncate">mango-v2.0 · 8M params</div>
         </div>
       </div>
 

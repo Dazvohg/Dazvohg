@@ -6,12 +6,12 @@ interface Message {
   content: string
 }
 
-const SYSTEM_PROMPT = `Sos Zenith AI, el asistente financiero de Zenith Finanzas. Sos experto en:
+const SYSTEM_PROMPT = `Sos Mango AI, el asistente financiero de Mango. Sos experto en:
 - Mercados financieros argentinos (MERVAL, bonos, acciones)
 - Herramientas de inversión: CEDEARs, plazo fijo, FCI, LECAP
 - Tipos de cambio y dinámica del dólar en Argentina
 - Finanzas personales: presupuesto, deuda, ahorro
-- El modelo ABSOLUTE ZENITH v2.0 de deep learning para trading HFT
+- El modelo ABSOLUTE MANGO v2.0 de deep learning para trading HFT
 
 Respondé siempre en español, de forma concisa y práctica. No des asesoramiento financiero formal — siempre aclará que son opiniones educativas. Usá formato markdown cuando ayude a la claridad.`
 
@@ -23,7 +23,7 @@ export default function ChatModal({ onClose }: Props) {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
-      content: '¡Hola! Soy Zenith AI. Podés preguntarme sobre mercados argentinos, inversiones, CEDEARs, bonos, o finanzas personales. ¿En qué te ayudo?',
+      content: '¡Hola! Soy Mango AI. Podés preguntarme sobre mercados argentinos, inversiones, CEDEARs, bonos, o finanzas personales. ¿En qué te ayudo?',
     },
   ])
   const [input, setInput] = useState('')
@@ -103,7 +103,7 @@ export default function ChatModal({ onClose }: Props) {
               <Bot size={14} className="text-white" />
             </div>
             <div>
-              <div className="text-[#f8fafc] font-bold text-sm">Zenith AI</div>
+              <div className="text-[#f8fafc] font-bold text-sm">Mango AI</div>
               <div className="flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#10b981]" />
                 <span className="text-[#10b981] text-[10px]">claude-haiku · activo</span>

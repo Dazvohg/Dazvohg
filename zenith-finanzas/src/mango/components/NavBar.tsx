@@ -57,10 +57,10 @@ export default function NavBar() {
             <NavLink
               to="/app/dashboard"
               className="hidden sm:flex items-center gap-1 bg-gray-900 rounded-xl px-2.5 py-1.5 border border-indigo-700/40 hover:border-indigo-500/60 transition-colors"
-              title="Zenith Finanzas"
+              title="Mango"
             >
               <span className="text-xs font-black text-white">Z</span>
-              <span className="text-[10px] text-[#10b981] font-semibold tracking-wide">ZENITH</span>
+              <span className="text-[10px] text-[#10b981] font-semibold tracking-wide">MANGO</span>
             </NavLink>
             <button
               onClick={handleSignOut}

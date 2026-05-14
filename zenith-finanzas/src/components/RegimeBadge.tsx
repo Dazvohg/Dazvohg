@@ -10,7 +10,7 @@ export default function RegimeBadge({ regime, confidence }: Props) {
     <div className="bg-[#111827] border border-[#1e293b] rounded-xl p-4">
       <div className="flex items-center justify-between mb-3">
         <span className="text-[#64748b] text-xs font-medium uppercase tracking-wide">Régimen Detectado</span>
-        <span className="text-[#64748b] text-xs">zenith-v2.0</span>
+        <span className="text-[#64748b] text-xs">mango-v2.0</span>
       </div>
 
       <div className="flex items-center gap-3 mb-3">

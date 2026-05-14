@@ -1,0 +1,20 @@
+{
+  "name": "Mango - Hace que rinda",
+  "short_name": "Mango",
+  "description": "Tu plata, tarjetas, gastos e inversiones en orden.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F4F1EA",
+  "theme_color": "#0A1628",
+  "lang": "es-AR",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

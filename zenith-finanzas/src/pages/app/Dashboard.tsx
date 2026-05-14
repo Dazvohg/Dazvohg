@@ -263,7 +263,7 @@ export default function Dashboard() {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-0.5">
             <span className="text-[#f8fafc] font-bold text-sm group-hover:text-[#fbbf24] transition-colors">Mango Tycoon</span>
-            <span className="text-[10px] bg-[#d97706]/15 text-[#d97706] border border-[#d97706]/20 px-1.5 py-0.5 rounded-full">Ecosistema Zenith</span>
+            <span className="text-[10px] bg-[#d97706]/15 text-[#d97706] border border-[#d97706]/20 px-1.5 py-0.5 rounded-full">Ecosistema Mango</span>
           </div>
           <p className="text-[#64748b] text-xs">Practicá lo que aprendés acá. Invertí en Argentina como juego — activos reales, economía simulada.</p>
         </div>

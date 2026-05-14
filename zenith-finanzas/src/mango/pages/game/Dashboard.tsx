@@ -186,9 +186,9 @@ export default function Dashboard() {
         </div>
       </Link>
 
-      {/* Zenith Finanzas cross-promo */}
+      {/* Mango cross-promo */}
       <a
-        href={import.meta.env.VITE_ZENITH_URL ?? 'http://localhost:5174'}
+        href={import.meta.env.VITE_MANGO_URL ?? 'http://localhost:5174'}
         target="_blank"
         rel="noopener noreferrer"
         className="block card bg-gradient-to-r from-indigo-900/20 to-gray-900 border-indigo-700/30 hover:border-indigo-600/50 transition-colors"
@@ -199,7 +199,7 @@ export default function Dashboard() {
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 mb-0.5">
-              <p className="text-sm font-bold text-white">Zenith Finanzas</p>
+              <p className="text-sm font-bold text-white">Mango</p>
               <span className="text-[9px] bg-[#10b981]/15 text-[#10b981] px-1.5 py-0.5 rounded-full font-semibold">IA</span>
             </div>
             <p className="text-xs text-gray-500">Señales Deep Learning para MERVAL · Herramienta pro del ecosistema</p>
