@@ -1,12 +1,11 @@
 version: "3.9"
 
-# One-command full-stack startup:
-#   docker-compose up
+# Una sola app unificada: Zenith Finanzas + Mango Tycoon integrado.
+# Arrancá todo con: docker-compose up
 #
-# Apps available at:
-#   Zenith API:      http://localhost:8000
-#   Zenith Finanzas: http://localhost:5174
-#   Mango Tycoon:    http://localhost:5173
+# URLs:
+#   Zenith + Mango:  http://localhost:5173
+#   API backend:     http://localhost:8000
 
 services:
   # ── Zenith AI Backend ─────────────────────────────────────────────────────
@@ -18,8 +17,8 @@ services:
     environment:
       HOST: "0.0.0.0"
       PORT: "8000"
-      ZENITH_API_KEY: ""        # leave empty for open access in dev
-      ZENITH_CHECKPOINT: ""     # optional path to .pt checkpoint
+      ZENITH_API_KEY: ""
+      ZENITH_CHECKPOINT: ""
       RELOAD: "false"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
@@ -28,34 +27,20 @@ services:
       retries: 3
       start_period: 5s
 
-  # ── Zenith Finanzas frontend (Vite dev server) ────────────────────────────
-  zenith-finanzas:
+  # ── App unificada: Zenith Finanzas + Mango Tycoon ────────────────────────
+  app:
     image: node:22-alpine
     working_dir: /app
     volumes:
       - ./zenith-finanzas:/app
       - /app/node_modules
     ports:
-      - "5174:5174"
-    environment:
-      VITE_ZENITH_API_URL: "http://localhost:8000"
-      VITE_MANGO_URL: "http://localhost:5173"
-    command: sh -c "npm ci && npm run dev -- --host 0.0.0.0 --port 5174"
-    depends_on:
-      zenith-backend:
-        condition: service_healthy
-
-  # ── Mango Tycoon frontend (Vite dev server) ────────────────────────────────
-  mango-tycoon:
-    image: node:22-alpine
-    working_dir: /app
-    volumes:
-      - ./mango-tycoon:/app
-      - /app/node_modules
-    ports:
       - "5173:5173"
     environment:
-      VITE_ZENITH_URL: "http://localhost:5174"
+      VITE_ZENITH_API_URL: "http://localhost:8000"
       VITE_SUPABASE_URL: "${VITE_SUPABASE_URL:-https://placeholder.supabase.co}"
       VITE_SUPABASE_ANON_KEY: "${VITE_SUPABASE_ANON_KEY:-placeholder}"
     command: sh -c "npm ci && npm run dev -- --host 0.0.0.0 --port 5173"
+    depends_on:
+      zenith-backend:
+        condition: service_healthy

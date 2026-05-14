@@ -1,6 +1,30 @@
 @import "tailwindcss";
 
 @theme {
+  /* ── Colores Mango Tycoon ── */
+  --color-mango-300: #fcd34d;
+  --color-mango-400: #fbbf24;
+  --color-mango-500: #f59e0b;
+  --color-mango-600: #d97706;
+  --color-mango-700: #b45309;
+  --color-mango-900: #78350f;
+  --color-argentina-blue: #74ACDF;
+  --color-argentina-blue-dark: #4A7FB5;
+
+  /* ── Grises base para Mango (Tailwind v3 gray scale) ── */
+  --color-gray-50:  #f9fafb;
+  --color-gray-100: #f3f4f6;
+  --color-gray-200: #e5e7eb;
+  --color-gray-300: #d1d5db;
+  --color-gray-400: #9ca3af;
+  --color-gray-500: #6b7280;
+  --color-gray-600: #4b5563;
+  --color-gray-700: #374151;
+  --color-gray-800: #1f2937;
+  --color-gray-900: #111827;
+  --color-gray-950: #030712;
+
+  /* ── Colores Zenith ── */
   --color-z-bg: #030712;
   --color-z-surface: #0f172a;
   --color-z-card: #111827;
@@ -78,6 +102,52 @@ body {
   gap: 0;
 }
 .ticker-track:hover { animation-play-state: paused; }
+
+/* ── Mango Tycoon utility classes ── */
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+
+.safe-area-pb { padding-bottom: env(safe-area-inset-bottom, 0px); }
+
+/* Mango card and button components */
+.mango-card {
+  background: #111827;
+  border: 1px solid #1f2937;
+  border-radius: 1rem;
+  padding: 1rem;
+}
+.card {
+  background: #111827;
+  border: 1px solid #1f2937;
+  border-radius: 1rem;
+  padding: 1rem;
+}
+.btn-primary {
+  background: #f59e0b;
+  color: #111827;
+  font-weight: 700;
+  padding: 0.625rem 1rem;
+  border-radius: 0.75rem;
+  transition: background 0.2s;
+  cursor: pointer;
+  border: none;
+}
+.btn-primary:hover { background: #fbbf24; }
+.btn-primary:active { transform: scale(0.95); }
+.btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+.btn-secondary {
+  background: #1f2937;
+  color: #fff;
+  font-weight: 600;
+  padding: 0.625rem 1rem;
+  border-radius: 0.75rem;
+  transition: background 0.2s;
+  cursor: pointer;
+  border: none;
+}
+.btn-secondary:hover { background: #374151; }
+.btn-secondary:active { transform: scale(0.95); }
+.btn-secondary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
 
 /* Neural network bg pattern */
 .neural-bg {

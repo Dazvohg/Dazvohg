@@ -9,6 +9,7 @@ import Portfolio from '@/pages/app/Portfolio'
 import Finanzas from '@/pages/app/Finanzas'
 import Simulador from '@/pages/app/Simulador'
 import Academia from '@/pages/app/Academia'
+import MangoApp from '@/pages/app/MangoApp'
 
 export default function App() {
   return (
@@ -25,6 +26,7 @@ export default function App() {
           <Route path="finanzas"   element={<Finanzas />} />
           <Route path="simulador"  element={<Simulador />} />
           <Route path="academia"   element={<Academia />} />
+          <Route path="mango/*"    element={<MangoApp />} />
           <Route path="*"          element={<Navigate to="/app/dashboard" replace />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

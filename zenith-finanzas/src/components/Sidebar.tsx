@@ -8,14 +8,15 @@ const NAV = [
   { to: '/app/dashboard',  icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/app/terminal',   icon: Activity,        label: 'Terminal' },
   { to: '/app/signals',    icon: Zap,             label: 'Señales IA',  badge: '4' },
-  { to: '/app/portfolio',  icon: Briefcase,        label: 'Portfolio' },
-  { to: '/app/finanzas',   icon: Wallet,           label: 'Finanzas' },
-  { to: '/app/simulador',  icon: BarChart3,        label: 'Simulador' },
+  { to: '/app/portfolio',  icon: Briefcase,       label: 'Portfolio' },
+  { to: '/app/finanzas',   icon: Wallet,          label: 'Finanzas' },
+  { to: '/app/simulador',  icon: BarChart3,       label: 'Simulador' },
   { to: '/app/academia',   icon: GraduationCap,   label: 'Academia' },
 ]
 
 export default function Sidebar() {
   const { pathname } = useLocation()
+  const inMango = pathname.startsWith('/app/mango')
 
   return (
     <aside className="w-56 min-h-screen bg-[#0c1221] border-r border-[#1e293b] flex flex-col shrink-0">
@@ -41,7 +42,7 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {/* Nav */}
+      {/* Nav principal */}
       <nav className="flex-1 px-2 py-3 space-y-0.5">
         {NAV.map(({ to, icon: Icon, label, badge }) => {
           const active = pathname.startsWith(to)
@@ -65,23 +66,26 @@ export default function Sidebar() {
             </Link>
           )
         })}
-      </nav>
 
-      {/* Ecosystem cross-promo */}
-      <div className="px-2 py-2 border-t border-[#1e293b]">
-        <a
-          href={import.meta.env.VITE_MANGO_URL ?? 'http://localhost:5173'}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg hover:bg-[#1e293b] transition-colors group"
+        {/* Separador */}
+        <div className="my-2 border-t border-[#1e293b]" />
+
+        {/* Mango Tycoon — integrado dentro de la plataforma */}
+        <Link
+          to="/app/mango"
+          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+            inMango
+              ? 'bg-[#d97706]/10 text-[#fbbf24] font-medium border border-[#d97706]/20'
+              : 'text-[#64748b] hover:text-[#fbbf24] hover:bg-[#1e293b]'
+          }`}
         >
-          <span className="text-xl shrink-0">🥭</span>
+          <span className="text-base leading-none">🥭</span>
           <div className="min-w-0">
-            <div className="text-xs font-semibold text-[#f8fafc] group-hover:text-[#fbbf24] transition-colors">Mango Tycoon</div>
-            <div className="text-[10px] text-[#10b981] tracking-wide">Ecosistema Zenith →</div>
+            <div className="text-xs font-semibold leading-tight">Mango</div>
+            <div className="text-[10px] text-[#64748b] leading-tight">Tycoon · Aprendé jugando</div>
           </div>
-        </a>
-      </div>
+        </Link>
+      </nav>
 
       {/* Bottom */}
       <div className="px-2 pb-4 space-y-0.5 border-t border-[#1e293b] pt-3">

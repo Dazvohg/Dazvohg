@@ -18,45 +18,28 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: |
-            mango-tycoon/package-lock.json
-            zenith-finanzas/package-lock.json
+          cache-dependency-path: zenith-finanzas/package-lock.json
 
-      # ── Mango Tycoon ─────────────────────────────────────────────────────
-      - name: Install Mango Tycoon deps
+      # ── Zenith Finanzas (app unificada: plataforma + Mango Tycoon) ────────
+      - name: Install deps
         run: npm ci
-        working-directory: mango-tycoon
+        working-directory: zenith-finanzas
 
-      - name: Build Mango Tycoon
+      - name: Build
         run: npm run build
-        working-directory: mango-tycoon
+        working-directory: zenith-finanzas
         env:
-          VITE_BASE_PATH: /Dazvohg/mango-tycoon/
+          VITE_BASE_PATH: /Dazvohg/
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
-          VITE_ZENITH_URL: https://dazvohg.github.io/Dazvohg/zenith-finanzas/
 
-      # ── Zenith Finanzas ───────────────────────────────────────────────────
-      - name: Install Zenith Finanzas deps
-        run: npm ci
-        working-directory: zenith-finanzas
-
-      - name: Build Zenith Finanzas
-        run: npm run build
-        working-directory: zenith-finanzas
-        env:
-          VITE_BASE_PATH: /Dazvohg/zenith-finanzas/
-          VITE_MANGO_URL: https://dazvohg.github.io/Dazvohg/mango-tycoon/
-
-      # ── Assemble gh-pages ─────────────────────────────────────────────────
+      # ── Deploy ────────────────────────────────────────────────────────────
       - name: Assemble gh-pages output
         run: |
-          mkdir -p gh-pages/mango-tycoon
-          mkdir -p gh-pages/zenith-finanzas
-          cp -r mango-tycoon/dist/. gh-pages/mango-tycoon/
-          cp -r zenith-finanzas/dist/. gh-pages/zenith-finanzas/
-          # Root index redirects to Mango Tycoon
-          echo '<meta http-equiv="refresh" content="0;url=./mango-tycoon/">' > gh-pages/index.html
+          mkdir -p gh-pages
+          cp -r zenith-finanzas/dist/. gh-pages/
+          # SPA fallback: redirigir rutas no encontradas al index
+          cp gh-pages/index.html gh-pages/404.html
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
