@@ -94,31 +94,31 @@ export default function ChatModal({ onClose }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-end p-4 pointer-events-none">
-      <div className="bg-[#0c1221] border border-[#1e293b] rounded-2xl w-full max-w-sm shadow-2xl flex flex-col pointer-events-auto"
+      <div className="bg-[#000000] border border-[#2F3336] rounded-2xl w-full max-w-sm shadow-2xl flex flex-col pointer-events-auto"
            style={{ height: '520px' }}>
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-[#1e293b] shrink-0">
+        <div className="flex items-center justify-between p-4 border-b border-[#2F3336] shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#10b981] to-[#6366f1] flex items-center justify-center">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#1D9BF0] to-[#1D9BF0] flex items-center justify-center">
               <Bot size={14} className="text-white" />
             </div>
             <div>
-              <div className="text-[#f8fafc] font-bold text-sm">Mango AI</div>
+              <div className="text-[#E7E9EA] font-bold text-sm">Mango AI</div>
               <div className="flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#10b981]" />
-                <span className="text-[#10b981] text-[10px]">claude-haiku · activo</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-[#1D9BF0]" />
+                <span className="text-[#1D9BF0] text-[10px]">claude-haiku · activo</span>
               </div>
             </div>
           </div>
           <div className="flex items-center gap-1">
             <button
               onClick={() => setShowKeyInput(v => !v)}
-              className="p-1.5 text-[#64748b] hover:text-[#f8fafc] transition-colors"
+              className="p-1.5 text-[#71767B] hover:text-[#E7E9EA] transition-colors"
               title="Configurar API key"
             >
               <Key size={14} />
             </button>
-            <button onClick={onClose} className="p-1.5 text-[#64748b] hover:text-[#f8fafc] transition-colors">
+            <button onClick={onClose} className="p-1.5 text-[#71767B] hover:text-[#E7E9EA] transition-colors">
               <X size={16} />
             </button>
           </div>
@@ -126,8 +126,8 @@ export default function ChatModal({ onClose }: Props) {
 
         {/* API Key input */}
         {showKeyInput && (
-          <div className="p-3 border-b border-[#1e293b] bg-[#111827] shrink-0">
-            <p className="text-[#64748b] text-xs mb-2">
+          <div className="p-3 border-b border-[#2F3336] bg-[#16181C] shrink-0">
+            <p className="text-[#71767B] text-xs mb-2">
               Ingresá tu Anthropic API key para activar el chat. Se guarda solo en tu navegador.
             </p>
             <div className="flex gap-2">
@@ -136,14 +136,14 @@ export default function ChatModal({ onClose }: Props) {
                 placeholder="sk-ant-..."
                 defaultValue={apiKey}
                 id="api-key-input"
-                className="flex-1 bg-[#0c1221] border border-[#1e293b] rounded-lg px-3 py-1.5 text-xs text-[#f8fafc] placeholder-[#475569] outline-none font-mono focus:border-[#334155]"
+                className="flex-1 bg-[#000000] border border-[#2F3336] rounded-lg px-3 py-1.5 text-xs text-[#E7E9EA] placeholder-[#475569] outline-none font-mono focus:border-[#3E4144]"
               />
               <button
                 onClick={() => {
                   const el = document.getElementById('api-key-input') as HTMLInputElement
                   if (el?.value) saveKey(el.value.trim())
                 }}
-                className="px-3 py-1.5 rounded-lg bg-[#10b981]/10 text-[#10b981] text-xs font-semibold hover:bg-[#10b981]/20 transition-colors"
+                className="px-3 py-1.5 rounded-lg bg-[#1D9BF0]/10 text-[#1D9BF0] text-xs font-semibold hover:bg-[#1D9BF0]/20 transition-colors"
               >
                 Guardar
               </button>
@@ -157,18 +157,18 @@ export default function ChatModal({ onClose }: Props) {
             <div key={i} className={`flex gap-2.5 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
               <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${
                 msg.role === 'assistant'
-                  ? 'bg-gradient-to-br from-[#10b981] to-[#6366f1]'
-                  : 'bg-[#1e293b]'
+                  ? 'bg-gradient-to-br from-[#1D9BF0] to-[#1D9BF0]'
+                  : 'bg-[#2F3336]'
               }`}>
                 {msg.role === 'assistant'
                   ? <Bot size={12} className="text-white" />
-                  : <User size={12} className="text-[#94a3b8]" />}
+                  : <User size={12} className="text-[#8B98A5]" />}
               </div>
               <div
                 className={`max-w-[80%] rounded-xl px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap ${
                   msg.role === 'user'
-                    ? 'bg-[#1e293b] text-[#f8fafc] rounded-tr-none'
-                    : 'bg-[#111827] text-[#e2e8f0] rounded-tl-none'
+                    ? 'bg-[#2F3336] text-[#E7E9EA] rounded-tr-none'
+                    : 'bg-[#16181C] text-[#e2e8f0] rounded-tl-none'
                 }`}
               >
                 {msg.content}
@@ -178,12 +178,12 @@ export default function ChatModal({ onClose }: Props) {
 
           {loading && (
             <div className="flex gap-2.5">
-              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#10b981] to-[#6366f1] flex items-center justify-center shrink-0">
+              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#1D9BF0] to-[#1D9BF0] flex items-center justify-center shrink-0">
                 <Bot size={12} className="text-white" />
               </div>
-              <div className="bg-[#111827] rounded-xl rounded-tl-none px-3 py-2 flex items-center gap-2">
-                <Loader2 size={13} className="text-[#10b981] animate-spin" />
-                <span className="text-[#64748b] text-xs">Pensando...</span>
+              <div className="bg-[#16181C] rounded-xl rounded-tl-none px-3 py-2 flex items-center gap-2">
+                <Loader2 size={13} className="text-[#1D9BF0] animate-spin" />
+                <span className="text-[#71767B] text-xs">Pensando...</span>
               </div>
             </div>
           )}
@@ -199,7 +199,7 @@ export default function ChatModal({ onClose }: Props) {
         </div>
 
         {/* Input */}
-        <div className="p-3 border-t border-[#1e293b] shrink-0">
+        <div className="p-3 border-t border-[#2F3336] shrink-0">
           <div className="flex gap-2">
             <input
               ref={inputRef}
@@ -208,12 +208,12 @@ export default function ChatModal({ onClose }: Props) {
               onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendMessage()}
               placeholder="Preguntame sobre inversiones..."
               disabled={loading}
-              className="flex-1 bg-[#111827] border border-[#1e293b] rounded-xl px-3 py-2 text-sm text-[#f8fafc] placeholder-[#475569] outline-none focus:border-[#334155] disabled:opacity-50"
+              className="flex-1 bg-[#16181C] border border-[#2F3336] rounded-xl px-3 py-2 text-sm text-[#E7E9EA] placeholder-[#475569] outline-none focus:border-[#3E4144] disabled:opacity-50"
             />
             <button
               onClick={sendMessage}
               disabled={loading || !input.trim()}
-              className="w-8 h-8 rounded-xl bg-[#10b981] flex items-center justify-center hover:bg-[#059669] transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+              className="w-8 h-8 rounded-xl bg-[#1D9BF0] flex items-center justify-center hover:bg-[#1A8CD8] transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
             >
               <Send size={14} className="text-black" />
             </button>

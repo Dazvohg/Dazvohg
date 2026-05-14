@@ -1,17 +1,56 @@
 @import "tailwindcss";
 
+/* ── Paleta Twitter/X + Mango ─────────────────────────────────────────────── */
 @theme {
-  /* ── Colores Mango Tycoon ── */
-  --color-mango-300: #fcd34d;
-  --color-mango-400: #fbbf24;
-  --color-mango-500: #f59e0b;
-  --color-mango-600: #d97706;
-  --color-mango-700: #b45309;
-  --color-mango-900: #78350f;
-  --color-argentina-blue: #74ACDF;
-  --color-argentina-blue-dark: #4A7FB5;
+  /* Base */
+  --color-x-bg:        #000000;
+  --color-x-surface:   #16181C;
+  --color-x-surface2:  #1C1C1C;
+  --color-x-border:    #2F3336;
+  --color-x-border2:   #3E4144;
 
-  /* ── Grises base para Mango (Tailwind v3 gray scale) ── */
+  /* Texto */
+  --color-x-text:      #E7E9EA;
+  --color-x-muted:     #71767B;
+
+  /* Primario — Twitter blue */
+  --color-x-blue:      #1D9BF0;
+  --color-x-blue-dim:  #0A1929;
+  --color-x-blue-hover:#1A8CD8;
+
+  /* Mercado */
+  --color-x-green:     #00BA7C;
+  --color-x-green-dim: #001A10;
+  --color-x-red:       #F4212E;
+  --color-x-red-dim:   #200006;
+
+  /* Mango Tycoon */
+  --color-mango-300:   #FCD34D;
+  --color-mango-400:   #FBBF24;
+  --color-mango-500:   #F59E0B;
+  --color-mango-600:   #D97706;
+  --color-mango-700:   #B45309;
+  --color-mango-900:   #78350F;
+
+  /* Legados — usados en clases Tailwind hardcodeadas en TSX */
+  --color-z-bg:           #000000;
+  --color-z-surface:      #16181C;
+  --color-z-card:         #16181C;
+  --color-z-border:       #2F3336;
+  --color-z-border-light: #3E4144;
+  --color-z-text:         #E7E9EA;
+  --color-z-muted:        #71767B;
+  --color-z-faint:        #1C1C1C;
+  --color-z-green:        #00BA7C;
+  --color-z-green-dim:    #001A10;
+  --color-z-red:          #F4212E;
+  --color-z-red-dim:      #200006;
+  --color-z-indigo:       #1D9BF0;
+  --color-z-indigo-dim:   #0A1929;
+  --color-z-amber:        #F59E0B;
+  --color-z-sky:          #1D9BF0;
+
+  /* Gray scale */
   --color-gray-50:  #f9fafb;
   --color-gray-100: #f3f4f6;
   --color-gray-200: #e5e7eb;
@@ -22,135 +61,99 @@
   --color-gray-700: #374151;
   --color-gray-800: #1f2937;
   --color-gray-900: #111827;
-  --color-gray-950: #030712;
+  --color-gray-950: #000000;
 
-  /* ── Colores Mango ── */
-  --color-z-bg: #030712;
-  --color-z-surface: #0f172a;
-  --color-z-card: #111827;
-  --color-z-border: #1e293b;
-  --color-z-border-light: #334155;
-  --color-z-text: #f8fafc;
-  --color-z-muted: #64748b;
-  --color-z-faint: #1e293b;
-  --color-z-green: #10b981;
-  --color-z-green-dim: #064e3b;
-  --color-z-red: #ef4444;
-  --color-z-red-dim: #450a0a;
-  --color-z-indigo: #6366f1;
-  --color-z-indigo-dim: #1e1b4b;
-  --color-z-amber: #f59e0b;
-  --color-z-sky: #0ea5e9;
+  /* Argentina */
+  --color-argentina-blue:      #74ACDF;
+  --color-argentina-blue-dark: #4A7FB5;
 }
 
-*, *::before, *::after {
-  box-sizing: border-box;
-}
+/* ── Reset ────────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
 
 body {
   margin: 0;
-  background: #030712;
-  color: #f8fafc;
-  font-family: system-ui, -apple-system, sans-serif;
+  background: #000000;
+  color: #E7E9EA;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
-#root {
-  min-height: 100dvh;
+#root { min-height: 100dvh; }
+
+/* ── Scrollbar ────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #2F3336; border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: #3E4144; }
+
+/* ── Ticker ───────────────────────────────────────────────────────────────── */
+@keyframes ticker {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.ticker-track {
+  display: inline-flex;
+  animation: ticker 60s linear infinite;
+}
+.ticker-track:hover { animation-play-state: paused; }
+
+/* ── Pulse dot ────────────────────────────────────────────────────────────── */
+@keyframes pulse-ring {
+  0%   { box-shadow: 0 0 0 0 rgba(29,155,240,.6); }
+  70%  { box-shadow: 0 0 0 6px rgba(29,155,240,0); }
+  100% { box-shadow: 0 0 0 0 rgba(29,155,240,0); }
+}
+.pulse-dot { animation: pulse-ring 2.5s ease-out infinite; }
+
+/* ── Signal card ──────────────────────────────────────────────────────────── */
+.signal-card {
+  background: #16181C;
+  border: 1px solid #2F3336;
+  border-radius: 16px;
+  padding: 16px;
+  transition: background .15s, border-color .15s;
+}
+.signal-card:hover {
+  background: #1C1C1C;
+  border-color: #3E4144;
 }
 
-/* Scrollbar */
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: #0f172a; }
-::-webkit-scrollbar-thumb { background: #334155; border-radius: 99px; }
-::-webkit-scrollbar-thumb:hover { background: #475569; }
+/* ── Chart ────────────────────────────────────────────────────────────────── */
+.recharts-cartesian-grid-horizontal line,
+.recharts-cartesian-grid-vertical line { stroke: #2F3336 !important; }
+.recharts-tooltip-wrapper { outline: none; }
 
-/* Monospace numbers everywhere */
-.mono { font-family: ui-monospace, Consolas, monospace; font-variant-numeric: tabular-nums; }
-
-/* Animated gradient border */
-.glow-border {
-  position: relative;
+/* ── Regime badge ─────────────────────────────────────────────────────────── */
+.regime-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .04em;
 }
+
+/* ── Mango Tycoon utilities ───────────────────────────────────────────────── */
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.safe-area-pb { padding-bottom: env(safe-area-inset-bottom, 0px); }
+.card { background: #16181C; border: 1px solid #2F3336; border-radius: 1rem; padding: 1rem; }
+.btn-primary { background: #1D9BF0; color: #fff; font-weight: 700; border: none; border-radius: .5rem; padding: .5rem 1rem; cursor: pointer; transition: background .15s; }
+.btn-primary:hover { background: #1A8CD8; }
+
+/* ── Glow border ──────────────────────────────────────────────────────────── */
+.glow-border { position: relative; }
 .glow-border::before {
   content: '';
   position: absolute;
   inset: -1px;
   border-radius: inherit;
-  background: linear-gradient(135deg, #10b981, #6366f1, #0ea5e9);
-  opacity: 0.4;
+  background: linear-gradient(135deg, #1D9BF0, #00BA7C, #F59E0B);
+  opacity: 0;
+  transition: opacity .3s;
   z-index: -1;
 }
-
-/* Pulse dot */
-@keyframes pulse-dot {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(0.8); }
-}
-.pulse-dot {
-  animation: pulse-dot 2s ease-in-out infinite;
-}
-
-/* Ticker scroll */
-@keyframes ticker-scroll {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
-}
-.ticker-track {
-  animation: ticker-scroll 60s linear infinite;
-  display: flex;
-  gap: 0;
-}
-.ticker-track:hover { animation-play-state: paused; }
-
-/* ── Mango Tycoon utility classes ── */
-.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-.scrollbar-hide::-webkit-scrollbar { display: none; }
-
-.safe-area-pb { padding-bottom: env(safe-area-inset-bottom, 0px); }
-
-/* Mango card and button components */
-.mango-card {
-  background: #111827;
-  border: 1px solid #1f2937;
-  border-radius: 1rem;
-  padding: 1rem;
-}
-.card {
-  background: #111827;
-  border: 1px solid #1f2937;
-  border-radius: 1rem;
-  padding: 1rem;
-}
-.btn-primary {
-  background: #f59e0b;
-  color: #111827;
-  font-weight: 700;
-  padding: 0.625rem 1rem;
-  border-radius: 0.75rem;
-  transition: background 0.2s;
-  cursor: pointer;
-  border: none;
-}
-.btn-primary:hover { background: #fbbf24; }
-.btn-primary:active { transform: scale(0.95); }
-.btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
-.btn-secondary {
-  background: #1f2937;
-  color: #fff;
-  font-weight: 600;
-  padding: 0.625rem 1rem;
-  border-radius: 0.75rem;
-  transition: background 0.2s;
-  cursor: pointer;
-  border: none;
-}
-.btn-secondary:hover { background: #374151; }
-.btn-secondary:active { transform: scale(0.95); }
-.btn-secondary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
-
-/* Neural network bg pattern */
-.neural-bg {
-  background-image: radial-gradient(circle at 1px 1px, #1e293b 1px, transparent 0);
-  background-size: 32px 32px;
-}
+.glow-border:hover::before { opacity: .35; }

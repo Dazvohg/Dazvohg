@@ -41,12 +41,12 @@ export const INSTRUMENTS: Instrument[] = [
 ]
 
 export const REGIMES: MarketRegime[] = [
-  { id: 0, label: 'Tendencia Alcista', description: 'Momentum positivo sostenido con alta participación de volumen', color: '#10b981', confidence: 0 },
+  { id: 0, label: 'Tendencia Alcista', description: 'Momentum positivo sostenido con alta participación de volumen', color: '#1D9BF0', confidence: 0 },
   { id: 1, label: 'Tendencia Bajista', description: 'Presión vendedora dominante, señales de distribución en ADRs', color: '#ef4444', confidence: 0 },
   { id: 2, label: 'Lateral / Chop',    description: 'Mercado sin dirección definida, alta incertidumbre', color: '#f59e0b', confidence: 0 },
   { id: 3, label: 'Alta Volatilidad',  description: 'Movimientos amplios intraday, spread bid-ask elevado', color: '#8b5cf6', confidence: 0 },
-  { id: 4, label: 'Baja Volatilidad',  description: 'Compresión de rango, posible breakout inminente', color: '#0ea5e9', confidence: 0 },
-  { id: 5, label: 'Neutro',           description: 'Transición entre regímenes, señales mixtas', color: '#64748b', confidence: 0 },
+  { id: 4, label: 'Baja Volatilidad',  description: 'Compresión de rango, posible breakout inminente', color: '#1D9BF0', confidence: 0 },
+  { id: 5, label: 'Neutro',           description: 'Transición entre regímenes, señales mixtas', color: '#71767B', confidence: 0 },
 ]
 
 function seed(n: number) {

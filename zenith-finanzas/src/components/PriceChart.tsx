@@ -17,7 +17,7 @@ function formatTime(ms: number) {
   return new Date(ms).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
 }
 
-export default function PriceChart({ symbol, basePrice, color = '#10b981', height = 200, showAxes = true }: Props) {
+export default function PriceChart({ symbol, basePrice, color = '#1D9BF0', height = 200, showAxes = true }: Props) {
   const data = useMemo(() =>
     generateCandles(basePrice, 80).map(c => ({
       time: c.time,
@@ -28,7 +28,7 @@ export default function PriceChart({ symbol, basePrice, color = '#10b981', heigh
   )
 
   const isUp = data[data.length - 1].price >= data[0].price
-  const lineColor = isUp ? '#10b981' : '#ef4444'
+  const lineColor = isUp ? '#1D9BF0' : '#ef4444'
   const gradientId = `grad-${symbol}`
 
   return (
@@ -42,14 +42,14 @@ export default function PriceChart({ symbol, basePrice, color = '#10b981', heigh
         </defs>
 
         {showAxes && (
-          <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke="#2F3336" vertical={false} />
         )}
 
         {showAxes && (
           <XAxis
             dataKey="time"
             tickFormatter={formatTime}
-            tick={{ fill: '#64748b', fontSize: 10, fontFamily: 'ui-monospace, monospace' }}
+            tick={{ fill: '#71767B', fontSize: 10, fontFamily: 'ui-monospace, monospace' }}
             axisLine={false}
             tickLine={false}
             minTickGap={50}
@@ -59,7 +59,7 @@ export default function PriceChart({ symbol, basePrice, color = '#10b981', heigh
         {showAxes && (
           <YAxis
             domain={['auto', 'auto']}
-            tick={{ fill: '#64748b', fontSize: 10, fontFamily: 'ui-monospace, monospace' }}
+            tick={{ fill: '#71767B', fontSize: 10, fontFamily: 'ui-monospace, monospace' }}
             axisLine={false}
             tickLine={false}
             width={48}
@@ -69,13 +69,13 @@ export default function PriceChart({ symbol, basePrice, color = '#10b981', heigh
 
         <Tooltip
           contentStyle={{
-            background: '#0f172a',
-            border: '1px solid #1e293b',
+            background: '#16181C',
+            border: '1px solid #2F3336',
             borderRadius: '8px',
             fontSize: '12px',
             fontFamily: 'ui-monospace, monospace',
           }}
-          labelStyle={{ color: '#64748b' }}
+          labelStyle={{ color: '#71767B' }}
           itemStyle={{ color: lineColor }}
           labelFormatter={v => formatTime(v as number)}
           formatter={v => [
@@ -93,7 +93,7 @@ export default function PriceChart({ symbol, basePrice, color = '#10b981', heigh
           strokeWidth={1.5}
           fill={`url(#${gradientId})`}
           dot={false}
-          activeDot={{ r: 3, fill: lineColor, stroke: '#0f172a', strokeWidth: 2 }}
+          activeDot={{ r: 3, fill: lineColor, stroke: '#16181C', strokeWidth: 2 }}
         />
       </AreaChart>
     </ResponsiveContainer>

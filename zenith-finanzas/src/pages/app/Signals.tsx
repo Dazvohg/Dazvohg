@@ -102,19 +102,19 @@ export default function Signals() {
         <div className="flex items-center gap-2 shrink-0 mt-1">
           {connected ? (
             <>
-              <span className="flex items-center gap-1.5 text-xs font-semibold text-[#10b981] bg-[#10b981]/10 border border-[#10b981]/25 px-2.5 py-1 rounded-full">
+              <span className="flex items-center gap-1.5 text-xs font-semibold text-[#1D9BF0] bg-[#1D9BF0]/10 border border-[#1D9BF0]/25 px-2.5 py-1 rounded-full">
                 <Radio size={10} className="animate-pulse" />
                 LIVE
               </span>
-              <span className="text-[10px] text-[#10b981]">Conectado al modelo</span>
+              <span className="text-[10px] text-[#1D9BF0]">Conectado al modelo</span>
             </>
           ) : (
             <>
-              <span className="flex items-center gap-1.5 text-xs text-[#64748b] bg-[#1e293b] border border-[#334155] px-2.5 py-1 rounded-full">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#64748b]" />
+              <span className="flex items-center gap-1.5 text-xs text-[#71767B] bg-[#2F3336] border border-[#3E4144] px-2.5 py-1 rounded-full">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#71767B]" />
                 DEMO
               </span>
-              <span className="text-[10px] text-[#64748b]">Modo demo</span>
+              <span className="text-[10px] text-[#71767B]">Modo demo</span>
             </>
           )}
         </div>
@@ -123,57 +123,57 @@ export default function Signals() {
       {/* Resumen de performance */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: 'Win Rate', value: `${(PERFORMANCE.winRate * 100).toFixed(1)}%`,  color: '#10b981' },
-          { label: 'Sharpe',   value: PERFORMANCE.sharpeRatio.toFixed(2),             color: '#6366f1' },
-          { label: 'Avg P&L',  value: `+${PERFORMANCE.avgPnlBps} bps`,               color: '#0ea5e9' },
+          { label: 'Win Rate', value: `${(PERFORMANCE.winRate * 100).toFixed(1)}%`,  color: '#1D9BF0' },
+          { label: 'Sharpe',   value: PERFORMANCE.sharpeRatio.toFixed(2),             color: '#1D9BF0' },
+          { label: 'Avg P&L',  value: `+${PERFORMANCE.avgPnlBps} bps`,               color: '#1D9BF0' },
           { label: 'Max DD',   value: `${PERFORMANCE.maxDrawdownBps} bps`,            color: '#f59e0b' },
         ].map(m => (
-          <div key={m.label} className="bg-[#111827] border border-[#1e293b] rounded-xl p-4">
-            <div className="text-[#64748b] text-xs mb-1 uppercase tracking-wide">{m.label}</div>
+          <div key={m.label} className="bg-[#16181C] border border-[#2F3336] rounded-xl p-4">
+            <div className="text-[#71767B] text-xs mb-1 uppercase tracking-wide">{m.label}</div>
             <div className="text-2xl font-black font-mono" style={{ color: m.color }}>{m.value}</div>
           </div>
         ))}
       </div>
 
       {/* Gráfico P&L acumulado */}
-      <div className="bg-[#111827] border border-[#1e293b] rounded-xl overflow-hidden">
-        <div className="flex items-center gap-2 px-5 py-4 border-b border-[#1e293b]">
-          <TrendingUp size={14} className="text-[#10b981]" />
-          <span className="text-[#f8fafc] font-semibold text-sm">P&L Acumulado — últimos 60 días hábiles</span>
-          <span className="ml-auto text-xs text-[#64748b]">En basis points (bps)</span>
+      <div className="bg-[#16181C] border border-[#2F3336] rounded-xl overflow-hidden">
+        <div className="flex items-center gap-2 px-5 py-4 border-b border-[#2F3336]">
+          <TrendingUp size={14} className="text-[#1D9BF0]" />
+          <span className="text-[#E7E9EA] font-semibold text-sm">P&L Acumulado — últimos 60 días hábiles</span>
+          <span className="ml-auto text-xs text-[#71767B]">En basis points (bps)</span>
         </div>
         <div className="p-4">
           <ResponsiveContainer width="100%" height={180}>
             <LineChart data={dailyPnL} margin={{ top: 4, right: 4, bottom: 0, left: 50 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#2F3336" vertical={false} />
               <XAxis
                 dataKey="date"
-                tick={{ fill: '#64748b', fontSize: 10 }}
+                tick={{ fill: '#71767B', fontSize: 10 }}
                 axisLine={false}
                 tickLine={false}
                 minTickGap={40}
                 tickFormatter={d => d.slice(5)}
               />
               <YAxis
-                tick={{ fill: '#64748b', fontSize: 10, fontFamily: 'ui-monospace, monospace' }}
+                tick={{ fill: '#71767B', fontSize: 10, fontFamily: 'ui-monospace, monospace' }}
                 axisLine={false}
                 tickLine={false}
                 width={48}
                 tickFormatter={v => `${v > 0 ? '+' : ''}${v}`}
               />
               <Tooltip
-                contentStyle={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: '8px', fontSize: '11px' }}
-                labelStyle={{ color: '#64748b' }}
+                contentStyle={{ background: '#16181C', border: '1px solid #2F3336', borderRadius: '8px', fontSize: '11px' }}
+                labelStyle={{ color: '#71767B' }}
                 formatter={(v) => { const n = Number(v ?? 0); return [`${n > 0 ? '+' : ''}${n} bps`, 'P&L acum.'] }}
               />
-              <ReferenceLine y={0} stroke="#334155" strokeDasharray="4 2" />
+              <ReferenceLine y={0} stroke="#3E4144" strokeDasharray="4 2" />
               <Line
                 type="monotone"
                 dataKey="cumPnlBps"
-                stroke="#10b981"
+                stroke="#1D9BF0"
                 strokeWidth={2}
                 dot={false}
-                activeDot={{ r: 4, fill: '#10b981', stroke: '#0f172a', strokeWidth: 2 }}
+                activeDot={{ r: 4, fill: '#1D9BF0', stroke: '#16181C', strokeWidth: 2 }}
               />
             </LineChart>
           </ResponsiveContainer>
@@ -181,18 +181,18 @@ export default function Signals() {
       </div>
 
       {/* Descripción del modelo */}
-      <div className="bg-[#0c1221] border border-[#1e293b] rounded-xl p-5 flex gap-4">
-        <div className="w-10 h-10 rounded-xl bg-[#6366f1]/15 border border-[#6366f1]/20 flex items-center justify-center shrink-0">
-          <Brain size={18} className="text-[#6366f1]" />
+      <div className="bg-[#000000] border border-[#2F3336] rounded-xl p-5 flex gap-4">
+        <div className="w-10 h-10 rounded-xl bg-[#1D9BF0]/15 border border-[#1D9BF0]/20 flex items-center justify-center shrink-0">
+          <Brain size={18} className="text-[#1D9BF0]" />
         </div>
         <div>
-          <div className="text-[#f8fafc] font-semibold text-sm mb-1">Cómo interpreta Mango cada señal</div>
-          <p className="text-[#64748b] text-xs leading-relaxed">
-            Cada señal incluye <span className="text-[#f8fafc]">probabilidad de ganancia</span> (Multi-Task Head),{' '}
-            <span className="text-[#f8fafc]">P&L esperado en bps</span> y{' '}
-            <span className="text-[#f8fafc]">estimación de incertidumbre aleatórica</span> (σ).
+          <div className="text-[#E7E9EA] font-semibold text-sm mb-1">Cómo interpreta Mango cada señal</div>
+          <p className="text-[#71767B] text-xs leading-relaxed">
+            Cada señal incluye <span className="text-[#E7E9EA]">probabilidad de ganancia</span> (Multi-Task Head),{' '}
+            <span className="text-[#E7E9EA]">P&L esperado en bps</span> y{' '}
+            <span className="text-[#E7E9EA]">estimación de incertidumbre aleatórica</span> (σ).
             Las señales con incertidumbre &gt; 20% se marcan como "baja confianza" y tienen tamaño reducido.
-            Los <span className="text-[#f8fafc]">Attention Peaks</span> muestran las features con mayor peso
+            Los <span className="text-[#E7E9EA]">Attention Peaks</span> muestran las features con mayor peso
             en el mecanismo de atención del Transformer para esa predicción específica.
           </p>
         </div>
@@ -200,7 +200,7 @@ export default function Signals() {
 
       {/* Filtros */}
       <div className="flex items-center gap-3 flex-wrap">
-        <div className="flex items-center gap-1.5 text-[#64748b] text-xs">
+        <div className="flex items-center gap-1.5 text-[#71767B] text-xs">
           <Filter size={12} />
           <span>Estado:</span>
         </div>
@@ -210,15 +210,15 @@ export default function Signals() {
             onClick={() => setFilterStatus(f)}
             className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${
               filterStatus === f
-                ? 'bg-[#10b981]/15 text-[#10b981] border border-[#10b981]/20'
-                : 'text-[#64748b] border border-[#1e293b] hover:border-[#334155] hover:text-[#f8fafc]'
+                ? 'bg-[#1D9BF0]/15 text-[#1D9BF0] border border-[#1D9BF0]/20'
+                : 'text-[#71767B] border border-[#2F3336] hover:border-[#3E4144] hover:text-[#E7E9EA]'
             }`}
           >
             {STATUS_LABEL[f]}
           </button>
         ))}
 
-        <div className="flex items-center gap-1.5 text-[#64748b] text-xs ml-4">
+        <div className="flex items-center gap-1.5 text-[#71767B] text-xs ml-4">
           <Zap size={12} />
           <span>Dirección:</span>
         </div>
@@ -228,15 +228,15 @@ export default function Signals() {
             onClick={() => setFilterDir(d)}
             className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${
               filterDir === d
-                ? 'bg-[#6366f1]/15 text-[#6366f1] border border-[#6366f1]/20'
-                : 'text-[#64748b] border border-[#1e293b] hover:border-[#334155] hover:text-[#f8fafc]'
+                ? 'bg-[#1D9BF0]/15 text-[#1D9BF0] border border-[#1D9BF0]/20'
+                : 'text-[#71767B] border border-[#2F3336] hover:border-[#3E4144] hover:text-[#E7E9EA]'
             }`}
           >
             {d === 'all' ? 'Todas' : d}
           </button>
         ))}
 
-        <span className="ml-auto text-xs text-[#64748b]">
+        <span className="ml-auto text-xs text-[#71767B]">
           {filtered.length} señales · {mergedSignals.length} total
           {liveSignals.length > 0 ? ` (${liveSignals.length} en vivo)` : ''}
         </span>
@@ -248,7 +248,7 @@ export default function Signals() {
           <SignalCard key={s.id} signal={s} />
         ))}
         {filtered.length === 0 && (
-          <div className="col-span-3 py-12 text-center text-[#64748b] text-sm">
+          <div className="col-span-3 py-12 text-center text-[#71767B] text-sm">
             No hay señales que coincidan con los filtros aplicados.
           </div>
         )}

@@ -7,7 +7,7 @@ import {
 const NAV = [
   { to: '/app/dashboard',  icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/app/terminal',   icon: Activity,        label: 'Terminal' },
-  { to: '/app/signals',    icon: Zap,             label: 'Señales IA',  badge: '4' },
+  { to: '/app/signals',    icon: Zap,             label: 'Señales IA', badge: '4' },
   { to: '/app/portfolio',  icon: Briefcase,       label: 'Portfolio' },
   { to: '/app/finanzas',   icon: Wallet,          label: 'Finanzas' },
   { to: '/app/simulador',  icon: BarChart3,       label: 'Simulador' },
@@ -19,47 +19,48 @@ export default function Sidebar() {
   const inMango = pathname.startsWith('/app/mango')
 
   return (
-    <aside className="w-56 min-h-screen bg-[#0c1221] border-r border-[#1e293b] flex flex-col shrink-0">
-      {/* Logo */}
-      <div className="px-5 py-5 border-b border-[#1e293b]">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#10b981] to-[#6366f1] flex items-center justify-center">
-            <span className="text-white text-xs font-black">Z</span>
+    <aside className="w-64 min-h-screen flex flex-col shrink-0 border-r border-[#2F3336] bg-black">
+
+      {/* ── Logo ─────────────────────────────────────────────────────────── */}
+      <div className="px-5 py-5 border-b border-[#2F3336]">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-[#1D9BF0] flex items-center justify-center shadow-lg shadow-[#1D9BF0]/20">
+            <span className="text-white text-base font-black">M</span>
           </div>
           <div>
-            <div className="text-white text-sm font-bold tracking-wide">MANGO</div>
-            <div className="text-[#10b981] text-[10px] tracking-[0.15em] font-medium">FINANZAS</div>
+            <div className="text-white text-base font-bold tracking-tight leading-none">Mango</div>
+            <div className="text-[#71767B] text-[11px] mt-0.5">Plataforma de inversión</div>
           </div>
         </div>
       </div>
 
-      {/* Model status */}
-      <div className="mx-3 mt-3 mb-1 px-3 py-2 rounded-lg bg-[#064e3b]/40 border border-[#10b981]/20 flex items-center gap-2">
-        <span className="w-2 h-2 rounded-full bg-[#10b981] pulse-dot shrink-0" />
+      {/* ── Modelo activo ────────────────────────────────────────────────── */}
+      <div className="mx-4 mt-4 mb-1 px-3 py-2.5 rounded-xl bg-[#0A1929] border border-[#1D9BF0]/30 flex items-center gap-2.5">
+        <span className="w-2 h-2 rounded-full bg-[#1D9BF0] pulse-dot shrink-0" />
         <div className="min-w-0">
-          <div className="text-[#10b981] text-[10px] font-semibold tracking-wide">MODELO ACTIVO</div>
-          <div className="text-[#64748b] text-[10px] truncate">mango-v2.0 · 8M params</div>
+          <div className="text-[#1D9BF0] text-[10px] font-bold tracking-widest uppercase">Modelo activo</div>
+          <div className="text-[#71767B] text-[11px] truncate mt-0.5">mango-v2.0 · 8M params</div>
         </div>
       </div>
 
-      {/* Nav principal */}
-      <nav className="flex-1 px-2 py-3 space-y-0.5">
+      {/* ── Nav ──────────────────────────────────────────────────────────── */}
+      <nav className="flex-1 px-3 py-3 space-y-0.5">
         {NAV.map(({ to, icon: Icon, label, badge }) => {
           const active = pathname.startsWith(to)
           return (
             <Link
               key={to}
               to={to}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-150 ${
                 active
-                  ? 'bg-[#10b981]/10 text-[#10b981] font-medium'
-                  : 'text-[#64748b] hover:text-[#f8fafc] hover:bg-[#1e293b]'
+                  ? 'bg-[#1D9BF0]/10 text-[#1D9BF0]'
+                  : 'text-[#71767B] hover:text-[#E7E9EA] hover:bg-[#16181C]'
               }`}
             >
-              <Icon size={16} />
-              {label}
+              <Icon size={17} className="shrink-0" />
+              <span className="flex-1">{label}</span>
               {badge && (
-                <span className="ml-auto bg-[#10b981] text-black text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                <span className="bg-[#1D9BF0] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none">
                   {badge}
                 </span>
               )}
@@ -67,39 +68,40 @@ export default function Sidebar() {
           )
         })}
 
-        {/* Separador */}
-        <div className="my-2 border-t border-[#1e293b]" />
+        <div className="my-3 border-t border-[#2F3336]" />
 
-        {/* Mango Tycoon — integrado dentro de la plataforma */}
+        {/* Mango Tycoon */}
         <Link
           to="/app/mango"
-          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-150 ${
             inMango
-              ? 'bg-[#d97706]/10 text-[#fbbf24] font-medium border border-[#d97706]/20'
-              : 'text-[#64748b] hover:text-[#fbbf24] hover:bg-[#1e293b]'
+              ? 'bg-[#F59E0B]/10 text-[#FBBF24] border border-[#F59E0B]/20'
+              : 'text-[#71767B] hover:text-[#FBBF24] hover:bg-[#16181C]'
           }`}
         >
-          <span className="text-base leading-none">🥭</span>
+          <span className="text-base leading-none shrink-0">🥭</span>
           <div className="min-w-0">
-            <div className="text-xs font-semibold leading-tight">Mango</div>
-            <div className="text-[10px] text-[#64748b] leading-tight">Tycoon · Aprendé jugando</div>
+            <div className="text-[13px] font-semibold leading-tight">Mango Tycoon</div>
+            <div className="text-[11px] text-[#71767B] leading-tight mt-0.5">Aprendé jugando</div>
           </div>
         </Link>
       </nav>
 
-      {/* Bottom */}
-      <div className="px-2 pb-4 space-y-0.5 border-t border-[#1e293b] pt-3">
+      {/* ── Bottom ───────────────────────────────────────────────────────── */}
+      <div className="px-3 pb-5 pt-3 border-t border-[#2F3336] space-y-0.5">
         <Link
           to="/app/settings"
-          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-[#64748b] hover:text-[#f8fafc] hover:bg-[#1e293b] transition-colors"
+          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-[#71767B] hover:text-[#E7E9EA] hover:bg-[#16181C] transition-all duration-150"
         >
-          <Settings size={16} /> Configuración
+          <Settings size={17} className="shrink-0" />
+          Configuración
         </Link>
         <Link
           to="/login"
-          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-[#64748b] hover:text-[#ef4444] hover:bg-[#1e293b] transition-colors"
+          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-[#71767B] hover:text-[#F4212E] hover:bg-[#200006]/40 transition-all duration-150"
         >
-          <LogOut size={16} /> Cerrar sesión
+          <LogOut size={17} className="shrink-0" />
+          Cerrar sesión
         </Link>
       </div>
     </aside>
