@@ -1,5 +1,7 @@
-// Typed API client for the Zenith backend
+// Cliente tipado para el backend Zenith
 const BASE = import.meta.env.VITE_ZENITH_API_URL ?? 'http://localhost:8000'
+
+type Regime = 'trend_bull' | 'trend_bear' | 'chop' | 'high_vol' | 'low_vol' | 'neutral'
 
 export interface ZenithSignal {
   id: string
@@ -10,7 +12,7 @@ export interface ZenithSignal {
   volatility: number
   prob_uncertainty: number
   pnl_uncertainty: number
-  regime: string
+  regime: Regime
   timeframe: string
   confidence: number
   status: 'active' | 'pending' | 'closed'
@@ -20,7 +22,7 @@ export interface ZenithSignal {
 }
 
 export interface ZenithRegime {
-  regime: string
+  regime: Regime
   label: string
   confidence: number
   dolar_spread_pct: number
@@ -74,7 +76,7 @@ export const zenithApi = {
   market: (): Promise<ZenithMarket | null> => apiFetch('/market', null),
 
   regime: (): Promise<ZenithRegime> => apiFetch('/regime', {
-    regime: 'neutral', label: 'Neutro', confidence: 0.847,
+    regime: 'neutral' as Regime, label: 'Neutro', confidence: 0.847,
     dolar_spread_pct: 27.5, riesgo_pais: 1450,
   }),
 
@@ -92,7 +94,7 @@ export const zenithApi = {
     last_training: 'N/A', avg_uncertainty: 0.098, torch_available: false,
   }),
 
-  connectWebSocket(onSignals: (signals: ZenithSignal[], regime: string) => void): () => void {
+  connectWebSocket(onSignals: (signals: ZenithSignal[], regime: Regime) => void): () => void {
     const url = BASE.replace(/^http/, 'ws') + '/ws/signals'
     let ws: WebSocket | null = null
     let closed = false
@@ -104,7 +106,9 @@ export const zenithApi = {
         try {
           const msg = JSON.parse(e.data)
           if (msg.type === 'signals') onSignals(msg.data, msg.regime)
-        } catch {}
+        } catch (err) {
+          console.warn('[zenith ws] parse error', err)
+        }
       }
       ws.onclose = () => { if (!closed) setTimeout(connect, 5000) }
       ws.onerror = () => ws?.close()

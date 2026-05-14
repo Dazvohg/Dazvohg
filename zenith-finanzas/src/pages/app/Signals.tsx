@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Zap, Filter, Brain, TrendingUp, Radio } from 'lucide-react'
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis,
@@ -16,29 +16,37 @@ type FilterDir = 'all' | 'LONG' | 'SHORT'
 
 const dailyPnL = generateDailyPnL(60)
 
-/** Map an API signal to the local ZenithSignal shape expected by SignalCard */
+const STATUS_MAP: Record<ApiSignal['status'], ZenithSignal['status']> = {
+  active:  'active',
+  pending: 'pending',
+  closed:  'closed_win',
+}
+
+const STATUS_LABEL: Record<FilterStatus, string> = {
+  all:         'Todas',
+  active:      'Activas',
+  pending:     'Pendientes',
+  closed_win:  'Ganadas',
+  closed_loss: 'Perdidas',
+}
+
 function mapApiSignal(s: ApiSignal): ZenithSignal {
-  const direction = s.side === 'BUY' ? 'LONG' : 'SHORT'
-  // Derive synthetic price levels from stop_bps
+  const direction    = s.side === 'BUY' ? 'LONG' : 'SHORT'
   const syntheticEntry = 100
-  const stopOffset = (s.stop_bps / 10_000) * syntheticEntry
+  const stopOffset   = (s.stop_bps / 10_000) * syntheticEntry
   const targetOffset = stopOffset * 1.5
-  const localStatus: ZenithSignal['status'] =
-    s.status === 'active' ? 'active'
-    : s.status === 'pending' ? 'pending'
-    : 'closed_win'
 
   return {
     id: s.id,
     symbol: s.symbol,
     name: s.symbol,
     direction,
-    status: localStatus,
+    status: STATUS_MAP[s.status] ?? 'closed_win',
     probability: s.probability,
     uncertainty: s.prob_uncertainty,
     entryPrice: syntheticEntry,
     targetPrice: direction === 'LONG' ? syntheticEntry + targetOffset : syntheticEntry - targetOffset,
-    stopLoss: direction === 'LONG' ? syntheticEntry - stopOffset : syntheticEntry + stopOffset,
+    stopLoss:    direction === 'LONG' ? syntheticEntry - stopOffset   : syntheticEntry + stopOffset,
     currentPrice: syntheticEntry,
     pnlBps: s.pnl_bps,
     regime: s.regime,
@@ -51,60 +59,41 @@ function mapApiSignal(s: ApiSignal): ZenithSignal {
 
 export default function Signals() {
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all')
-  const [filterDir, setFilterDir] = useState<FilterDir>('all')
-  const [liveSignals, setLiveSignals] = useState<ZenithSignal[]>([])
-  const [connected, setConnected] = useState(false)
-  const disconnectRef = useRef<(() => void) | null>(null)
+  const [filterDir, setFilterDir]       = useState<FilterDir>('all')
+  const [liveSignals, setLiveSignals]   = useState<ZenithSignal[]>([])
+  const [connected, setConnected]       = useState(false)
 
   useEffect(() => {
-    // Initial fetch of signals from HTTP endpoint
     zenithApi.signals().then(({ signals }) => {
-      if (signals.length > 0) {
-        setLiveSignals(signals.map(mapApiSignal))
-      }
+      if (signals.length > 0) setLiveSignals(signals.map(mapApiSignal))
     })
 
-    // Connect WebSocket for live updates
-    const disconnect = zenithApi.connectWebSocket((apiSignals, _regime) => {
+    const disconnect = zenithApi.connectWebSocket((apiSignals) => {
       setConnected(true)
-      if (apiSignals.length > 0) {
-        setLiveSignals(apiSignals.map(mapApiSignal))
-      }
+      if (apiSignals.length > 0) setLiveSignals(apiSignals.map(mapApiSignal))
     })
 
-    // Patch disconnect to also clear connected flag
-    disconnectRef.current = () => {
+    return () => {
       disconnect()
       setConnected(false)
     }
-
-    // Detect WebSocket connection by checking after a short delay;
-    // if ws cannot connect (API unavailable) the onerror fires quickly
-    const timer = setTimeout(() => {
-      // If we haven't received any message within 3s, assume disconnected
-    }, 3000)
-
-    return () => {
-      clearTimeout(timer)
-      disconnectRef.current?.()
-    }
   }, [])
 
-  // Merge: API signals take priority over static; keyed by symbol to deduplicate
-  const mergedSignals: ZenithSignal[] = (() => {
+  const mergedSignals = useMemo<ZenithSignal[]>(() => {
     if (liveSignals.length === 0) return SIGNALS
-    const apiById = new Map(liveSignals.map(s => [s.id, s]))
+    const apiById     = new Map(liveSignals.map(s => [s.id, s]))
     const apiBySymbol = new Map(liveSignals.map(s => [s.symbol, s]))
-    // Replace static signals whose symbol matches a live signal, keep the rest
     const base = SIGNALS.filter(s => !apiBySymbol.has(s.symbol))
     return [...liveSignals, ...base.filter(s => !apiById.has(s.id))]
-  })()
+  }, [liveSignals])
 
-  const filtered = mergedSignals.filter(s => {
-    if (filterStatus !== 'all' && s.status !== filterStatus) return false
-    if (filterDir !== 'all' && s.direction !== filterDir) return false
-    return true
-  })
+  const filtered = useMemo(() =>
+    mergedSignals.filter(s => {
+      if (filterStatus !== 'all' && s.status !== filterStatus) return false
+      if (filterDir !== 'all' && s.direction !== filterDir)    return false
+      return true
+    }),
+  [mergedSignals, filterStatus, filterDir])
 
   return (
     <div className="p-6 space-y-6">
@@ -131,13 +120,13 @@ export default function Signals() {
         </div>
       </div>
 
-      {/* Performance overview */}
+      {/* Resumen de performance */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: 'Win Rate',     value: `${(PERFORMANCE.winRate * 100).toFixed(1)}%`,  color: '#10b981' },
-          { label: 'Sharpe',       value: PERFORMANCE.sharpeRatio.toFixed(2),             color: '#6366f1' },
-          { label: 'Avg P&L',      value: `+${PERFORMANCE.avgPnlBps} bps`,               color: '#0ea5e9' },
-          { label: 'Max DD',       value: `${PERFORMANCE.maxDrawdownBps} bps`,            color: '#f59e0b' },
+          { label: 'Win Rate', value: `${(PERFORMANCE.winRate * 100).toFixed(1)}%`,  color: '#10b981' },
+          { label: 'Sharpe',   value: PERFORMANCE.sharpeRatio.toFixed(2),             color: '#6366f1' },
+          { label: 'Avg P&L',  value: `+${PERFORMANCE.avgPnlBps} bps`,               color: '#0ea5e9' },
+          { label: 'Max DD',   value: `${PERFORMANCE.maxDrawdownBps} bps`,            color: '#f59e0b' },
         ].map(m => (
           <div key={m.label} className="bg-[#111827] border border-[#1e293b] rounded-xl p-4">
             <div className="text-[#64748b] text-xs mb-1 uppercase tracking-wide">{m.label}</div>
@@ -146,7 +135,7 @@ export default function Signals() {
         ))}
       </div>
 
-      {/* Cumulative P&L chart */}
+      {/* Gráfico P&L acumulado */}
       <div className="bg-[#111827] border border-[#1e293b] rounded-xl overflow-hidden">
         <div className="flex items-center gap-2 px-5 py-4 border-b border-[#1e293b]">
           <TrendingUp size={14} className="text-[#10b981]" />
@@ -191,7 +180,7 @@ export default function Signals() {
         </div>
       </div>
 
-      {/* Model insight */}
+      {/* Descripción del modelo */}
       <div className="bg-[#0c1221] border border-[#1e293b] rounded-xl p-5 flex gap-4">
         <div className="w-10 h-10 rounded-xl bg-[#6366f1]/15 border border-[#6366f1]/20 flex items-center justify-center shrink-0">
           <Brain size={18} className="text-[#6366f1]" />
@@ -209,7 +198,7 @@ export default function Signals() {
         </div>
       </div>
 
-      {/* Filters */}
+      {/* Filtros */}
       <div className="flex items-center gap-3 flex-wrap">
         <div className="flex items-center gap-1.5 text-[#64748b] text-xs">
           <Filter size={12} />
@@ -225,7 +214,7 @@ export default function Signals() {
                 : 'text-[#64748b] border border-[#1e293b] hover:border-[#334155] hover:text-[#f8fafc]'
             }`}
           >
-            {f === 'all' ? 'Todas' : f === 'active' ? 'Activas' : f === 'pending' ? 'Pendientes' : f === 'closed_win' ? 'Ganadas' : 'Perdidas'}
+            {STATUS_LABEL[f]}
           </button>
         ))}
 
@@ -247,10 +236,13 @@ export default function Signals() {
           </button>
         ))}
 
-        <span className="ml-auto text-xs text-[#64748b]">{filtered.length} señales · {mergedSignals.length} total{liveSignals.length > 0 ? ` (${liveSignals.length} en vivo)` : ''}</span>
+        <span className="ml-auto text-xs text-[#64748b]">
+          {filtered.length} señales · {mergedSignals.length} total
+          {liveSignals.length > 0 ? ` (${liveSignals.length} en vivo)` : ''}
+        </span>
       </div>
 
-      {/* Signal grid */}
+      {/* Grilla de señales */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {filtered.map(s => (
           <SignalCard key={s.id} signal={s} />

@@ -32,7 +32,10 @@ export default function NavBar() {
         <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-2xl">🥭</span>
-            <span className="font-bold text-lg text-mango-400">Mango Tycoon</span>
+            <div className="flex flex-col leading-tight">
+              <span className="font-black text-base text-mango-400 tracking-tight">Mango</span>
+              <span className="text-[10px] text-gray-500 font-medium tracking-widest uppercase">Tycoon</span>
+            </div>
           </div>
 
           <div className="flex items-center gap-2">

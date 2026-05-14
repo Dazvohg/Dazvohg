@@ -21,7 +21,6 @@ import asyncio
 import json
 import logging
 import os
-import secrets
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -29,7 +28,6 @@ from dataclasses import asdict
 from typing import List, Optional
 
 from fastapi import (
-    BackgroundTasks,
     FastAPI,
     HTTPException,
     Request,
@@ -46,9 +44,6 @@ from pydantic import BaseModel, Field
 from .market import MarketDataFetcher
 from .signals import SignalEngine, Signal
 
-# --------------------------------------------------------------------------
-# Optional PyTorch trainer — graceful fallback if torch not installed
-# --------------------------------------------------------------------------
 try:
     from .trainer import ZenithTrainer, Experience
     from .model import ZenithNetV2
@@ -57,7 +52,6 @@ try:
 except ImportError:
     _TORCH_AVAILABLE = False
 
-# Optional Prometheus
 try:
     from prometheus_client import (
         Counter, Histogram, Gauge, generate_latest, CONTENT_TYPE_LATEST,
@@ -82,9 +76,6 @@ except ImportError:
 
     _REQ_TOTAL = _REQ_LATENCY = _PROB_GAUGE = _BUFFER_GAUGE = _Noop()  # type: ignore
 
-# --------------------------------------------------------------------------
-# Structured JSON logger (mirrors MIPROYECTO)
-# --------------------------------------------------------------------------
 
 class _JSONFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
@@ -124,7 +115,7 @@ _ws_clients: List[WebSocket] = []
 # Auth
 # --------------------------------------------------------------------------
 _API_KEY_HEADER = APIKeyHeader(name="X-API-Key", auto_error=False)
-_API_KEY = os.environ.get("ZENITH_API_KEY", "")   # empty = open access in dev
+_API_KEY = os.environ.get("ZENITH_API_KEY", "")
 
 
 def _check_key(key: Optional[str]):
@@ -133,31 +124,37 @@ def _check_key(key: Optional[str]):
 
 
 # --------------------------------------------------------------------------
-# Background signal loop
+# Helpers
+# --------------------------------------------------------------------------
+
+def _build_signals_payload(signals: List[Signal], snapshot) -> str:
+    return json.dumps({
+        "type":      "signals",
+        "data":      [asdict(s) for s in signals],
+        "regime":    signal_engine.detect_regime(snapshot),
+        "timestamp": int(time.time() * 1000),
+    })
+
+
+# --------------------------------------------------------------------------
+# Background signal loop — only runs work when clients are connected
 # --------------------------------------------------------------------------
 
 async def _signal_loop():
-    """Generate and broadcast signals every 30 seconds."""
     while True:
         try:
-            snapshot = await market_fetcher.fetch()
-            signals  = signal_engine.generate_signals(snapshot)
-
             if _ws_clients:
-                payload = json.dumps({
-                    "type":      "signals",
-                    "data":      [asdict(s) for s in signals],
-                    "regime":    signal_engine.detect_regime(snapshot),
-                    "timestamp": int(time.time() * 1000),
-                })
-                dead = []
+                snapshot = await market_fetcher.fetch()
+                signals  = signal_engine.generate_signals(snapshot)
+                payload  = _build_signals_payload(signals, snapshot)
+                survivors = []
                 for ws in list(_ws_clients):
                     try:
                         await ws.send_text(payload)
+                        survivors.append(ws)
                     except Exception:
-                        dead.append(ws)
-                for ws in dead:
-                    _ws_clients.remove(ws)
+                        pass
+                _ws_clients[:] = survivors
         except Exception as exc:
             logger.error(f"Signal loop error: {exc}")
         await asyncio.sleep(30)
@@ -223,25 +220,19 @@ def create_zenith_app(trainer=None) -> FastAPI:
         lifespan=lifespan,
     )
 
-    # ------------------------------------------------------------------
-    # CORS
-    # ------------------------------------------------------------------
     app.add_middleware(
         CORSMiddleware,
         allow_origins=[
             "http://localhost:5173",
             "http://localhost:5174",
             "https://*.github.io",
-            "*",   # open in dev; restrict in production
+            "*",
         ],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
     )
 
-    # ------------------------------------------------------------------
-    # Request logging middleware
-    # ------------------------------------------------------------------
     @app.middleware("http")
     async def _logging_middleware(request: Request, call_next):
         rid = str(uuid.uuid4())
@@ -259,7 +250,6 @@ def create_zenith_app(trainer=None) -> FastAPI:
         response.headers["X-Request-Id"] = rid
         return response
 
-    # ── Health ─────────────────────────────────────────────────────────────────
     @app.get("/health")
     async def health():
         return {
@@ -269,21 +259,18 @@ def create_zenith_app(trainer=None) -> FastAPI:
             "timestamp": int(time.time() * 1000),
         }
 
-    # ── Prometheus metrics ─────────────────────────────────────────────────────
     @app.get("/metrics", response_class=PlainTextResponse)
     async def metrics():
         if not _PROMETHEUS_AVAILABLE:
             raise HTTPException(status_code=501, detail="prometheus_client not installed")
         return PlainTextResponse(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
-    # ── Market data ────────────────────────────────────────────────────────────
     @app.get("/market")
     async def market(key: Optional[str] = Security(_API_KEY_HEADER)):
         _check_key(key)
         snapshot = await market_fetcher.fetch()
         return asdict(snapshot)
 
-    # ── Regime ─────────────────────────────────────────────────────────────────
     @app.get("/regime")
     async def regime(key: Optional[str] = Security(_API_KEY_HEADER)):
         _check_key(key)
@@ -297,15 +284,16 @@ def create_zenith_app(trainer=None) -> FastAPI:
             "low_vol":    "Baja Volatilidad",
             "neutral":    "Neutro",
         }
+        # Confidence derived from spread distance to regime thresholds
+        confidence = round(0.6 + snapshot.dolar.spread_pct / 200, 3)
         return {
             "regime":           r,
             "label":            labels.get(r, r),
-            "confidence":       0.847,
+            "confidence":       min(confidence, 0.95),
             "dolar_spread_pct": snapshot.dolar.spread_pct,
             "riesgo_pais":      snapshot.macro.riesgo_pais,
         }
 
-    # ── Signals ────────────────────────────────────────────────────────────────
     @app.get("/signals")
     async def get_signals(
         generate: bool = False,
@@ -335,13 +323,11 @@ def create_zenith_app(trainer=None) -> FastAPI:
             raise HTTPException(status_code=404, detail=f"No signal for {symbol}")
         return asdict(match[0])
 
-    # ── Performance ────────────────────────────────────────────────────────────
     @app.get("/performance")
     async def performance(key: Optional[str] = Security(_API_KEY_HEADER)):
         _check_key(key)
         return signal_engine.get_performance_stats()
 
-    # ── Model status ───────────────────────────────────────────────────────────
     @app.get("/model/status")
     async def model_status(key: Optional[str] = Security(_API_KEY_HEADER)):
         _check_key(key)
@@ -353,12 +339,11 @@ def create_zenith_app(trainer=None) -> FastAPI:
             "inference_ms":      14 if has_trainer else 2,
             "buffer_size":       len(_trainer.buffer) if has_trainer else 0,  # type: ignore[union-attr]
             "training_step":     getattr(_trainer, "step", 0),
-            "last_training":     "23 min ago",
-            "avg_uncertainty":   0.098,
+            "last_training":     getattr(_trainer, "last_training_ts", "N/A"),
+            "avg_uncertainty":   getattr(_trainer, "avg_uncertainty", 0.098),
             "torch_available":   _TORCH_AVAILABLE,
         }
 
-    # ── Neural net predict (requires PyTorch) ──────────────────────────────────
     @app.post("/predict", response_model=PredictResponse)
     async def predict(
         request: Request,
@@ -461,24 +446,16 @@ def create_zenith_app(trainer=None) -> FastAPI:
             logger.error(f"batch predict error rid={rid}: {exc}")
             raise HTTPException(status_code=400, detail=str(exc))
 
-    # ── WebSocket real-time signals ────────────────────────────────────────────
     @app.websocket("/ws/signals")
     async def ws_signals(websocket: WebSocket):
         await websocket.accept()
         _ws_clients.append(websocket)
         try:
-            # Push current signals immediately on connect
             snapshot = await market_fetcher.fetch()
             signals  = signal_engine.generate_signals(snapshot)
-            await websocket.send_text(json.dumps({
-                "type":      "signals",
-                "data":      [asdict(s) for s in signals],
-                "regime":    signal_engine.detect_regime(snapshot),
-                "timestamp": int(time.time() * 1000),
-            }))
-            # Keep-alive pings every second
+            await websocket.send_text(_build_signals_payload(signals, snapshot))
             while True:
-                await asyncio.sleep(1)
+                await asyncio.sleep(30)
                 try:
                     await websocket.send_text(
                         json.dumps({"type": "ping", "ts": int(time.time() * 1000)})
