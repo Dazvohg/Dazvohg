@@ -1324,6 +1324,135 @@ function TabBar({ tab, setTab }: { tab: Tab; setTab: (tab: Tab) => void }) {
   );
 }
 
+// ─── BTC Live Chart ──────────────────────────────────────────────────────────
+
+type PricePoint = { t: number; c: number };
+
+const BINANCE_REST = "https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1m&limit=60";
+const BINANCE_WS   = "wss://stream.binance.com/ws/btcusdt@kline_1m";
+
+function BtcLiveChart({ onPrice }: { onPrice: (p: number) => void }) {
+  const [history, setHistory] = useState<PricePoint[]>([]);
+  const [live, setLive]       = useState(0);
+  const [wsOk, setWsOk]       = useState(false);
+  const wsRef = useRef<WebSocket | null>(null);
+  const onPriceRef = useRef(onPrice);
+  onPriceRef.current = onPrice;
+
+  useEffect(() => {
+    let dead = false;
+
+    fetch(BINANCE_REST, { signal: AbortSignal.timeout(8000) })
+      .then((r) => r.json())
+      .then((rows: number[][]) => {
+        if (dead) return;
+        setHistory(rows.map(([t, , , , c]) => ({ t, c: Number(c) })));
+      })
+      .catch(() => {});
+
+    function connect() {
+      if (dead) return;
+      const w = new WebSocket(BINANCE_WS);
+      wsRef.current = w;
+      w.onopen  = () => { if (!dead) setWsOk(true); };
+      w.onclose = () => { setWsOk(false); if (!dead) setTimeout(connect, 3000); };
+      w.onmessage = ({ data }) => {
+        try {
+          const { k } = JSON.parse(data);
+          const price = Number(k.c);
+          setLive(price);
+          onPriceRef.current(price);
+          if (k.x) {
+            setHistory((prev) => [...prev.slice(-59), { t: k.t, c: price }]);
+          }
+        } catch {}
+      };
+    }
+    connect();
+
+    return () => { dead = true; wsRef.current?.close(); };
+  }, []);
+
+  const pts = [...history.map((p) => p.c), live].filter(Boolean);
+  const currentPrice = live || pts[pts.length - 1] || 0;
+  const firstPrice   = pts[0] || currentPrice;
+  const change       = firstPrice ? ((currentPrice - firstPrice) / firstPrice) * 100 : 0;
+  const positive     = change >= 0;
+  const color        = positive ? "var(--green)" : "var(--red)";
+
+  if (pts.length < 2) {
+    return (
+      <section className="panel btc-chart-panel">
+        <div className="btc-chart-header">
+          <div>
+            <p className="eyebrow" style={{ margin: "0 0 2px" }}>Bitcoin · BTC/USDT</p>
+            <strong className="btc-price">Cargando...</strong>
+          </div>
+        </div>
+        <div style={{ height: 80, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <span style={{ color: "var(--muted)", fontSize: 12 }}>Conectando a Binance...</span>
+        </div>
+      </section>
+    );
+  }
+
+  const min  = Math.min(...pts);
+  const max  = Math.max(...pts);
+  const span = max - min || 1;
+  const W = 340, H = 80;
+  const toX = (i: number) => ((i / (pts.length - 1)) * W).toFixed(1);
+  const toY = (p: number) => (H - ((p - min) / span) * (H - 6) - 3).toFixed(1);
+  const line = pts.map((p, i) => `${i === 0 ? "M" : "L"}${toX(i)},${toY(p)}`).join(" ");
+  const area = `${line} L${W},${H} L0,${H} Z`;
+  const lastX = toX(pts.length - 1);
+  const lastY = toY(pts[pts.length - 1]);
+
+  return (
+    <section className="panel btc-chart-panel">
+      <div className="btc-chart-header">
+        <div>
+          <p className="eyebrow" style={{ margin: "0 0 2px", display: "flex", alignItems: "center", gap: 6 }}>
+            Bitcoin · BTC/USDT
+            <span className={`live-dot${wsOk ? " live-dot--on" : ""}`} />
+          </p>
+          <strong className="btc-price">
+            ${currentPrice.toLocaleString("en-US", { maximumFractionDigits: 0 })}
+          </strong>
+        </div>
+        <div style={{ textAlign: "right" }}>
+          <div style={{ color, fontWeight: 700, fontSize: 16 }}>
+            {positive ? "+" : ""}{change.toFixed(2)}%
+          </div>
+          <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>Última hora</div>
+        </div>
+      </div>
+
+      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: 80, marginTop: 8 }} preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="btcGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"   stopColor={positive ? "#00BA7C" : "#F4212E"} stopOpacity="0.35" />
+            <stop offset="100%" stopColor={positive ? "#00BA7C" : "#F4212E"} stopOpacity="0.02" />
+          </linearGradient>
+        </defs>
+        <path d={area} fill="url(#btcGrad)" />
+        <path d={line} fill="none" stroke={positive ? "#00BA7C" : "#F4212E"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        <circle cx={lastX} cy={lastY} r="3.5" fill={positive ? "#00BA7C" : "#F4212E"} />
+        {wsOk && <circle cx={lastX} cy={lastY} r="6" fill={positive ? "#00BA7C" : "#F4212E"} opacity="0.25">
+          <animate attributeName="r" values="4;10;4" dur="2s" repeatCount="indefinite" />
+          <animate attributeName="opacity" values="0.3;0;0.3" dur="2s" repeatCount="indefinite" />
+        </circle>}
+      </svg>
+
+      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
+        <span style={{ fontSize: 10, color: "var(--muted)" }}>60 min</span>
+        <span style={{ fontSize: 10, color: wsOk ? "var(--green)" : "var(--muted)" }}>
+          {wsOk ? "● EN VIVO" : "○ Reconectando..."}
+        </span>
+      </div>
+    </section>
+  );
+}
+
 // ─── Simulador ───────────────────────────────────────────────────────────────
 
 function SimulatorTab({
@@ -1384,12 +1513,18 @@ function SimulatorTab({
     ? Math.round((Date.now() - sim.pricesUpdatedAt) / 1000)
     : null;
 
+  const handleBtcPrice = useCallback((price: number) => {
+    setState((cur) => updateSimPrices(cur, { ...cur.simulator.prices, BTC: price }));
+  }, [setState]);
+
   return (
     <>
       <div className="page-intro">
         <h2>Simulador</h2>
         <p>Invertí con US$10.000 ficticios. Aprendé sin riesgo real.</p>
       </div>
+
+      <BtcLiveChart onPrice={handleBtcPrice} />
 
       {/* Resumen */}
       <section className="panel">

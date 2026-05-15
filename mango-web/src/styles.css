@@ -38,6 +38,43 @@ body {
 button, input, select { font: inherit; }
 button { cursor: pointer; }
 
+/* ── BTC Live Chart ─────────────────────────────────────────────────────────*/
+.btc-chart-panel { padding: 14px 16px 10px; overflow: hidden; }
+
+.btc-chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.btc-price {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -.02em;
+  color: var(--text);
+}
+
+.live-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--muted);
+  flex-shrink: 0;
+}
+
+.live-dot--on {
+  background: var(--green);
+  box-shadow: 0 0 0 0 rgba(0,186,124,.6);
+  animation: livePulse 2s ease-in-out infinite;
+}
+
+@keyframes livePulse {
+  0%   { box-shadow: 0 0 0 0 rgba(0,186,124,.6); }
+  70%  { box-shadow: 0 0 0 6px rgba(0,186,124,0); }
+  100% { box-shadow: 0 0 0 0 rgba(0,186,124,0); }
+}
+
 /* ── Scrollbar ──────────────────────────────────────────────────────────────*/
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
