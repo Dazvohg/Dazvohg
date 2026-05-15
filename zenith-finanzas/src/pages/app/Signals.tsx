@@ -28,6 +28,152 @@ const ORACLE_SIGNAL = {
   regimeConf: 0.87,
   backtestReturn: 14.3,
   backtestUsd: 1_430,
+  // Darvas Box
+  boxTop: 69_000,
+  boxBottom: 64_500,
+  boxDays: 8,
+}
+
+// ── Darvas Box ────────────────────────────────────────────────────────────────
+function DarvasBoxViz({ sig }: { sig: typeof ORACLE_SIGNAL }) {
+  const { entry, target, stop, boxTop, boxBottom } = sig
+
+  const PRICE_MIN = stop   - 800
+  const PRICE_MAX = target + 600
+  const RANGE     = PRICE_MAX - PRICE_MIN
+  const W = 340, H = 160, PAD = 10
+
+  const toY = (p: number) => PAD + (1 - (p - PRICE_MIN) / RANGE) * (H - PAD * 2)
+
+  const yTarget  = toY(target)
+  const yBoxTop  = toY(boxTop)
+  const yCurrent = toY(entry)
+  const yBoxBot  = toY(boxBottom)
+  const yStop    = toY(stop)
+
+  const approachPct = Math.round(((entry - boxBottom) / (boxTop - boxBottom)) * 100)
+  const status = entry >= boxTop ? 'BREAKOUT ✓' : 'TESTEANDO TECHO'
+  const statusColor = entry >= boxTop ? '#00BA7C' : '#F59E0B'
+
+  return (
+    <div className="px-5 pb-5 pt-4 border-t border-[#2F3336]">
+      {/* Title row */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <span className="text-base">📦</span>
+          <div>
+            <span className="text-[#E7E9EA] text-sm font-black">Método de la Caja</span>
+            <span className="text-[#71767B] text-[10px] ml-2">Darvas Box</span>
+          </div>
+        </div>
+        <span
+          className="text-[11px] font-black tracking-wide px-2.5 py-1 rounded-full border"
+          style={{ color: statusColor, borderColor: `${statusColor}40`, background: `${statusColor}12` }}
+        >
+          {status}
+        </span>
+      </div>
+
+      {/* SVG canvas */}
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" preserveAspectRatio="none"
+        style={{ height: 160, display: 'block', overflow: 'visible' }}>
+
+        {/* Target zone (above box) */}
+        <rect x="0" y={yTarget} width={W} height={yBoxTop - yTarget}
+          fill="rgba(0,186,124,0.07)" />
+
+        {/* Box fill */}
+        <rect x="0" y={yBoxTop} width={W} height={yBoxBot - yBoxTop}
+          fill="rgba(29,155,240,0.10)" />
+
+        {/* Stop zone (below box) */}
+        <rect x="0" y={yBoxBot} width={W} height={yStop - yBoxBot}
+          fill="rgba(244,33,46,0.06)" />
+
+        {/* Target dashed */}
+        <line x1="0" y1={yTarget} x2={W} y2={yTarget}
+          stroke="#00BA7C" strokeWidth="1" strokeDasharray="5 3" />
+
+        {/* Box top — solid blue */}
+        <line x1="0" y1={yBoxTop} x2={W} y2={yBoxTop}
+          stroke="#1D9BF0" strokeWidth="2" />
+        {/* Box top label bg */}
+        <rect x="4" y={yBoxTop - 16} width={110} height={14} rx="3" fill="#0A1929" />
+        <text x="8" y={yBoxTop - 5} fill="#1D9BF0" fontSize="9.5" fontFamily="ui-monospace,monospace" fontWeight="700">
+          TECHO CAJA  ${boxTop.toLocaleString()}
+        </text>
+
+        {/* Box bottom — solid blue */}
+        <line x1="0" y1={yBoxBot} x2={W} y2={yBoxBot}
+          stroke="#1D9BF0" strokeWidth="2" />
+        <rect x="4" y={yBoxBot + 3} width={110} height={14} rx="3" fill="#0A1929" />
+        <text x="8" y={yBoxBot + 13} fill="#1D9BF0" fontSize="9.5" fontFamily="ui-monospace,monospace" fontWeight="700">
+          PISO CAJA   ${boxBottom.toLocaleString()}
+        </text>
+
+        {/* Stop dashed */}
+        <line x1="0" y1={yStop} x2={W} y2={yStop}
+          stroke="#F4212E" strokeWidth="1" strokeDasharray="5 3" />
+        <text x={W - 4} y={yStop + 12} textAnchor="end" fill="#F4212E" fontSize="9" fontFamily="ui-monospace,monospace">
+          STOP  ${stop.toLocaleString()}
+        </text>
+
+        {/* Target label */}
+        <text x={W - 4} y={yTarget - 4} textAnchor="end" fill="#00BA7C" fontSize="9" fontFamily="ui-monospace,monospace">
+          OBJETIVO  ${target.toLocaleString()}
+        </text>
+
+        {/* Current price — bright white moving line */}
+        <line x1="0" y1={yCurrent} x2={W} y2={yCurrent}
+          stroke="#E7E9EA" strokeWidth="2.5" />
+        <rect x="4" y={yCurrent - 16} width={130} height={14} rx="3" fill="#1C1C1C" />
+        <text x="8" y={yCurrent - 5} fill="#E7E9EA" fontSize="10" fontFamily="ui-monospace,monospace" fontWeight="800">
+          ▶ PRECIO  ${entry.toLocaleString()}
+        </text>
+        {/* Blinking dot on right edge */}
+        <circle cx={W - 6} cy={yCurrent} r="4.5" fill="#E7E9EA" />
+        <circle cx={W - 6} cy={yCurrent} r="8" fill="#E7E9EA" opacity="0.2">
+          <animate attributeName="r" values="5;12;5" dur="2s" repeatCount="indefinite" />
+          <animate attributeName="opacity" values="0.25;0;0.25" dur="2s" repeatCount="indefinite" />
+        </circle>
+
+        {/* Progress bar inside box showing how far price is from breakout */}
+        <rect x={W - 18} y={yBoxTop} width="12" height={yBoxBot - yBoxTop}
+          rx="4" fill="#2F3336" />
+        <rect x={W - 18} y={yBoxTop + (yBoxBot - yBoxTop) * (1 - approachPct / 100)}
+          width="12" height={(yBoxBot - yBoxTop) * (approachPct / 100)}
+          rx="4" fill="#1D9BF0" opacity="0.8" />
+      </svg>
+
+      {/* Stats row */}
+      <div className="grid grid-cols-3 gap-2 mt-3">
+        {[
+          { label: 'Techo caja',    value: `$${boxTop.toLocaleString()}`,  color: '#1D9BF0' },
+          { label: 'En caja desde', value: `${sig.boxDays} días`,           color: '#E7E9EA' },
+          { label: 'Piso caja',     value: `$${boxBottom.toLocaleString()}`, color: '#1D9BF0' },
+        ].map(({ label, value, color }) => (
+          <div key={label} className="bg-[#000000] border border-[#2F3336] rounded-xl p-2.5 text-center">
+            <div className="text-[#71767B] text-[9px] uppercase tracking-wide mb-0.5">{label}</div>
+            <div className="font-mono font-bold text-[11px]" style={{ color }}>{value}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Explanation */}
+      <p className="text-[#71767B] text-[11px] mt-3 leading-relaxed">
+        BTC consolidó entre{' '}
+        <span className="text-[#E7E9EA] font-semibold">${boxBottom.toLocaleString()}</span> y{' '}
+        <span className="text-[#E7E9EA] font-semibold">${boxTop.toLocaleString()}</span>{' '}
+        durante {sig.boxDays} días formando una caja Darvas. El precio está al{' '}
+        <span className="font-bold" style={{ color: statusColor }}>{approachPct}%</span>{' '}
+        del techo. Un cierre diario sobre{' '}
+        <span className="text-[#1D9BF0] font-semibold">${boxTop.toLocaleString()}</span>{' '}
+        confirma el <span className="text-[#00BA7C] font-semibold">breakout</span> hacia{' '}
+        <span className="text-[#E7E9EA] font-semibold">${target.toLocaleString()}</span>{' '}
+        (altura de la caja proyectada × 1.0).
+      </p>
+    </div>
+  )
 }
 
 function OraclePanel({ connected }: { connected: boolean }) {
@@ -122,6 +268,9 @@ function OraclePanel({ connected }: { connected: boolean }) {
           ))}
         </div>
       </div>
+
+      {/* Método de la Caja — Darvas Box */}
+      <DarvasBoxViz sig={sig} />
 
       {/* Backtest bar */}
       <div className="mx-5 mb-5 bg-[#001A10] border border-[#00BA7C]/20 rounded-xl px-4 py-3">
