@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import {
   TrendingUp, TrendingDown, Zap, Activity,
-  ArrowRight, Brain, BarChart2,
+  ArrowRight, Brain, BarChart2, Lock, Crown,
 } from 'lucide-react'
 import Header from '@/components/Header'
 import MetricCard from '@/components/MetricCard'
@@ -17,6 +17,64 @@ import { zenithApi, type ModelStatus, type ZenithRegime } from '@/lib/zenithApi'
 const staticRegime = { ...REGIMES[0], confidence: 0.847 }
 const activeSignals = SIGNALS.filter(s => s.status === 'active' || s.status === 'pending')
 const topInstruments = INSTRUMENTS.slice(0, 6)
+
+const ARENA_NAMES_D = ['Marcos G.', 'Laura V.', 'Diego H.', 'Ana P.', 'Carlos M.']
+const MEDALS_D = ['👑', '🥈', '🥉']
+
+function ArenaDashCard() {
+  const { weekNum, countdown, top3, totalUsers } = useMemo(() => {
+    const now = new Date()
+    const epochWeek = Math.floor(now.getTime() / (7 * 24 * 60 * 60 * 1000))
+    const sunday = new Date(now)
+    sunday.setDate(now.getDate() + (7 - now.getDay()) % 7 || 7)
+    sunday.setHours(23, 59, 59, 0)
+    const diff = sunday.getTime() - now.getTime()
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+    const s = epochWeek
+    const sorted = [...ARENA_NAMES_D].sort((a, b) => {
+      const h = (x: string, seed: number) => [...x].reduce((acc, c) => (acc * 31 + c.charCodeAt(0) + seed) | 0, 0)
+      return h(a, s) - h(b, s)
+    })
+    const base = [22.1, 17.8, 13.4]
+    return {
+      weekNum: (epochWeek % 52) + 1,
+      countdown: `${days}d ${hours}h`,
+      top3: sorted.slice(0, 3).map((name, i) => ({ name, ret: base[i] + ((s * (i + 7)) % 41) * 0.1 })),
+      totalUsers: 820 + (s % 180),
+    }
+  }, [])
+
+  return (
+    <div className="rounded-2xl border border-[#F59E0B]/25 bg-gradient-to-br from-[#1C1200] to-[#000000] p-5">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <div className="text-[#F59E0B] text-[10px] font-black tracking-widest uppercase mb-0.5">⚔️ Arena Semanal</div>
+          <div className="text-white font-black text-base">Semana #{weekNum} · {totalUsers.toLocaleString()} jugadores</div>
+        </div>
+        <div className="text-right">
+          <div className="text-[10px] text-[#71767B]">Termina en</div>
+          <div className="text-[#F59E0B] font-black text-base">{countdown}</div>
+        </div>
+      </div>
+      <div className="space-y-2 mb-4">
+        {top3.map((p, i) => (
+          <div key={p.name} className="flex items-center gap-2">
+            <span className="text-base w-6">{MEDALS_D[i]}</span>
+            <span className="flex-1 text-sm font-semibold text-[#E7E9EA]">{p.name}</span>
+            <span className="text-sm font-bold text-[#00BA7C]">+{p.ret.toFixed(1)}%</span>
+          </div>
+        ))}
+      </div>
+      <Link
+        to="/app/signals"
+        className="flex items-center justify-center gap-2 w-full py-2 rounded-xl border border-[#F59E0B]/30 text-[#F59E0B] text-xs font-bold hover:bg-[#F59E0B]/10 transition-colors"
+      >
+        <Lock size={11} /> Ver ranking completo · Pro
+      </Link>
+    </div>
+  )
+}
 
 export default function Dashboard() {
   const [modelStatus, setModelStatus] = useState<ModelStatus | null>(null)
@@ -70,6 +128,34 @@ export default function Dashboard() {
           icon={<Brain size={14} />}
           accent="sky"
         />
+      </div>
+
+      {/* Arena + Oracle teasers */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+        {/* Arena Semanal */}
+        <ArenaDashCard />
+
+        {/* Oracle teaser */}
+        <div className="relative rounded-2xl border border-[#F59E0B]/25 bg-gradient-to-br from-[#1C1200] to-[#000000] p-5 overflow-hidden">
+          <div className="flex items-center gap-2 mb-3">
+            <Crown size={13} className="text-[#F59E0B]" />
+            <span className="text-[#F59E0B] text-[10px] font-black tracking-widest uppercase">Oracle IA · Pro</span>
+          </div>
+          <div className="text-[#E7E9EA] text-lg font-black mb-1">Señal del Día</div>
+          <div className="text-[#00BA7C] text-2xl font-black mb-3">↑ LONG · BTC</div>
+          <div className="space-y-1 text-xs font-mono mb-4 blur-sm select-none">
+            <div className="flex justify-between"><span className="text-[#71767B]">Entrada</span><span className="text-white">$68,400</span></div>
+            <div className="flex justify-between"><span className="text-[#71767B]">Objetivo</span><span className="text-[#00BA7C]">$72,100 (+5.4%)</span></div>
+            <div className="flex justify-between"><span className="text-[#71767B]">Stop</span><span className="text-[#F4212E]">$66,200 (-3.2%)</span></div>
+          </div>
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/50 backdrop-blur-[1px] rounded-2xl">
+            <Lock size={18} className="text-[#F59E0B]" />
+            <Link to="/app/signals" className="bg-[#F59E0B] text-black text-xs font-black px-4 py-2 rounded-lg hover:bg-[#FBBF24] transition-colors">
+              Ver Oracle completo
+            </Link>
+          </div>
+        </div>
       </div>
 
       {/* Main grid */}

@@ -237,6 +237,10 @@ function HomeTab({
 
   return (
     <>
+      <MangoScoreCard state={state} setTab={setTab} />
+
+      <ArenaWeekCard state={state} setTab={setTab} />
+
       <section className="panel advice">
         <p className="eyebrow">Asesor Mango</p>
         <h3>{currentAdvice.title}</h3>
@@ -1321,6 +1325,179 @@ function TabBar({ tab, setTab }: { tab: Tab; setTab: (tab: Tab) => void }) {
         );
       })}
     </nav>
+  );
+}
+
+// ─── Mango Score ─────────────────────────────────────────────────────────────
+
+function computeMangoScore(state: AppState) {
+  const health = budgetHealth(state);
+  const budgetPts = health.status === "green" ? 250 : health.status === "yellow" ? 120 : 30;
+
+  const spent = monthlyExpenses(state);
+  const salary = state.user?.salary || 1;
+  const savingsPts = Math.round(Math.max(0, Math.min(1, (salary - spent) / salary)) * 250);
+
+  const done = state.tycoon.completedLessonIds.length;
+  const lessonsPts = Math.round((done / Math.max(lessons.length, 1)) * 250);
+
+  const pnlP = simPnlPct(state.simulator);
+  const simPts = pnlP >= 20 ? 250 : pnlP >= 10 ? 200 : pnlP >= 0 ? 130 : pnlP >= -10 ? 60 : 10;
+
+  return {
+    score: Math.min(1000, budgetPts + savingsPts + lessonsPts + simPts),
+    breakdown: { budget: budgetPts, savings: savingsPts, lessons: lessonsPts, sim: simPts },
+  };
+}
+
+function MangoScoreCard({ state, setTab }: { state: AppState; setTab: (t: Tab) => void }) {
+  const { score, breakdown } = useMemo(() => computeMangoScore(state), [state]);
+  const color = score >= 700 ? "var(--green)" : score >= 400 ? "var(--amber)" : "var(--red)";
+  const label = score >= 700 ? "Inversor Avanzado" : score >= 400 ? "Inversor Intermedio" : "Inversor Novato";
+  const R = 40, circumference = 2 * Math.PI * R;
+  const arc = circumference * (score / 1000);
+
+  return (
+    <section className="panel score-card">
+      <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
+        <svg width="96" height="96" viewBox="0 0 100 100" style={{ flexShrink: 0 }}>
+          <circle cx="50" cy="50" r={R} fill="none" stroke="var(--border)" strokeWidth="9" />
+          <circle
+            cx="50" cy="50" r={R} fill="none"
+            stroke={color} strokeWidth="9"
+            strokeDasharray={`${arc.toFixed(1)} ${(circumference - arc).toFixed(1)}`}
+            strokeLinecap="round"
+            transform="rotate(-90 50 50)"
+          />
+          <text x="50" y="47" textAnchor="middle" fill="var(--text)" fontSize="20" fontWeight="800" fontFamily="inherit">{score}</text>
+          <text x="50" y="61" textAnchor="middle" fill="var(--muted)" fontSize="9" fontFamily="inherit">/ 1000</text>
+        </svg>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p className="eyebrow" style={{ margin: "0 0 2px" }}>Mango Score</p>
+          <strong style={{ display: "block", fontSize: 16, fontWeight: 800 }}>{label}</strong>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "5px 12px", marginTop: 10 }}>
+            <ScorePill label="Presupuesto" pts={breakdown.budget} max={250} />
+            <ScorePill label="Ahorro" pts={breakdown.savings} max={250} />
+            <ScorePill label="Lecciones" pts={breakdown.lessons} max={250} onClick={() => setTab("learn")} />
+            <ScorePill label="Simulador" pts={breakdown.sim} max={250} onClick={() => setTab("simulador")} />
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ScorePill({ label, pts, max, onClick }: { label: string; pts: number; max: number; onClick?: () => void }) {
+  const pct = pts / max;
+  const color = pct >= 0.8 ? "var(--green)" : pct >= 0.5 ? "var(--amber)" : "var(--red)";
+  return (
+    <div style={{ cursor: onClick ? "pointer" : "default" }} onClick={onClick}>
+      <div style={{ display: "flex", justifyContent: "space-between" }}>
+        <span style={{ fontSize: 10, color: "var(--muted)" }}>{label}</span>
+        <span style={{ fontSize: 10, fontWeight: 700, color }}>{pts}</span>
+      </div>
+      <div style={{ height: 3, background: "var(--border)", borderRadius: 99, marginTop: 2 }}>
+        <div style={{ height: 3, width: `${pct * 100}%`, background: color, borderRadius: 99, transition: "width 1.2s ease" }} />
+      </div>
+    </div>
+  );
+}
+
+// ─── Arena Semanal ────────────────────────────────────────────────────────────
+
+const ARENA_NAMES = ["Marcos G.", "Laura V.", "Diego H.", "Ana P.", "Carlos M.", "Pablo R.", "Jimena S.", "Rodrigo T.", "Valentina F.", "Matías O."];
+const MEDALS = ["👑", "🥈", "🥉"];
+
+function getArenaWeek() {
+  const now = new Date();
+  const epochWeek = Math.floor(now.getTime() / (7 * 24 * 60 * 60 * 1000));
+  const sunday = new Date(now);
+  sunday.setDate(now.getDate() + (7 - now.getDay()) % 7 || 7);
+  sunday.setHours(23, 59, 59, 0);
+  const diff = sunday.getTime() - now.getTime();
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+
+  const s = epochWeek;
+  const sorted = [...ARENA_NAMES].sort((a, b) => {
+    const h = (x: string, seed: number) => [...x].reduce((acc, c) => (acc * 31 + c.charCodeAt(0) + seed) | 0, 0);
+    return h(a, s) - h(b, s);
+  });
+  const base = [22.1, 17.8, 13.4, 10.2, 8.6];
+  const top3 = sorted.slice(0, 3).map((name, i) => ({
+    name,
+    ret: base[i] + ((s * (i + 7)) % 41) * 0.1,
+  }));
+
+  return { weekNum: (epochWeek % 52) + 1, countdown: `${days}d ${hours}h`, top3, totalUsers: 820 + (s % 180) };
+}
+
+function ArenaWeekCard({ state, setTab }: { state: AppState; setTab: (t: Tab) => void }) {
+  const { weekNum, countdown, top3, totalUsers } = useMemo(getArenaWeek, []);
+  const pnlPct = useMemo(() => simPnlPct(state.simulator), [state.simulator]);
+  const pnlUsd = useMemo(() => simPnl(state.simulator), [state.simulator]);
+  const pos = pnlPct >= 0;
+
+  const rank = useMemo(() => {
+    if (pnlPct >= 18) return Math.max(1, Math.floor(totalUsers * 0.03));
+    if (pnlPct >= 12) return Math.floor(totalUsers * 0.12);
+    if (pnlPct >=  5) return Math.floor(totalUsers * 0.28);
+    if (pnlPct >=  0) return Math.floor(totalUsers * 0.52);
+    return Math.floor(totalUsers * 0.78);
+  }, [pnlPct, totalUsers]);
+
+  const topPct = Math.round((rank / totalUsers) * 100);
+
+  return (
+    <section className="panel arena-card">
+      <div className="arena-head">
+        <div>
+          <p className="eyebrow" style={{ margin: "0 0 1px", color: "var(--amber)" }}>⚔️ Arena Semanal</p>
+          <strong style={{ fontSize: 15, fontWeight: 800 }}>Semana #{weekNum} · {totalUsers.toLocaleString()} usuarios</strong>
+        </div>
+        <div style={{ textAlign: "right" }}>
+          <div style={{ fontSize: 10, color: "var(--muted)" }}>Termina en</div>
+          <div style={{ fontSize: 15, fontWeight: 800, color: "var(--amber)" }}>{countdown}</div>
+        </div>
+      </div>
+
+      <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 6 }}>
+        {top3.map((p, i) => (
+          <div key={p.name} className="arena-row">
+            <span style={{ width: 22, fontSize: 15 }}>{MEDALS[i]}</span>
+            <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{p.name}</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: "var(--green)" }}>+{p.ret.toFixed(1)}%</span>
+            <span style={{ fontSize: 11, color: "var(--muted)", marginLeft: 6 }}>
+              +${(p.ret / 100 * 10000).toFixed(0)}
+            </span>
+          </div>
+        ))}
+
+        <div style={{ borderTop: "1px solid var(--border)", margin: "4px 0" }} />
+
+        <div className="arena-row arena-mine">
+          <span style={{ width: 22, fontSize: 12, color: "var(--muted)", fontWeight: 700 }}>#{rank}</span>
+          <span style={{ flex: 1, fontSize: 13, fontWeight: 800 }}>Vos</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: pos ? "var(--green)" : "var(--red)" }}>
+            {pos ? "+" : ""}{pnlPct.toFixed(1)}%
+          </span>
+          <span style={{ fontSize: 11, color: "var(--muted)", marginLeft: 6 }}>
+            {pos ? "+" : ""}{pnlUsd >= 0 ? "" : "-"}${Math.abs(pnlUsd).toFixed(0)}
+          </span>
+        </div>
+        <p style={{ fontSize: 11, color: "var(--muted)", margin: "2px 0 8px" }}>
+          Top {topPct}% de la comunidad
+          {topPct <= 20 ? " 🔥 Excelente semana" : topPct <= 50 ? " — Seguís sumando" : " — Simulá más para subir 💪"}
+        </p>
+      </div>
+
+      <button
+        className="arena-pro-btn"
+        onClick={() => setTab("mercados")}
+      >
+        <Lock size={12} /> Ver ranking completo · Pro
+      </button>
+    </section>
   );
 }
 
