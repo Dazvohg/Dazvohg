@@ -6,14 +6,20 @@ import RegimeBadge from '@/components/RegimeBadge'
 import SignalCard from '@/components/SignalCard'
 import { INSTRUMENTS, REGIMES } from '@/data/market'
 import { SIGNALS } from '@/data/signals'
+import { useLivePrices } from '@/hooks/useLivePrices'
 
 const TIMEFRAMES = ['5s', '15s', '1m', '5m', '15m', '1h']
 
 export default function Terminal() {
-  const [selectedSymbol, setSelectedSymbol] = useState('YPF')
+  const [selectedSymbol, setSelectedSymbol] = useState('BTC')
   const [selectedTf, setSelectedTf] = useState('1m')
+  const { prices, btcLive } = useLivePrices()
 
-  const instrument = INSTRUMENTS.find(i => i.symbol === selectedSymbol) ?? INSTRUMENTS[1]
+  const baseInstrument = INSTRUMENTS.find(i => i.symbol === selectedSymbol) ?? INSTRUMENTS[1]
+  const liveData = prices[selectedSymbol]
+  const instrument = liveData
+    ? { ...baseInstrument, price: liveData.price, changePct: liveData.changePct, change: liveData.change }
+    : baseInstrument
   const signalForSymbol = SIGNALS.filter(s => s.symbol === selectedSymbol)
   const currentRegime = { ...REGIMES[0], confidence: 0.847 }
 
@@ -26,22 +32,31 @@ export default function Terminal() {
         {/* Left: instrument picker */}
         <div className="w-44 shrink-0 space-y-1">
           <div className="text-[#71767B] text-xs uppercase tracking-wide px-2 mb-2">Instrumentos</div>
-          {INSTRUMENTS.map(inst => (
-            <button
-              key={inst.symbol}
-              onClick={() => setSelectedSymbol(inst.symbol)}
-              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs transition-colors ${
-                selectedSymbol === inst.symbol
-                  ? 'bg-[#1D9BF0]/10 border border-[#1D9BF0]/20 text-[#1D9BF0]'
-                  : 'text-[#71767B] hover:bg-[#2F3336] hover:text-[#E7E9EA]'
-              }`}
-            >
-              <span className="font-mono font-bold">{inst.symbol}</span>
-              <span className={inst.changePct >= 0 ? 'text-[#00BA7C]' : 'text-[#F4212E]'}>
-                {inst.changePct >= 0 ? '+' : ''}{inst.changePct.toFixed(2)}%
-              </span>
-            </button>
-          ))}
+          {INSTRUMENTS.map(inst => {
+            const live = prices[inst.symbol]
+            const pct  = live?.changePct ?? inst.changePct
+            return (
+              <button
+                key={inst.symbol}
+                onClick={() => setSelectedSymbol(inst.symbol)}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs transition-colors ${
+                  selectedSymbol === inst.symbol
+                    ? 'bg-[#1D9BF0]/10 border border-[#1D9BF0]/20 text-[#1D9BF0]'
+                    : 'text-[#71767B] hover:bg-[#2F3336] hover:text-[#E7E9EA]'
+                }`}
+              >
+                <span className="font-mono font-bold flex items-center gap-1">
+                  {inst.symbol}
+                  {inst.symbol === 'BTC' && btcLive && (
+                    <span className="w-1 h-1 rounded-full bg-[#00BA7C] animate-pulse" />
+                  )}
+                </span>
+                <span className={pct >= 0 ? 'text-[#00BA7C]' : 'text-[#F4212E]'}>
+                  {pct >= 0 ? '+' : ''}{pct.toFixed(2)}%
+                </span>
+              </button>
+            )
+          })}
         </div>
 
         {/* Center: chart */}
@@ -59,13 +74,23 @@ export default function Terminal() {
                   instrument.type === 'crypto' ? 'bg-[#8b5cf6]/10 text-[#8b5cf6]' :
                   'bg-[#1D9BF0]/10 text-[#1D9BF0]'
                 }`}>{instrument.type}</span>
+                {selectedSymbol === 'BTC' && (
+                  <span className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    btcLive
+                      ? 'bg-[#00BA7C]/10 text-[#00BA7C]'
+                      : 'bg-[#71767B]/10 text-[#71767B]'
+                  }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${btcLive ? 'bg-[#00BA7C] animate-pulse' : 'bg-[#71767B]'}`} />
+                    {btcLive ? 'EN VIVO' : 'Conectando...'}
+                  </span>
+                )}
               </div>
               <div className="flex items-center gap-3 mt-1">
                 <span className="text-3xl font-black font-mono text-[#E7E9EA]">
                   {instrument.symbol === 'MERVAL'
                     ? instrument.price.toLocaleString('es-AR')
                     : instrument.symbol === 'BTC'
-                    ? `$${instrument.price.toLocaleString()}`
+                    ? `$${Math.round(instrument.price).toLocaleString('en-US')}`
                     : `$${instrument.price.toFixed(2)}`}
                 </span>
                 <span className={`flex items-center gap-1 text-sm font-mono ${
