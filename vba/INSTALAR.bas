@@ -36,29 +36,31 @@ Public Sub InstalarModulos()
     Set vbp = ThisWorkbook.VBProject
 
     ' Archivos a importar
-    Dim archivos(4) As String
+    Dim archivos(5) As String
     archivos(0) = CARPETA_VBA & "modUtils.bas"
     archivos(1) = CARPETA_VBA & "modCampos.bas"
     archivos(2) = CARPETA_VBA & "modExtractorPDF.bas"
     archivos(3) = CARPETA_VBA & "modOCR.bas"
-    archivos(4) = CARPETA_VBA & "modPrincipal.bas"
+    archivos(4) = CARPETA_VBA & "modConfiguracion.bas"
+    archivos(5) = CARPETA_VBA & "modPrincipal.bas"
 
     ' Nombres de los modulos (para eliminar si ya existen)
-    Dim nombres(4) As String
+    Dim nombres(5) As String
     nombres(0) = "modUtils"
     nombres(1) = "modCampos"
     nombres(2) = "modExtractorPDF"
     nombres(3) = "modOCR"
-    nombres(4) = "modPrincipal"
+    nombres(4) = "modConfiguracion"
+    nombres(5) = "modPrincipal"
 
     ' Eliminar modulos previos si existen
     Dim i As Integer
-    For i = 0 To 4
+    For i = 0 To 5
         EliminarModulo vbp, nombres(i)
     Next i
 
     ' Importar modulos
-    For i = 0 To 4
+    For i = 0 To 5
         If Dir(archivos(i)) <> "" Then
             vbp.VBComponents.Import archivos(i)
         Else
@@ -78,9 +80,14 @@ Public Sub InstalarModulos()
 
     ' Ejecutar configuracion inicial
     modPrincipal.ConfigurarHoja
+    modConfiguracion.ConfigurarHojaConfig
 
-    MsgBox "Instalacion completada correctamente." & vbNewLine & _
-           "La hoja 'Lector de Facturas' esta lista para usar.", _
+    MsgBox "Instalacion completada correctamente." & vbNewLine & vbNewLine & _
+           "Hojas creadas:" & vbNewLine & _
+           "  - 'Lector de Facturas'  (interfaz principal)" & vbNewLine & _
+           "  - 'Configuracion'       (elegir que campos extraer)" & vbNewLine & vbNewLine & _
+           "Usa el boton 'Configurar Campos' para personalizar" & vbNewLine & _
+           "la extraccion segun el tipo de documento.", _
            vbInformation, "Instalacion"
 End Sub
 

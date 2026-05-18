@@ -14,6 +14,7 @@ Option Explicit
 ' ==============================================================
 
 Private Sub Workbook_Open()
-    ' Configurar la hoja de interfaz al abrir el libro
+    ' Configurar hojas al abrir el libro
     modPrincipal.ConfigurarHoja
+    modConfiguracion.ConfigurarHojaConfig
 End Sub

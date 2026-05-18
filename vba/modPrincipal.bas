@@ -106,13 +106,14 @@ Public Sub ConfigurarHoja()
         AgregarBoton ws, "D3", "Examinar...", "SeleccionarArchivo", RGB(68, 114, 196)
 
         ' BOTONES - fila 7
-        AgregarBoton ws, "B7", "Extraer Datos",   "ExtraerDatos",       RGB(68, 114, 196)
-        AgregarBoton ws, "C7", "Procesar Varios",  "ProcesarLote",       RGB(112, 173, 71)
-        AgregarBoton ws, "D7", "Exportar CSV",     "ExportarCSV",        RGB(255, 153, 0)
+        AgregarBoton ws, "B7", "Extraer Datos",      "ExtraerDatos",          RGB(68, 114, 196)
+        AgregarBoton ws, "C7", "Procesar Varios",    "ProcesarLote",          RGB(112, 173, 71)
+        AgregarBoton ws, "D7", "Exportar CSV",       "ExportarCSV",           RGB(255, 153, 0)
 
         ' BOTONES - fila 8
-        AgregarBoton ws, "B8", "Ver Texto Extraido", "VerTextoExtraido", RGB(150, 100, 200)
-        AgregarBoton ws, "C8", "Limpiar",            "LimpiarResultados", RGB(180, 60, 60)
+        AgregarBoton ws, "B8", "Configurar Campos",  "AbrirConfiguracion",    RGB(31, 73, 125)
+        AgregarBoton ws, "C8", "Ver Texto Extraido", "VerTextoExtraido",      RGB(150, 100, 200)
+        AgregarBoton ws, "D8", "Limpiar",            "LimpiarResultados",     RGB(180, 60, 60)
 
         ' ======================================================
         ' TABLA DE RESULTADOS - encabezados
@@ -365,12 +366,28 @@ Public Sub VerTextoExtraido()
 End Sub
 
 ' ---------------------------------------------------------------
+' Abre la hoja de configuracion de campos
+' ---------------------------------------------------------------
+Public Sub AbrirConfiguracion()
+    Dim ws As Worksheet
+    On Error Resume Next
+    Set ws = ThisWorkbook.Sheets(modConfiguracion.HOJA_CONFIG)
+    On Error GoTo 0
+
+    If ws Is Nothing Then
+        modConfiguracion.ConfigurarHojaConfig
+    Else
+        ws.Activate
+    End If
+End Sub
+
+' ---------------------------------------------------------------
 ' Limpia los resultados de la hoja principal
 ' ---------------------------------------------------------------
 Public Sub LimpiarResultados()
     With HojaUI
-        .Range("B11:D23").ClearContents
-        .Range("B11:D23").ClearFormats
+        .Range("B11:D36").ClearContents
+        .Range("B11:D36").ClearFormats
         On Error Resume Next
         .Range("InfoMetodo").Value = ""
         .Range(NOMBRE_RUTA).Value = ""
@@ -392,15 +409,23 @@ Private Sub MostrarResultados(ws As Worksheet, campos() As CampoFactura, _
     Dim FILA_INICIO As Integer: FILA_INICIO = 11
     Dim COLOR_PAR   As Long:    COLOR_PAR   = RGB(240, 245, 255)
     Dim COLOR_IMPAR As Long:    COLOR_IMPAR = RGB(255, 255, 255)
+    Dim COLOR_TOTAL As Long:    COLOR_TOTAL = RGB(220, 235, 255)
 
-    ' Limpiar resultados anteriores
-    ws.Range("B" & FILA_INICIO & ":D" & (FILA_INICIO + 13)).ClearContents
-    ws.Range("B" & FILA_INICIO & ":D" & (FILA_INICIO + 13)).ClearFormats
+    ' Limpiar resultados anteriores (rango ampliado para 20 campos)
+    ws.Range("B" & FILA_INICIO & ":D" & (FILA_INICIO + 22)).ClearContents
+    ws.Range("B" & FILA_INICIO & ":D" & (FILA_INICIO + 22)).ClearFormats
+
+    Dim filaVis  As Integer  ' fila visual (solo campos activos)
+    Dim encontrados As Integer
+    filaVis = FILA_INICIO
 
     Dim i As Integer
     For i = 0 To UBound(campos)
-        Dim fila As Integer: fila = FILA_INICIO + i
-        Dim rng As Range:    Set rng = ws.Range("B" & fila & ":D" & fila)
+        ' Respetar configuracion: saltar campos desactivados
+        If Not modConfiguracion.CampoEstaActivo(campos(i).Nombre) Then GoTo SiguienteCampo
+
+        Dim fila As Integer: fila = filaVis
+        Dim rng  As Range:   Set rng = ws.Range("B" & fila & ":D" & fila)
 
         ' Etiqueta
         With ws.Cells(fila, 2)
@@ -408,8 +433,10 @@ Private Sub MostrarResultados(ws As Worksheet, campos() As CampoFactura, _
             .Font.Bold = True
         End With
 
-        ' Valor
+        ' Valor (puede ser largo para "montos_todos")
         ws.Cells(fila, 3).Value = campos(i).Valor
+        ws.Rows(fila).RowHeight = IIf(campos(i).Nombre = "montos_todos", 30, 18)
+        ws.Cells(fila, 3).WrapText = (campos(i).Nombre = "montos_todos")
 
         ' Estado
         With ws.Cells(fila, 4)
@@ -417,6 +444,7 @@ Private Sub MostrarResultados(ws As Worksheet, campos() As CampoFactura, _
                 .Value = Chr(10003) & " OK"
                 .Font.Color = RGB(0, 130, 0)
                 ws.Cells(fila, 3).Font.Color = RGB(0, 0, 0)
+                encontrados = encontrados + 1
             Else
                 .Value = Chr(10007) & " ---"
                 .Font.Color = RGB(180, 0, 0)
@@ -426,23 +454,42 @@ Private Sub MostrarResultados(ws As Worksheet, campos() As CampoFactura, _
             .HorizontalAlignment = xlCenter
         End With
 
-        ' Color de fila alternado
-        If i Mod 2 = 0 Then
-            rng.Interior.Color = COLOR_PAR
+        ' Color: TOTAL en azul mas intenso, resto alternado
+        Dim colorFila As Long
+        If campos(i).Nombre = "total" Then
+            colorFila = COLOR_TOTAL
+            rng.Font.Bold = True
+            rng.Borders.Weight = xlMedium
+        ElseIf filaVis Mod 2 = 0 Then
+            colorFila = COLOR_PAR
         Else
-            rng.Interior.Color = COLOR_IMPAR
+            colorFila = COLOR_IMPAR
         End If
+        rng.Interior.Color = colorFila
         rng.Borders.LineStyle = xlContinuous
-        rng.Borders.Color = RGB(180, 180, 180)
-        ws.Rows(fila).RowHeight = 18
+        rng.Borders.Color = RGB(180, 180, 200)
+
+        filaVis = filaVis + 1
+
+SiguienteCampo:
     Next i
 
-    ' Resumen en la fila de informacion
-    Dim encontrados As Integer
-    encontrados = ContarEncontrados(campos)
+    ' Separador final
+    Dim filaSep As Integer: filaSep = filaVis
+    ws.Rows(filaSep).RowHeight = 6
+    ws.Range("B" & filaSep & ":D" & filaSep).Interior.Color = RGB(31, 73, 125)
+
+    ' Resumen
+    Dim totalActivos As Integer
+    For i = 0 To UBound(campos)
+        If modConfiguracion.CampoEstaActivo(campos(i).Nombre) Then
+            totalActivos = totalActivos + 1
+        End If
+    Next i
+
     On Error Resume Next
     ws.Range("InfoMetodo").Value = "Metodo: " & metodo & _
-        "  |  Campos: " & encontrados & " / " & (UBound(campos) + 1) & _
+        "  |  Encontrados: " & encontrados & " / " & totalActivos & _
         "  |  Archivo: " & Dir(rutaPDF)
     On Error GoTo 0
 End Sub
