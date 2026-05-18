@@ -2,309 +2,248 @@ Attribute VB_Name = "modConfiguracion"
 Option Explicit
 
 ' ==============================================================
-' modConfiguracion  -  Hoja de configuracion de campos
-'
-' Permite al usuario elegir QUE campos extraer segun el tipo
-' de documento: Factura, Siniestro, Demanda, Poder, o custom.
-'
-' La hoja "Configuracion" muestra una fila por campo con:
-'   - Checkbox (control de formulario) enlazado a col C
-'   - Nombre del campo (col D)
-'   - Descripcion / tipo de documento (col E)
+' modConfiguracion  -  Hoja visual de seleccion de campos
 '
 ' Presets disponibles:
-'   Solo Facturas | Solo Siniestros | Solo Demandas |
-'   Poderes       | Todos           | Ninguno
+'   Facturas | Siniestros | Demandas/Poderes | Informes | Todos
 ' ==============================================================
 
 Public Const HOJA_CONFIG As String = "Configuracion"
-
-' Indice de la primera fila de datos en la hoja Config
 Private Const FILA_DATOS As Integer = 8
+Private Const N_CAMPOS   As Integer = 31   ' debe coincidir con UBound(c)+1 en modCampos
 
-' Total de campos definidos en modCampos (indices 0..N)
-' Debe coincidir con UBound(campos) en ExtraerCampos
-Private Const N_CAMPOS As Integer = 20
+' ── Definicion de todos los campos ──────────────────────────────
+' Orden: igual al array c() en modCampos.ExtraerCampos
+Private Sub Defs(n() As String, e() As String, d() As String)
+    ReDim n(N_CAMPOS - 1): ReDim e(N_CAMPOS - 1): ReDim d(N_CAMPOS - 1)
 
-' ---------------------------------------------------------------
-' Definicion de todos los campos: nombre interno, etiqueta y
-' descripcion del tipo de documento en que aparece.
-' El orden DEBE coincidir con el array en ExtraerCampos().
-' ---------------------------------------------------------------
-Private Sub ObtenerDefiniciones(nombres() As String, _
-                                 etiquetas() As String, _
-                                 descripciones() As String)
-    ReDim nombres(N_CAMPOS - 1)
-    ReDim etiquetas(N_CAMPOS - 1)
-    ReDim descripciones(N_CAMPOS - 1)
-
-    nombres(0)  = "numero_factura":    etiquetas(0)  = "Numero de factura":         descripciones(0)  = "Facturas / Comprobantes"
-    nombres(1)  = "numero_siniestro":  etiquetas(1)  = "Siniestro N" & Chr(176):    descripciones(1)  = "Siniestros / Polizas / Seguros"
-    nombres(2)  = "numero_expediente": etiquetas(2)  = "Expediente (Exp/Expte)":    descripciones(2)  = "Demandas / Poderes / Causas judiciales"
-    nombres(3)  = "fecha":             etiquetas(3)  = "Fecha":                     descripciones(3)  = "Todos los documentos"
-    nombres(4)  = "vencimiento":       etiquetas(4)  = "Vencimiento":               descripciones(4)  = "Facturas / Documentos comerciales"
-    nombres(5)  = "proveedor":         etiquetas(5)  = "Proveedor / Emisor / Actor": descripciones(5)  = "Todos los documentos"
-    nombres(6)  = "cliente":           etiquetas(6)  = "Cliente / Receptor / Demandado": descripciones(6)  = "Todos los documentos"
-    nombres(7)  = "cuit_rfc":          etiquetas(7)  = "CUIT / CUIL / DNI":         descripciones(7)  = "Todos (identificacion fiscal)"
-    nombres(8)  = "condicion_pago":    etiquetas(8)  = "Condicion de pago":         descripciones(8)  = "Facturas / Documentos comerciales"
-    nombres(9)  = "moneda":            etiquetas(9)  = "Moneda":                    descripciones(9)  = "Documentos con importes"
-    nombres(10) = "subtotal":          etiquetas(10) = "Subtotal / Neto":           descripciones(10) = "Facturas"
-    nombres(11) = "impuesto_iva":      etiquetas(11) = "IVA / Impuesto":            descripciones(11) = "Facturas"
-    nombres(12) = "capital":           etiquetas(12) = "Capital":                   descripciones(12) = "Demandas / Siniestros / Seguros"
-    nombres(13) = "intereses":         etiquetas(13) = "Intereses":                 descripciones(13) = "Demandas / Liquidaciones"
-    nombres(14) = "honorarios":        etiquetas(14) = "Honorarios":                descripciones(14) = "Demandas / Poderes / Liquidaciones"
-    nombres(15) = "costas":            etiquetas(15) = "Costas / Gastos judiciales": descripciones(15) = "Demandas / Informes judiciales"
-    nombres(16) = "danos":             etiquetas(16) = "Da" & Chr(241) & "os y Perjuicios": descripciones(16) = "Demandas / Siniestros"
-    nombres(17) = "multa":             etiquetas(17) = "Multa / Recargo":            descripciones(17) = "Demandas / Infracciones"
-    nombres(18) = "total":             etiquetas(18) = "TOTAL A PAGAR / RECLAMAR":  descripciones(18) = "Todos los documentos"
-    nombres(19) = "montos_todos":      etiquetas(19) = "Resumen de todos los montos": descripciones(19) = "Documentos con multiples importes"
+    n(0)  = "numero_factura":   e(0)  = "N" & Chr(176) & " Factura / Comprobante":     d(0)  = "Facturas / Recibos"
+    n(1)  = "numero_siniestro": e(1)  = "Siniestro N" & Chr(176):                      d(1)  = "Siniestros / Seguros"
+    n(2)  = "numero_expediente":e(2)  = "Expediente (Exp/Expte/Causa)":                d(2)  = "Demandas / Poderes"
+    n(3)  = "numero_poliza":    e(3)  = "N" & Chr(176) & " Poliza":                    d(3)  = "Seguros / Polizas"
+    n(4)  = "fecha":            e(4)  = "Fecha del documento":                          d(4)  = "Todos"
+    n(5)  = "vencimiento":      e(5)  = "Vencimiento":                                  d(5)  = "Facturas / Comerciales"
+    n(6)  = "fecha_siniestro":  e(6)  = "Fecha del siniestro/hecho":                   d(6)  = "Siniestros / Demandas"
+    n(7)  = "periodo":          e(7)  = "Periodo facturado/cubierto":                   d(7)  = "Facturas / Seguros"
+    n(8)  = "proveedor":        e(8)  = "Proveedor / Emisor / Actor":                   d(8)  = "Todos"
+    n(9)  = "cliente":          e(9)  = "Cliente / Demandado / Receptor":               d(9)  = "Todos"
+    n(10) = "asegurado":        e(10) = "Asegurado / Tomador":                          d(10) = "Seguros / Polizas"
+    n(11) = "letrado":          e(11) = "Letrado / Abogado":                            d(11) = "Demandas / Poderes"
+    n(12) = "cuit_rfc":         e(12) = "CUIT / CUIL / DNI":                           d(12) = "Todos (identificacion)"
+    n(13) = "matricula":        e(13) = "Matricula / Tomo y Folio":                     d(13) = "Demandas / Poderes"
+    n(14) = "juzgado":          e(14) = "Juzgado / Tribunal":                           d(14) = "Demandas / Poderes"
+    n(15) = "secretaria":       e(15) = "Secretar" & Chr(237) & "a":                   d(15) = "Demandas / Informes"
+    n(16) = "fuero":            e(16) = "Fuero":                                         d(16) = "Demandas"
+    n(17) = "caratula":         e(17) = "Car" & Chr(225) & "tula / Autos":             d(17) = "Demandas / Poderes"
+    n(18) = "condicion_pago":   e(18) = "Condicion de pago":                            d(18) = "Facturas / Comerciales"
+    n(19) = "moneda":           e(19) = "Moneda":                                        d(19) = "Docs con importes"
+    n(20) = "tasa_interes":     e(20) = "Tasa de interes":                              d(20) = "Demandas / Liquidaciones"
+    n(21) = "subtotal":         e(21) = "Subtotal / Neto":                              d(21) = "Facturas"
+    n(22) = "impuesto_iva":     e(22) = "IVA / Impuesto":                              d(22) = "Facturas"
+    n(23) = "capital":          e(23) = "Capital":                                       d(23) = "Demandas / Siniestros"
+    n(24) = "intereses":        e(24) = "Intereses":                                     d(24) = "Demandas / Liquidaciones"
+    n(25) = "honorarios":       e(25) = "Honorarios":                                   d(25) = "Demandas / Poderes"
+    n(26) = "costas":           e(26) = "Costas / Gastos procesales":                   d(26) = "Demandas / Informes"
+    n(27) = "danos":            e(27) = "Da" & Chr(241) & "os y Perjuicios":           d(27) = "Demandas / Siniestros"
+    n(28) = "multa":            e(28) = "Multa / Recargo":                              d(28) = "Demandas / Infracciones"
+    n(29) = "total":            e(29) = "TOTAL A PAGAR / RECLAMAR":                    d(29) = "Todos"
+    n(30) = "montos_todos":     e(30) = "Todos los montos encontrados":                 d(30) = "Docs con multiples importes"
 End Sub
 
 ' ---------------------------------------------------------------
-' Crea (o recrea) la hoja de configuracion con checkboxes.
+' Crea (o regenera) la hoja de configuracion.
 ' ---------------------------------------------------------------
 Public Sub ConfigurarHojaConfig()
     Dim ws As Worksheet
-
-    ' Crear hoja si no existe
-    On Error Resume Next
-    Set ws = ThisWorkbook.Sheets(HOJA_CONFIG)
-    On Error GoTo 0
+    On Error Resume Next: Set ws = ThisWorkbook.Sheets(HOJA_CONFIG): On Error GoTo 0
 
     If ws Is Nothing Then
         Set ws = ThisWorkbook.Sheets.Add(After:=ThisWorkbook.Sheets(ThisWorkbook.Sheets.Count))
         ws.Name = HOJA_CONFIG
     Else
-        ' Limpiar checkboxes previos
         Dim cb As CheckBox
-        For Each cb In ws.CheckBoxes
-            cb.Delete
-        Next
+        For Each cb In ws.CheckBoxes: cb.Delete: Next
         ws.Cells.Clear
     End If
 
     Application.ScreenUpdating = False
 
-    ' ── Anchos de columna ───────────────────────────────────────
-    ws.Columns("A").ColumnWidth = 3
-    ws.Columns("B").ColumnWidth = 6      ' checkbox
-    ws.Columns("C").ColumnWidth = 3      ' valor enlazado (oculto)
-    ws.Columns("D").ColumnWidth = 32     ' nombre del campo
-    ws.Columns("E").ColumnWidth = 38     ' descripcion / tipo doc
-    ws.Columns("F").ColumnWidth = 3
+    ws.Columns("A").ColumnWidth = 2
+    ws.Columns("B").ColumnWidth = 5
+    ws.Columns("C").ColumnWidth = 3   ' valores enlazados (se oculta)
+    ws.Columns("D").ColumnWidth = 34
+    ws.Columns("E").ColumnWidth = 32
 
-    ' ── Encabezado ──────────────────────────────────────────────
-    ws.Rows(1).RowHeight = 36
+    ' Encabezado
+    ws.Rows(1).RowHeight = 34
     With ws.Range("B1:E1")
-        .Merge
-        .Value = Chr(9881) & "  CONFIGURACION DE CAMPOS A EXTRAER"
-        .Font.Bold = True
-        .Font.Size = 13
-        .Font.Color = RGB(255, 255, 255)
+        .Merge: .Value = Chr(9881) & "  CONFIGURAR CAMPOS A EXTRAER"
+        .Font.Bold = True: .Font.Size = 13: .Font.Color = RGB(255, 255, 255)
         .Interior.Color = RGB(31, 73, 125)
-        .HorizontalAlignment = xlCenter
-        .VerticalAlignment = xlCenter
+        .HorizontalAlignment = xlCenter: .VerticalAlignment = xlCenter
     End With
 
-    ' ── Subtitulo ───────────────────────────────────────────────
     With ws.Range("B2:E2")
-        .Merge
-        .Value = "Activa los campos que queres extraer segun el tipo de documento."
-        .Font.Italic = True
-        .Font.Size = 9
-        .Font.Color = RGB(80, 80, 80)
+        .Merge: .Value = "Marca los campos que queres ver en el resultado segun el tipo de documento."
+        .Font.Italic = True: .Font.Size = 9: .Font.Color = RGB(80, 80, 80)
         .HorizontalAlignment = xlCenter
     End With
 
-    ' ── Presets ─────────────────────────────────────────────────
-    ws.Range("B4").Value = "Presets rapidos:"
+    ' Presets - fila 4
+    ws.Range("B4").Value = "Presets:"
     ws.Range("B4").Font.Bold = True
+    Btn ws, "C4", "Facturas",        "PresetFactura",    RGB(68, 114, 196)
+    Btn ws, "D4", "Siniestros",      "PresetSiniestro",  RGB(255, 153, 0)
+    Btn ws, "E4", "Demandas/Poderes","PresetDemanda",     RGB(112, 173, 71)
 
-    AgregarBotonConfig ws, "C4", "Solo Facturas",    "PresetFactura",    RGB(68, 114, 196), 90
-    AgregarBotonConfig ws, "D4", "Siniestros",       "PresetSiniestro",  RGB(255, 153, 0),  90
-    AgregarBotonConfig ws, "E4", "Demandas/Poderes", "PresetDemanda",    RGB(112, 173, 71), 90
-    AgregarBotonConfig ws, "C5", "Todos",            "PresetTodos",      RGB(31, 73, 125),  90
-    AgregarBotonConfig ws, "D5", "Ninguno",          "PresetNinguno",    RGB(180, 60, 60),  90
-    AgregarBotonConfig ws, "E5", "Volver al Lector", "VolverAlLector",   RGB(100, 100, 100), 90
+    ' Presets - fila 5
+    Btn ws, "C5", "Informes",        "PresetInforme",    RGB(150, 100, 200)
+    Btn ws, "D5", "Todos",           "PresetTodos",      RGB(31, 73, 125)
+    Btn ws, "E5", "Ninguno",         "PresetNinguno",    RGB(180, 60, 60)
 
-    ' ── Encabezado tabla ────────────────────────────────────────
-    ws.Rows(7).RowHeight = 18
+    ' Boton volver - fila 6
+    Btn ws, "C6", "Volver al Lector","VolverAlLector",   RGB(100, 100, 100)
+
+    ' Encabezado tabla - fila 7
+    ws.Rows(7).RowHeight = 17
     With ws.Range("B7:E7")
-        .Interior.Color = RGB(200, 215, 235)
-        .Font.Bold = True
-        .Borders.LineStyle = xlContinuous
-        .Borders.Color = RGB(150, 150, 180)
+        .Interior.Color = RGB(190, 210, 240): .Font.Bold = True
+        .Borders.LineStyle = xlContinuous: .Borders.Color = RGB(130, 160, 200)
     End With
-    ws.Range("B7").Value = Chr(10003)
-    ws.Range("D7").Value = "Campo"
+    ws.Range("B7").Value = Chr(10003): ws.Range("D7").Value = "Campo"
     ws.Range("E7").Value = "Tipo de documento"
 
-    ' ── Ocultar columna C (valores enlazados) ───────────────────
-    ws.Columns("C").Hidden = True
+    ws.Columns("C").Hidden = True   ' ocultar columna de valores
 
-    ' ── Filas de campos ─────────────────────────────────────────
-    Dim nombres()    As String
-    Dim etiquetas()  As String
-    Dim descripciones() As String
-    ObtenerDefiniciones nombres, etiquetas, descripciones
+    ' Definiciones
+    Dim n() As String, e() As String, d() As String
+    Defs n, e, d
 
-    Dim i As Integer
+    ' Filas de campos
+    Dim i As Integer, fila As Integer
     For i = 0 To N_CAMPOS - 1
-        Dim fila As Integer
         fila = FILA_DATOS + i
+        ws.Rows(fila).RowHeight = 17
+        ws.Cells(fila, 3).Value = True     ' activo por defecto
 
-        ws.Rows(fila).RowHeight = 18
-
-        ' Celda enlazada (True/False) - oculta en col C
-        ws.Cells(fila, 3).Value = True   ' por defecto todos activos
-
-        ' Checkbox en col B
-        Dim rngCB As Range
-        Set rngCB = ws.Cells(fila, 2)
+        ' Checkbox enlazado a col C
+        Dim rC As Range: Set rC = ws.Cells(fila, 2)
         Dim ck As CheckBox
-        Set ck = ws.CheckBoxes.Add( _
-            rngCB.Left + 4, _
-            rngCB.Top + 2, _
-            rngCB.Width - 6, _
-            rngCB.Height - 2)
-        ck.Caption    = ""
-        ck.LinkedCell = ws.Cells(fila, 3).Address(False, False)
-        ck.Value      = xlOn
-        ck.Name       = "chk_" & nombres(i)
+        Set ck = ws.CheckBoxes.Add(rC.Left + 3, rC.Top + 2, rC.Width - 5, rC.Height - 3)
+        ck.Caption = "": ck.LinkedCell = ws.Cells(fila, 3).Address(False, False)
+        ck.Value = xlOn: ck.Name = "chk_" & n(i)
 
-        ' Nombre del campo
-        With ws.Cells(fila, 4)
-            .Value = etiquetas(i)
-            .Font.Bold = (i = 18)   ' TOTAL en negrita
-        End With
+        ws.Cells(fila, 4).Value = e(i)
+        If n(i) = "total" Then ws.Cells(fila, 4).Font.Bold = True
 
-        ' Descripcion
-        ws.Cells(fila, 5).Value = descripciones(i)
+        ws.Cells(fila, 5).Value = d(i)
         ws.Cells(fila, 5).Font.Color = RGB(100, 100, 100)
         ws.Cells(fila, 5).Font.Size = 9
 
-        ' Color alternado
-        Dim colorFila As Long
-        If i Mod 2 = 0 Then colorFila = RGB(245, 249, 255) Else colorFila = RGB(255, 255, 255)
-        ws.Range(ws.Cells(fila, 2), ws.Cells(fila, 5)).Interior.Color = colorFila
-        ws.Range(ws.Cells(fila, 2), ws.Cells(fila, 5)).Borders.LineStyle = xlContinuous
-        ws.Range(ws.Cells(fila, 2), ws.Cells(fila, 5)).Borders.Color = RGB(200, 200, 220)
+        Dim clr As Long
+        clr = IIf(i Mod 2 = 0, RGB(245, 249, 255), RGB(255, 255, 255))
+        With ws.Range(ws.Cells(fila, 2), ws.Cells(fila, 5))
+            .Interior.Color = clr
+            .Borders.LineStyle = xlContinuous
+            .Borders.Color = RGB(200, 210, 225)
+        End With
     Next i
 
-    ' Separador visual entre grupos
-    MarcarSeparador ws, FILA_DATOS,      "IDENTIFICACION"
-    MarcarSeparador ws, FILA_DATOS + 3,  "FECHAS"
-    MarcarSeparador ws, FILA_DATOS + 5,  "PARTES INTERVINIENTES"
-    MarcarSeparador ws, FILA_DATOS + 8,  "DATOS COMERCIALES"
-    MarcarSeparador ws, FILA_DATOS + 10, "MONTOS DESAGREGADOS"
-    MarcarSeparador ws, FILA_DATOS + 18, "RESUMEN"
+    ' Separadores de grupo (borde superior grueso)
+    Sep ws, FILA_DATOS       ' Identificacion
+    Sep ws, FILA_DATOS + 4   ' Fechas
+    Sep ws, FILA_DATOS + 8   ' Partes
+    Sep ws, FILA_DATOS + 14  ' Judicial
+    Sep ws, FILA_DATOS + 18  ' Comercial/Financiero
+    Sep ws, FILA_DATOS + 21  ' Montos
+    Sep ws, FILA_DATOS + 29  ' Total
 
     Application.ScreenUpdating = True
     ws.Range("D8").Select
 End Sub
 
 ' ---------------------------------------------------------------
-' Devuelve True si el campo con ese nombre interno esta activo.
-' Si no existe la hoja config, devuelve True (incluir todo).
+' Devuelve True si el campo esta activo en la config.
+' Si no hay hoja config → True (incluir todo).
 ' ---------------------------------------------------------------
 Public Function CampoEstaActivo(ByVal nombre As String) As Boolean
     Dim ws As Worksheet
-    On Error Resume Next
-    Set ws = ThisWorkbook.Sheets(HOJA_CONFIG)
-    On Error GoTo 0
+    On Error Resume Next: Set ws = ThisWorkbook.Sheets(HOJA_CONFIG): On Error GoTo 0
+    If ws Is Nothing Then CampoEstaActivo = True: Exit Function
 
-    If ws Is Nothing Then
-        CampoEstaActivo = True   ' sin config = todos activos
-        Exit Function
-    End If
-
-    Dim nombres()    As String
-    Dim etiquetas()  As String
-    Dim descripciones() As String
-    ObtenerDefiniciones nombres, etiquetas, descripciones
+    Dim n() As String, e() As String, d() As String
+    Defs n, e, d
 
     Dim i As Integer
     For i = 0 To N_CAMPOS - 1
-        If nombres(i) = nombre Then
-            Dim val As Variant
-            val = ws.Cells(FILA_DATOS + i, 3).Value
-            CampoEstaActivo = CBool(val)
+        If n(i) = nombre Then
+            CampoEstaActivo = CBool(ws.Cells(FILA_DATOS + i, 3).Value)
             Exit Function
         End If
     Next i
-
-    CampoEstaActivo = True  ' campo no encontrado = incluir
+    CampoEstaActivo = True
 End Function
-
-' ---------------------------------------------------------------
-' Activa una lista de campos por nombre y desactiva el resto.
-' ---------------------------------------------------------------
-Private Sub AplicarPreset(activos() As String)
-    Dim ws As Worksheet
-    On Error Resume Next
-    Set ws = ThisWorkbook.Sheets(HOJA_CONFIG)
-    On Error GoTo 0
-    If ws Is Nothing Then Exit Sub
-
-    Dim nombres()    As String
-    Dim etiquetas()  As String
-    Dim descripciones() As String
-    ObtenerDefiniciones nombres, etiquetas, descripciones
-
-    Dim i As Integer
-    For i = 0 To N_CAMPOS - 1
-        Dim activo As Boolean
-        activo = False
-        Dim j As Integer
-        For j = 0 To UBound(activos)
-            If activos(j) = nombres(i) Then
-                activo = True
-                Exit For
-            End If
-        Next j
-        ws.Cells(FILA_DATOS + i, 3).Value = activo
-        ' Sincronizar checkbox
-        On Error Resume Next
-        ws.CheckBoxes("chk_" & nombres(i)).Value = IIf(activo, xlOn, xlOff)
-        On Error GoTo 0
-    Next i
-End Sub
 
 ' ==============================================================
 ' PRESETS
 ' ==============================================================
 
+Private Sub Aplicar(activos() As String)
+    Dim ws As Worksheet
+    On Error Resume Next: Set ws = ThisWorkbook.Sheets(HOJA_CONFIG): On Error GoTo 0
+    If ws Is Nothing Then Exit Sub
+
+    Dim n() As String, e() As String, d() As String
+    Defs n, e, d
+
+    Dim i As Integer
+    For i = 0 To N_CAMPOS - 1
+        Dim ok As Boolean: ok = False
+        Dim j As Integer
+        For j = 0 To UBound(activos)
+            If activos(j) = n(i) Then ok = True: Exit For
+        Next j
+        ws.Cells(FILA_DATOS + i, 3).Value = ok
+        On Error Resume Next
+        ws.CheckBoxes("chk_" & n(i)).Value = IIf(ok, xlOn, xlOff)
+        On Error GoTo 0
+    Next i
+End Sub
+
 Public Sub PresetFactura()
-    AplicarPreset Array("numero_factura", "fecha", "vencimiento", "proveedor", _
-                        "cliente", "cuit_rfc", "condicion_pago", "moneda", _
-                        "subtotal", "impuesto_iva", "total")
+    Aplicar Array("numero_factura", "fecha", "vencimiento", "periodo", _
+                  "proveedor", "cliente", "cuit_rfc", "condicion_pago", _
+                  "moneda", "subtotal", "impuesto_iva", "total")
 End Sub
 
 Public Sub PresetSiniestro()
-    AplicarPreset Array("numero_siniestro", "numero_expediente", "fecha", _
-                        "proveedor", "cliente", "cuit_rfc", _
-                        "capital", "intereses", "honorarios", "costas", _
-                        "total", "montos_todos")
+    Aplicar Array("numero_siniestro", "numero_poliza", "numero_expediente", _
+                  "fecha", "fecha_siniestro", "proveedor", "cliente", "asegurado", _
+                  "cuit_rfc", "capital", "intereses", "honorarios", _
+                  "total", "montos_todos")
 End Sub
 
 Public Sub PresetDemanda()
-    AplicarPreset Array("numero_expediente", "numero_siniestro", "fecha", _
-                        "proveedor", "cliente", "cuit_rfc", _
-                        "capital", "intereses", "honorarios", "costas", _
-                        "danos", "multa", "total", "montos_todos")
+    Aplicar Array("numero_expediente", "numero_siniestro", "caratula", _
+                  "fecha", "fecha_siniestro", "proveedor", "cliente", "cuit_rfc", _
+                  "letrado", "matricula", "juzgado", "secretaria", "fuero", _
+                  "capital", "intereses", "tasa_interes", "honorarios", _
+                  "costas", "danos", "multa", "total", "montos_todos")
+End Sub
+
+Public Sub PresetInforme()
+    Aplicar Array("numero_expediente", "numero_siniestro", "fecha", _
+                  "proveedor", "cliente", "cuit_rfc", "juzgado", "secretaria", _
+                  "letrado", "capital", "intereses", "honorarios", _
+                  "total", "montos_todos")
 End Sub
 
 Public Sub PresetTodos()
-    Dim nombres()    As String
-    Dim etiquetas()  As String
-    Dim descripciones() As String
-    ObtenerDefiniciones nombres, etiquetas, descripciones
-    AplicarPreset nombres
+    Dim n() As String, e() As String, d() As String
+    Defs n, e, d: Aplicar n
 End Sub
 
-Public Sub PresetNinguno()
-    AplicarPreset Array()
-End Sub
+Public Sub PresetNinguno():  Aplicar Array(): End Sub
 
 Public Sub VolverAlLector()
     On Error Resume Next
@@ -313,36 +252,18 @@ Public Sub VolverAlLector()
 End Sub
 
 ' ==============================================================
-' HELPERS DE PRESENTACION
+' HELPERS
 ' ==============================================================
 
-Private Sub AgregarBotonConfig(ws As Worksheet, celda As String, _
-                                texto As String, macro As String, _
-                                color As Long, ancho As Integer)
-    Dim rng As Range
-    Set rng = ws.Range(celda)
-    Dim btn As Button
-    Set btn = ws.Buttons.Add(rng.Left + 1, rng.Top + 2, ancho, rng.Height - 3)
-    With btn
-        .Caption  = texto
-        .OnAction = macro
-        .Font.Size = 8
-        .Font.Bold = True
-    End With
+Private Sub Btn(ws As Worksheet, cel As String, txt As String, mac As String, clr As Long)
+    Dim r As Range: Set r = ws.Range(cel)
+    Dim b As Button
+    Set b = ws.Buttons.Add(r.Left + 1, r.Top + 2, r.Width - 2, r.Height - 3)
+    b.Caption = txt: b.OnAction = mac: b.Font.Size = 8: b.Font.Bold = True
 End Sub
 
-Private Sub MarcarSeparador(ws As Worksheet, fila As Integer, titulo As String)
-    ' Inserta una fila separadora de grupo (solo visual, no desplaza datos)
-    ' Como no podemos insertar filas facilmente, usamos el borde superior
-    With ws.Range(ws.Cells(fila, 2), ws.Cells(fila, 5))
-        .Borders(xlEdgeTop).LineStyle = xlDouble
-        .Borders(xlEdgeTop).Color = RGB(31, 73, 125)
-        .Borders(xlEdgeTop).Weight = xlMedium
+Private Sub Sep(ws As Worksheet, fila As Integer)
+    With ws.Range(ws.Cells(fila, 2), ws.Cells(fila, 5)).Borders(xlEdgeTop)
+        .LineStyle = xlDouble: .Color = RGB(31, 73, 125): .Weight = xlMedium
     End With
-    ' Mini etiqueta de grupo en col E usando comentario de celda
-    On Error Resume Next
-    ws.Cells(fila, 4).Comment.Delete
-    ws.Cells(fila, 4).AddComment titulo
-    ws.Cells(fila, 4).Comment.Visible = False
-    On Error GoTo 0
 End Sub
