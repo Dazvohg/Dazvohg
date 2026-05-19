@@ -164,35 +164,28 @@ Private Function TextoViaWindowsPDF(ByVal rutaPDF As String) As String
     Dim tmpSalida As String
     tmpSalida = CarpetaTemp() & "lf_texto_nativo.txt"
 
-    ' Reemplaza las barras simples del path para PowerShell
-    Dim pathPS As String
-    pathPS = rutaPDF
+    Dim ps(18) As String
+    ps(0)  = "Add-Type -AssemblyName System.Runtime.WindowsRuntime"
+    ps(1)  = "$null=[Windows.Data.Pdf.PdfDocument,Windows.Data.Pdf,ContentType=WindowsRuntime]"
+    ps(2)  = "$null=[Windows.Storage.StorageFile,Windows.Storage,ContentType=WindowsRuntime]"
+    ps(3)  = ""
+    ps(4)  = "function Await($task,$type){"
+    ps(5)  = "  $m=([System.WindowsRuntimeSystemExtensions].GetMethods()|Where-Object{"
+    ps(6)  = "    $_.Name -eq 'AsTask' -and $_.GetParameters().Count -eq 1 -and"
+    ps(7)  = "    $_.GetParameters()[0].ParameterType.Name -eq 'IAsyncOperation``1'})[0]"
+    ps(8)  = "  $t=$m.MakeGenericMethod($type).Invoke($null,@($task))"
+    ps(9)  = "  $t.Wait(-1)|Out-Null; return $t.Result"
+    ps(10) = "}"
+    ps(11) = ""
+    ps(12) = "try {"
+    ps(13) = "  $f=Await ([Windows.Storage.StorageFile]::GetFileFromPathAsync('" & rutaPDF & "')) ([Windows.Storage.StorageFile])"
+    ps(14) = "  $d=Await ([Windows.Data.Pdf.PdfDocument]::LoadFromFileAsync($f)) ([Windows.Data.Pdf.PdfDocument])"
+    ps(15) = "  $sb=[System.Text.StringBuilder]::new()"
+    ps(16) = "  for($i=0;$i -lt $d.PageCount;$i++){$p=$d.GetPage($i);$sb.AppendLine($p.GetTextRange(0,$p.GetLength()))|Out-Null}"
+    ps(17) = "  [IO.File]::WriteAllText('" & tmpSalida & "',$sb.ToString(),[Text.Encoding]::UTF8)"
+    ps(18) = "} catch { Write-Output ""ERROR: $_"" }"
 
-    Dim ps As String
-    ps = "Add-Type -AssemblyName System.Runtime.WindowsRuntime" & vbNewLine & _
-         "$null = [Windows.Data.Pdf.PdfDocument,Windows.Data.Pdf,ContentType=WindowsRuntime]" & vbNewLine & _
-         "$null = [Windows.Storage.StorageFile,Windows.Storage,ContentType=WindowsRuntime]" & vbNewLine & _
-         "" & vbNewLine & _
-         "function Await($task,$type){" & vbNewLine & _
-         "  $m=([System.WindowsRuntimeSystemExtensions].GetMethods()|Where-Object{" & vbNewLine & _
-         "    $_.Name -eq 'AsTask' -and $_.GetParameters().Count -eq 1 -and" & vbNewLine & _
-         "    $_.GetParameters()[0].ParameterType.Name -eq 'IAsyncOperation``1'})[0]" & vbNewLine & _
-         "  $t=$m.MakeGenericMethod($type).Invoke($null,@($task))" & vbNewLine & _
-         "  $t.Wait(-1)|Out-Null; return $t.Result" & vbNewLine & _
-         "}" & vbNewLine & _
-         "" & vbNewLine & _
-         "try {" & vbNewLine & _
-         "  $f=Await ([Windows.Storage.StorageFile]::GetFileFromPathAsync('" & pathPS & "')) ([Windows.Storage.StorageFile])" & vbNewLine & _
-         "  $d=Await ([Windows.Data.Pdf.PdfDocument]::LoadFromFileAsync($f)) ([Windows.Data.Pdf.PdfDocument])" & vbNewLine & _
-         "  $sb=[System.Text.StringBuilder]::new()" & vbNewLine & _
-         "  for($i=0;$i -lt $d.PageCount;$i++){" & vbNewLine & _
-         "    $p=$d.GetPage($i)" & vbNewLine & _
-         "    $sb.AppendLine($p.GetTextRange(0,$p.GetLength())) | Out-Null" & vbNewLine & _
-         "  }" & vbNewLine & _
-         "  [IO.File]::WriteAllText('" & tmpSalida & "',$sb.ToString(),[Text.Encoding]::UTF8)" & vbNewLine & _
-         "} catch { Write-Output ""ERROR: $_"" }"
-
-    EjecutarPS ps
+    EjecutarPS Join(ps, vbNewLine)
 
     If ArchivoExiste(tmpSalida) Then
         TextoViaWindowsPDF = LeerArchivo(tmpSalida)
