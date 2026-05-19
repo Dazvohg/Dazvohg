@@ -1,0 +1,208 @@
+================================================================
+  LECTOR DE FACTURAS PDF  -  ACTIVACION EN EXCEL
+  (Facturas | Siniestros | Demandas | Poderes | Informes)
+================================================================
+
+ARCHIVOS INCLUIDOS
+------------------
+  modUtils.bas          Utilidades (archivos, PowerShell, shell)
+  modCampos.bas         Extraccion de 31 campos con RegExp
+  modExtractorPDF.bas   Lectura de PDF (Word, Acrobat, Windows PDF)
+  modOCR.bas            OCR para PDFs escaneados (Windows 10+)
+  modConfiguracion.bas  Hoja de seleccion de campos
+  modPrincipal.bas      Interfaz, botones, lote, exportacion
+  INSTALAR.bas          Instalador automatico (usar una sola vez)
+
+================================================================
+  PASO 1  -  CONFIGURAR EXCEL (solo la primera vez)
+================================================================
+
+1.1  Habilitar macros
+     Excel → Archivo → Opciones → Centro de confianza
+     → "Configuracion del centro de confianza..."
+     → "Configuracion de macros"
+     → Seleccionar: "Habilitar todas las macros"
+     → OK → OK
+
+1.2  Permitir acceso al proyecto VBA (necesario para instalar)
+     Mismo menu: Centro de confianza → Config. de macros
+     → Tildar: "Confiar en el acceso al modelo de objetos
+                del proyecto VBA"
+     → OK
+
+     NOTA: Esta opcion se puede desactivar nuevamente luego
+           de la instalacion si lo preferis.
+
+================================================================
+  PASO 2  -  CREAR EL LIBRO EXCEL
+================================================================
+
+2.1  Abrir un libro nuevo en Excel (Ctrl + N)
+
+2.2  Guardarlo de inmediato como .XLSM:
+     Archivo → Guardar como
+     Tipo: "Libro de Excel habilitado para macros (*.xlsm)"
+     Nombre: LectorFacturas.xlsm (o el que quieras)
+     → Guardar
+
+     MUY IMPORTANTE: siempre .xlsm, nunca .xlsx
+     Los archivos .xlsx no guardan las macros.
+
+================================================================
+  PASO 3  -  IMPORTAR EL INSTALADOR
+================================================================
+
+3.1  Abrir el editor VBA:
+     Alt + F11  (o menu Desarrollador → Visual Basic)
+
+     Si no ves el menu "Desarrollador":
+     Archivo → Opciones → Personalizar cinta de opciones
+     → tildar "Desarrollador" → OK
+
+3.2  En el editor VBA:
+     Menu Archivo → Importar archivo...
+     Buscar y seleccionar:  INSTALAR.bas
+     → Abrir
+
+3.3  En el modulo "INSTALAR" que aparecio, buscar esta linea:
+     Dim CARPETA_VBA As String
+     CARPETA_VBA = "C:\ruta\a\los\archivos\vba\"
+
+     CAMBIAR la ruta por la carpeta donde guardaste los archivos.
+     Ejemplos:
+       CARPETA_VBA = "C:\Users\Juan\Desktop\vba\"
+       CARPETA_VBA = "D:\Documentos\LectorPDF\vba\"
+
+     IMPORTANTE: incluir la barra \ al final.
+
+================================================================
+  PASO 4  -  EJECUTAR EL INSTALADOR
+================================================================
+
+4.1  Click en cualquier parte dentro de la funcion
+     "InstalarModulos"
+
+4.2  Presionar F5  (o menu Ejecutar → Ejecutar Sub)
+
+4.3  Esperar el cartel de confirmacion:
+     "Instalacion completada correctamente"
+
+4.4  Cerrar el editor VBA (Alt + F4 o cerrar la ventana)
+
+================================================================
+  PASO 5  -  YA ESTA LISTO
+================================================================
+
+Al volver a Excel vas a ver dos hojas creadas:
+
+  "Lector de Facturas"  →  Interfaz principal
+  "Configuracion"        →  Elegir que campos extraer
+
+================================================================
+  USO DIARIO
+================================================================
+
+Para procesar un PDF:
+
+1. Ir a la hoja "Lector de Facturas"
+
+2. (Opcional) Click en "Configurar Campos"
+   → Elegir preset segun el tipo de documento:
+        [Facturas]        [Siniestros]
+        [Demandas/Poderes][Informes]
+        [Todos]           [Ninguno]
+   → Tildar/destildar campos individuales si querés
+   → Click en "Volver al Lector"
+
+3. Click en "Examinar..." → seleccionar el PDF
+
+4. Si el PDF es una imagen escaneada:
+   → Tildar el checkbox "Forzar OCR" antes de extraer
+   → (Requiere Windows 10 o superior)
+
+5. Click en "Extraer Datos"
+   → El resultado aparece en segundos
+
+BOTONES DISPONIBLES
+-------------------
+  Examinar           Seleccionar el archivo PDF
+  Extraer Datos      Procesar el PDF y mostrar resultados
+  Procesar Varios    Procesar una lista de PDFs en lote
+                     (ver hoja "Lote")
+  Exportar CSV       Guardar los resultados como .csv
+  Configurar Campos  Abrir la hoja de seleccion de campos
+  Ver Texto Extraido Mostrar el texto crudo del PDF
+  Limpiar            Borrar resultados actuales
+
+CAMPOS QUE EXTRAE (31 total)
+-----------------------------
+  Identificacion:  N° Factura, Siniestro N°, Expediente,
+                   N° Poliza
+  Fechas:          Fecha doc, Vencimiento, Fecha siniestro,
+                   Periodo
+  Partes:          Proveedor/Actor, Cliente/Demandado,
+                   Asegurado, Letrado, CUIT/CUIL/DNI, Matricula
+  Judicial:        Juzgado, Secretaria, Fuero, Caratula
+  Comercial:       Condicion pago, Moneda, Tasa de interes
+  Montos:          Subtotal, IVA, Capital, Intereses,
+                   Honorarios, Costas, Daños, Multa
+  Total:           TOTAL A PAGAR/RECLAMAR
+                   Todos los montos encontrados
+
+================================================================
+  PROCESAMIENTO EN LOTE
+================================================================
+
+Para procesar varios PDFs a la vez:
+
+1. Click en "Procesar Varios"
+   La primera vez se crea la hoja "Lote" automaticamente.
+
+2. En la hoja "Lote", pegar las rutas completas de los PDFs
+   en la columna A (una por fila, desde la fila 2):
+   Ejemplo:
+     A2: C:\Facturas\factura_001.pdf
+     A3: C:\Facturas\factura_002.pdf
+     A4: C:\Demandas\demanda_garcia.pdf
+
+3. Volver a la hoja "Lector de Facturas"
+
+4. Click en "Procesar Varios" nuevamente
+   Los resultados se escriben en la hoja "Lote" con una
+   columna por cada campo.
+
+================================================================
+  REQUISITOS
+================================================================
+
+  - Windows 10 o superior (para OCR nativo)
+  - Microsoft Excel 2016 o superior
+  - Para extraccion nativa de PDFs:
+      * Microsoft Word 2013+ (abre PDFs directamente), O
+      * Adobe Acrobat Standard/Pro instalado
+  - Para OCR de PDFs escaneados:
+      * Windows 10+ con Windows.Media.Ocr (no requiere instalar nada)
+      * O Tesseract OCR (instalar de: https://github.com/UB-Mannheim/tesseract)
+
+================================================================
+  PREGUNTAS FRECUENTES
+================================================================
+
+P: El PDF no extrae texto, sale vacio.
+R: Tildá "Forzar OCR" y volvé a extraer.
+   Si sigue sin funcionar, el PDF puede estar protegido.
+
+P: Los resultados son incorrectos / con caracteres raros.
+R: El PDF es probablemente escaneado. Tildar "Forzar OCR".
+
+P: Quiero agregar un campo que no esta en la lista.
+R: Abrir modCampos.bas en el editor VBA y agregar el campo
+   siguiendo el mismo patron que los existentes.
+
+P: Aparece error "Confianza en el acceso al modelo VBA".
+R: Ir al Paso 1.2 de estas instrucciones.
+
+P: El archivo pierde las macros al guardar.
+R: Asegurarse de guardar siempre como .xlsm (no .xlsx).
+
+================================================================
