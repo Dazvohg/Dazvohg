@@ -93,6 +93,78 @@ const categoryOptions = Object.entries(categories) as Array<
   [ExpenseCategory, { label: string; color: string }]
 >;
 
+// Cuántas decisiones de Tycoon desbloquea cada lección (estático)
+const LESSON_UNLOCK_COUNT = (() => {
+  const m: Record<string, number> = {};
+  for (const ev of GAME_EVENTS) {
+    for (const ch of ev.choices) {
+      if (ch.requiredLessonId) m[ch.requiredLessonId] = (m[ch.requiredLessonId] ?? 0) + 1;
+    }
+  }
+  return m;
+})();
+
+// ── Donut chart de gastos ──────────────────────────────────────────────────────
+function SpendingDonut({
+  byCategory,
+  total,
+}: {
+  byCategory: [ExpenseCategory, number][];
+  total: number;
+}) {
+  const r = 60;
+  const circ = 2 * Math.PI * r;
+  let acc = 0;
+  const slices = byCategory.slice(0, 7).map(([key, value]) => {
+    const pct = value / total;
+    const slice = { key, value, pct, dashLen: pct * circ, offset: acc, color: categories[key].color };
+    acc += pct * circ;
+    return slice;
+  });
+  const displayTotal = total >= 1_000_000
+    ? `${(total / 1_000_000).toFixed(1)}M`
+    : total >= 1000
+    ? `${Math.round(total / 1000)}K`
+    : `${total}`;
+
+  return (
+    <div className="spending-donut-wrap">
+      <svg width="160" height="160" viewBox="0 0 160 160" style={{ flex: "0 0 160px" }}>
+        <circle cx="80" cy="80" r={r} fill="none" stroke="var(--border)" strokeWidth="22" />
+        {slices.map((s) => (
+          <circle
+            key={s.key}
+            cx="80"
+            cy="80"
+            r={r}
+            fill="none"
+            stroke={s.color}
+            strokeWidth="22"
+            strokeDasharray={`${s.dashLen} ${circ - s.dashLen}`}
+            strokeDashoffset={-s.offset}
+            transform="rotate(-90 80 80)"
+          />
+        ))}
+        <text x="80" y="75" textAnchor="middle" fill="var(--text)" fontSize="15" fontWeight="800">
+          ${displayTotal}
+        </text>
+        <text x="80" y="92" textAnchor="middle" fill="var(--muted)" fontSize="11">
+          este mes
+        </text>
+      </svg>
+      <div className="spending-legend">
+        {slices.map((s) => (
+          <div key={s.key} className="legend-row">
+            <span className="legend-dot" style={{ background: s.color }} />
+            <span className="legend-label">{categories[s.key].label}</span>
+            <span className="legend-pct">{(s.pct * 100).toFixed(0)}%</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function App() {
   const [state, setState] = usePersistentState();
   const [tab, setTab] = useState<Tab>("home");
@@ -262,8 +334,17 @@ function HomeTab({
         <div>
           <p className="eyebrow">Juego interno</p>
           <h3>Mango Tycoon</h3>
+          <div className="tycoon-entry-level">
+            <span className="level-badge-sm">Nv {state.tycoon.level}</span>
+            <span className="tycoon-entry-levelname">
+              {LEVEL_NAMES[state.tycoon.level] ?? "Mango Master"}
+            </span>
+          </div>
           <span>
-            Tenes {state.tycoon.mangoCash.toLocaleString("es-AR")} Mangos para comprar activos y cobrar rentas.
+            {state.tycoon.mangoCash.toLocaleString("es-AR")} M
+            {state.tycoon.eventHistory.length > 0
+              ? ` · ${state.tycoon.eventHistory.length} meses`
+              : " · ¡Empezá a jugar!"}
           </span>
         </div>
         <Building2 size={34} />
@@ -507,6 +588,30 @@ function LearnTab({
               {completed ? "Recompensa cobrada" : `Cobrar ${lessonReward} Mangos`}
             </button>
           </section>
+
+          {(LESSON_UNLOCK_COUNT[selected.id] ?? 0) > 0 && (
+            <section className="panel lesson-tycoon-panel">
+              <p className="eyebrow">🎮 Lo que desbloqueás en Tycoon</p>
+              <div className="lesson-tycoon-events">
+                {GAME_EVENTS.filter((ev) =>
+                  ev.choices.some((ch) => ch.requiredLessonId === selected.id),
+                ).map((ev) => (
+                  <div key={ev.id} className="lesson-tycoon-event-row">
+                    <span>{ev.emoji}</span>
+                    <div>
+                      <strong>{ev.title}</strong>
+                      <span>
+                        {ev.choices
+                          .filter((ch) => ch.requiredLessonId === selected.id)
+                          .map((ch) => ch.label)
+                          .join(" · ")}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
         </article>
       </>
     );
@@ -525,23 +630,32 @@ function LearnTab({
         </p>
       </section>
       <div className="lesson-grid">
-        {lessons.map((lesson) => (
-          <button className="lesson-card" key={lesson.id} onClick={() => setSelectedId(lesson.id)}>
-            <div>
-              <p className="eyebrow">Modulo · {lesson.level}</p>
-              <h3>{lesson.title}</h3>
-              <p>{lesson.subtitle}</p>
-              <div className="tag-row">
-                {lesson.tags.map((tag) => (
-                  <span key={tag}>{tag}</span>
-                ))}
+        {lessons.map((lesson) => {
+          const unlockCount = LESSON_UNLOCK_COUNT[lesson.id] ?? 0;
+          const done = state.tycoon.completedLessonIds.includes(lesson.id);
+          return (
+            <button className="lesson-card" key={lesson.id} onClick={() => setSelectedId(lesson.id)}>
+              <div>
+                <p className="eyebrow">Modulo · {lesson.level}</p>
+                <h3>{lesson.title}</h3>
+                <p>{lesson.subtitle}</p>
+                <div className="tag-row">
+                  {lesson.tags.map((tag) => (
+                    <span key={tag}>{tag}</span>
+                  ))}
+                  {unlockCount > 0 && (
+                    <span className={`lesson-tycoon-badge ${done ? "done" : ""}`}>
+                      🎮 {unlockCount} en Tycoon
+                    </span>
+                  )}
+                </div>
               </div>
-            </div>
-            <strong>
-              {state.tycoon.completedLessonIds.includes(lesson.id) ? "Completada" : `+${lessonReward} M`}
-            </strong>
-          </button>
-        ))}
+              <strong>
+                {done ? "✓" : `+${lessonReward} M`}
+              </strong>
+            </button>
+          );
+        })}
       </div>
     </>
   );
@@ -1060,6 +1174,9 @@ function ExpensesTab({
       <section className="panel">
         <p className="eyebrow">Gastado este mes</p>
         <h3>{money(total, state.user?.hidden)}</h3>
+        {byCategory.length > 0 && (
+          <SpendingDonut byCategory={byCategory} total={total} />
+        )}
       </section>
 
       <section className="panel">
@@ -1147,17 +1264,6 @@ function ExpensesTab({
           <Plus size={16} /> Agregar gasto
         </button>
       </form>
-      {byCategory.length > 0 && (
-        <section className="panel">
-          <p className="eyebrow">Por categoria</p>
-          {byCategory.map(([key, value]) => (
-            <div className="category-row" key={key}>
-              <span>{categories[key].label}</span>
-              <strong>{money(value)}</strong>
-            </div>
-          ))}
-        </section>
-      )}
       <div className="list">
         {state.expenses.slice(0, visibleCount).map((expense) => (
           <article className="list-row" key={expense.id}>
