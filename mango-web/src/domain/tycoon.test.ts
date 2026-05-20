@@ -30,7 +30,7 @@ function makeState(): AppState {
     ],
     budgets: [{ id: "b", category: "super", monthlyLimit: 50000 }],
     goals: [],
-    tycoon: { mangoCash: 10000, ownedAssets: [], completedObjectiveIds: [], completedLessonIds: [], gameMonth: 1, gameYear: 2024, level: 1, xp: 0, currentEventId: null, eventHistory: [], achievements: [] },
+    tycoon: { mangoCash: 10000, ownedAssets: [], completedObjectiveIds: [], completedLessonIds: [], gameMonth: 1, gameYear: 2024, level: 1, xp: 0, currentEventId: null, eventHistory: [], achievements: [], triggeredEventIds: [] },
     simulator: initialSimulatorState,
     rates: defaultRates,
     live: {},

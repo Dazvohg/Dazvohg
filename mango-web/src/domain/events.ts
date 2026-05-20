@@ -10,6 +10,7 @@ export type EventChoice = {
   quality: "great" | "ok" | "bad";
   xp: number;
   requiredLessonId?: string;
+  chainEventId?: string;   // dispara este evento inmediatamente después
 };
 
 export type GameEvent = {
@@ -22,6 +23,8 @@ export type GameEvent = {
   choices: EventChoice[];
   eduNote: string;
   minLevel: number;
+  lessonTrigger?: string;  // se encola cuando se completa esta lección
+  chainOnly?: boolean;     // solo accesible por cadena/trigger, no por pool aleatorio
 };
 
 export type GameEventRecord = {
@@ -116,11 +119,17 @@ export function getNextEvent(
   level: number,
   eventHistory: GameEventRecord[],
 ): GameEvent {
-  const eligible = GAME_EVENTS.filter((e) => e.minLevel <= level);
+  const eligible = GAME_EVENTS.filter((e) => e.minLevel <= level && !e.chainOnly);
   const recentIds = new Set(eventHistory.slice(-4).map((h) => h.eventId));
   const fresh = eligible.filter((e) => !recentIds.has(e.id));
   const pool = fresh.length > 0 ? fresh : eligible;
   return pool[eventHistory.length % pool.length];
+}
+
+export function getTriggeredEventsForLesson(lessonId: string): string[] {
+  return GAME_EVENTS
+    .filter((e) => e.lessonTrigger === lessonId)
+    .map((e) => e.id);
 }
 
 // ── Pool de eventos ───────────────────────────────────────────────────────────
@@ -658,6 +667,308 @@ export const GAME_EVENTS: GameEvent[] = [
     ],
     eduNote: "En Argentina, el sueldo nominal puede subir y aun así perdés poder adquisitivo si sube menos que la inflación. La pauta: al menos inflación pasada + un % por productividad.",
     minLevel: 3,
+  },
+
+  // ── Escenario: La Trampa de la Tarjeta (triggered por "presupuesto") ─────────
+
+  {
+    id: "impuesto-cuenta-bloqueada",
+    emoji: "🏛️",
+    category: "emergencia",
+    categoryLabel: "CRISIS",
+    title: "Impuesto nuevo: tu cuenta quedó bloqueada",
+    body: "El gobierno subió las retenciones bancarias al 1.2% sobre débitos. Tu banco bloqueó tu cuenta 48 horas para verificar identidad. El vencimiento de tu tarjeta es en 2 días.",
+    choices: [
+      {
+        id: "otra-cuenta",
+        label: "Pago desde otra cuenta",
+        desc: "Tengo Naranja X o Mercado Pago para el vencimiento.",
+        consequence: "Perfecto. Diversificar medios de pago te salvó. La tarjeta se pagó en tiempo y sin intereses.",
+        baseDelta: 300,
+        quality: "great",
+        xp: 50,
+      },
+      {
+        id: "esperar",
+        label: "Espero que se desbloquee",
+        desc: "No tengo otra cuenta, espero al banco.",
+        consequence: "La cuenta tardó 72 horas. El vencimiento pasó. Ahora tenés intereses automáticos y el banco te llama.",
+        baseDelta: -100,
+        quality: "bad",
+        xp: 15,
+        chainEventId: "pago-emergencia-tarjeta",
+      },
+      {
+        id: "ir-banco",
+        label: "Voy al banco en persona",
+        desc: "Trámite presencial para desbloquear urgente.",
+        consequence: "Tardó todo el día, pero lo desbloqueaste. El banco igual registró la demora y quiere verificar el pago de la tarjeta.",
+        baseDelta: 0,
+        quality: "ok",
+        xp: 25,
+        chainEventId: "pago-emergencia-tarjeta",
+      },
+    ],
+    eduNote: "En Argentina siempre conviene tener al menos dos medios de pago (banco + billetera virtual). Una sola fuente puede bloquearse por AFIP, BCRA o por verificación AML y dejarte sin acceso en el peor momento.",
+    minLevel: 1,
+    lessonTrigger: "presupuesto",
+  },
+
+  {
+    id: "pago-emergencia-tarjeta",
+    emoji: "💳",
+    category: "deuda",
+    categoryLabel: "DEUDA URGENTE",
+    title: "¡Vencimiento de tarjeta con cuenta bloqueada!",
+    body: "Cuenta aún bloqueada. Tu tarjeta tiene $40.000 de deuda al 7.5% mensual (90% TEA). El mínimo son $4.000. Cada día de atraso genera intereses y puede afectar tu historial en el BCRA.",
+    choices: [
+      {
+        id: "pagar-todo",
+        label: "Pagar todo el saldo ($40.000)",
+        desc: "Gestiono el pago desde homebanking de otro banco.",
+        consequence: "¡Excelente gestión de crisis! Pagaste todo, evitaste intereses y mantuviste historial crediticio limpio.",
+        baseDelta: 500,
+        quality: "great",
+        xp: 60,
+        requiredLessonId: "deuda-cara",
+      },
+      {
+        id: "pagar-minimo",
+        label: "Solo el mínimo ($4.000)",
+        desc: "Por ahora pago lo justo para no quedar en mora.",
+        consequence: "Evitaste la mora pero el saldo restante ($36.000) acumula 7.5% mensual. El banco además marcó el pago como 'mínimo' — señal de alerta.",
+        baseDelta: -400,
+        quality: "bad",
+        xp: 10,
+        chainEventId: "investigacion-fraude-banco",
+      },
+      {
+        id: "refinanciar",
+        label: "Refinanciar todo (no pagar nada)",
+        desc: "El banco me permite diferir el total al próximo mes.",
+        consequence: "Refinanciaste $40.000 al 7.5% mensual. El próximo mes debés $43.000 solo de capital + intereses. El banco encendió alertas.",
+        baseDelta: -700,
+        quality: "bad",
+        xp: 8,
+        chainEventId: "espiral-intereses",
+      },
+    ],
+    eduNote: "El pago mínimo de tarjeta es la trampa más cara de las finanzas personales. $40.000 al 7.5% mensual genera $3.000 de interés por mes — el equivalente a tirar un billete a la basura cada 30 días.",
+    minLevel: 1,
+    chainOnly: true,
+  },
+
+  {
+    id: "investigacion-fraude-banco",
+    emoji: "🔍",
+    category: "emergencia",
+    categoryLabel: "ALERTA BANCO",
+    title: "El banco sospecha: te llaman por actividad inusual",
+    body: "Tres meses de pago mínimo + cuenta bloqueada por AFIP. El banco envió un agente de prevención de fraude. Quieren confirmar que sos vos quien maneja la cuenta.",
+    choices: [
+      {
+        id: "documentos",
+        label: "Presento toda la documentación",
+        desc: "DNI, comprobantes de ingresos, historial.",
+        consequence: "El banco verificó que todo está en regla. Levantaron la alerta. Te recomendaron un plan de pagos para bajar la deuda.",
+        baseDelta: 250,
+        quality: "great",
+        xp: 45,
+      },
+      {
+        id: "movimiento-raro",
+        label: "Hubo un movimiento raro sin querer",
+        desc: "Le presté la cuenta a alguien una vez.",
+        consequence: "El banco congeló la cuenta 30 días adicionales por posible cesión no autorizada. Multa + trámite engorroso.",
+        baseDelta: -600,
+        quality: "bad",
+        xp: 12,
+      },
+      {
+        id: "no-atender",
+        label: "No atiendo el teléfono",
+        desc: "No sé quién llama, podría ser estafa.",
+        consequence: "El banco interpretó la falta de respuesta como confirmación de actividad sospechosa. Bloquearon la tarjeta definitivamente hasta presentarte en persona.",
+        baseDelta: -900,
+        quality: "bad",
+        xp: 5,
+      },
+    ],
+    eduNote: "Los bancos en Argentina tienen obligación regulatoria de reportar operaciones sospechosas a la UIF (Unidad de Información Financiera). Atender estas verificaciones prontamente y con documentación evita bloqueos que pueden durar meses.",
+    minLevel: 1,
+    chainOnly: true,
+  },
+
+  {
+    id: "espiral-intereses",
+    emoji: "🌀",
+    category: "deuda",
+    categoryLabel: "DEUDA CRECIENTE",
+    title: "La deuda creció sola: el interés compuesto en contra",
+    body: "Refinanciaste $40.000. Tres meses después, con 7.5% mensual acumulado, la deuda es $52.200. El banco exige ahora un pago mayor o suma mora al BCRA.",
+    choices: [
+      {
+        id: "cancelar-todo",
+        label: "Cancelar toda la deuda de una vez",
+        desc: "Uso mis ahorros para salir del pozo.",
+        consequence: "Dolor de corto plazo, alivio de largo plazo. Saliste del ciclo de intereses. Nunca más refinanciar deuda cara.",
+        baseDelta: 700,
+        quality: "great",
+        xp: 65,
+        requiredLessonId: "deuda-cara",
+      },
+      {
+        id: "minimos-siempre",
+        label: "Seguir pagando mínimos",
+        desc: "No tengo de otra por ahora.",
+        consequence: "En 6 meses habrás pagado más de $20.000 solo en intereses. La deuda original sigue casi intacta. Trampa clásica de las tarjetas argentinas.",
+        baseDelta: -1200,
+        quality: "bad",
+        xp: 5,
+      },
+      {
+        id: "prestamo-mas-barato",
+        label: "Refinancio con préstamo personal al 60% TNA",
+        desc: "Cambio deuda al 90% TEA por una al 60% TNA.",
+        consequence: "Movida correcta. Bajaste la tasa de interés. Ahora pagás menos por mes y el capital baja más rápido. Pero no te relajes.",
+        baseDelta: 200,
+        quality: "ok",
+        xp: 35,
+      },
+    ],
+    eduNote: "El interés compuesto sobre deuda funciona exactamente igual que sobre una inversión, pero en tu contra. $40.000 al 7.5% mensual se convierte en $80.000 en solo 10 meses si no pagás el capital.",
+    minLevel: 1,
+    chainOnly: true,
+  },
+
+  // ── Escenario: El Colchón bajo Presión (triggered por "colchon") ─────────────
+
+  {
+    id: "emergencia-auto",
+    emoji: "🚗",
+    category: "emergencia",
+    categoryLabel: "EMERGENCIA",
+    title: "El auto falla: $80.000 urgente hoy",
+    body: "Falla eléctrica grave. El taller cobra $80.000 y no arranca sin ese arreglo. Tenés que decidir AHORA cómo cubrirlo.",
+    choices: [
+      {
+        id: "colchon",
+        label: "Uso mi colchón de emergencias",
+        desc: "Para esto lo tenía ahorrado.",
+        consequence: "¡Perfecto! Para esto existe el colchón. Sin deuda, sin intereses, sin stress. Lo reconstituís en los próximos meses.",
+        baseDelta: 300,
+        quality: "great",
+        xp: 60,
+        requiredLessonId: "colchon",
+      },
+      {
+        id: "tarjeta-cuotas",
+        label: "Tarjeta en 12 cuotas 'sin interés'",
+        desc: "$6.667 por mes durante un año.",
+        consequence: "En inflación alta, las cuotas se licúan. Pero $6.667 fijos por mes durante 12 meses puede ahogar tu presupuesto si surge otra emergencia.",
+        baseDelta: -200,
+        quality: "bad",
+        xp: 15,
+        chainEventId: "cuotas-auto-presion",
+      },
+      {
+        id: "prestamo-90",
+        label: "Préstamo personal al 90% TNA",
+        desc: "El banco me presta en el día.",
+        consequence: "Tasa carísima para una emergencia. En 12 meses pagás casi el doble. El colchón habría sido infinitamente más barato.",
+        baseDelta: -600,
+        quality: "bad",
+        xp: 10,
+      },
+    ],
+    eduNote: "El colchón de emergencias existe para exactamente esto: evitar que un imprevisto se convierta en deuda cara. 3 meses de gastos en un instrumento líquido (caja de ahorro, plazo fijo 30 días) es el estándar.",
+    minLevel: 1,
+    lessonTrigger: "colchon",
+  },
+
+  {
+    id: "cuotas-auto-presion",
+    emoji: "📅",
+    category: "deuda",
+    categoryLabel: "CUOTAS FIJAS",
+    title: "Las cuotas del auto aprietan el presupuesto",
+    body: "Las 12 cuotas del auto son $6.667 por mes. Este mes también llegó la suba de servicios (+$8.000). El presupuesto no cierra: te faltan $4.500.",
+    choices: [
+      {
+        id: "ajustar",
+        label: "Ajusto otros gastos para compensar",
+        desc: "Menos delivery, menos salidas este mes.",
+        consequence: "Gestión de presupuesto bajo presión. Recortaste donde había margen y cerraste el mes sin atrasar ningún pago. Eso se llama control financiero real.",
+        baseDelta: 350,
+        quality: "great",
+        xp: 50,
+        requiredLessonId: "presupuesto",
+      },
+      {
+        id: "sigo-igual",
+        label: "Sigo gastando igual, algo se arreglará",
+        desc: "No me gusta restringirme.",
+        consequence: "No se arregló solo. Al final del mes atrasaste 2 cuotas del auto. El banco registró la mora.",
+        baseDelta: -500,
+        quality: "bad",
+        xp: 8,
+        chainEventId: "mora-cuotas-bcra",
+      },
+      {
+        id: "cancelar-resto",
+        label: "Cancelo las cuotas restantes con mis ahorros",
+        desc: "Prefiero quedar sin deuda.",
+        consequence: "Bien. Usaste ahorros para cancelar la deuda y liberar el flujo mensual. Ahora reconstituis los ahorros sin la presión de las cuotas.",
+        baseDelta: 200,
+        quality: "ok",
+        xp: 35,
+      },
+    ],
+    eduNote: "Las cuotas fijas son gastos comprometidos: no se pueden negociar mes a mes. En finanzas personales, la regla es que tus compromisos fijos (cuotas + servicios + alquiler) no deben superar el 50% de tus ingresos.",
+    minLevel: 1,
+    chainOnly: true,
+  },
+
+  {
+    id: "mora-cuotas-bcra",
+    emoji: "⚠️",
+    category: "deuda",
+    categoryLabel: "MORA / VERAZ",
+    title: "Entraste en mora: el banco reportó al BCRA",
+    body: "Atrasaste 2 cuotas del auto. El banco reportó la deuda al BCRA (Central de Deudores). Aparecer en el Veraz con mora puede cerrar puertas de crédito por hasta 5 años.",
+    choices: [
+      {
+        id: "pagar-todo-atrasado",
+        label: "Pago todo lo atrasado + capital",
+        desc: "Regularizo la situación de una vez.",
+        consequence: "Hiciste lo correcto: regularizaste. La mora queda registrada, pero 'regularizada'. En 6 meses el historial mejora notablemente.",
+        baseDelta: 600,
+        quality: "great",
+        xp: 65,
+        requiredLessonId: "deuda-cara",
+      },
+      {
+        id: "negociar-quita",
+        label: "Negocio una quita del 30% con el banco",
+        desc: "El banco prefiere cobrar algo que nada.",
+        consequence: "Los bancos aceptan quitas cuando la alternativa es no cobrar. Pagaste el 70% y cerraste la deuda. El historial queda con observación pero sin mora activa.",
+        baseDelta: 250,
+        quality: "ok",
+        xp: 40,
+      },
+      {
+        id: "ignorar-veraz",
+        label: "Ignoro el Veraz, total es una sola cuota",
+        desc: "Tampoco es para tanto.",
+        consequence: "La mora creció mes a mes. Ahora tenés 4 cuotas impagas y el banco inició gestión de cobro. El Veraz te va a complicar cualquier trámite financiero por años.",
+        baseDelta: -1500,
+        quality: "bad",
+        xp: 3,
+      },
+    ],
+    eduNote: "El BCRA Central de Deudores (antes Veraz) registra deudas mayores a $1.000 con más de 30 días de atraso. Una mora 'regularizada' es mejor que una activa, pero la mejor estrategia siempre es no entrar en mora.",
+    minLevel: 1,
+    chainOnly: true,
   },
 
   {

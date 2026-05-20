@@ -1146,6 +1146,15 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 .consequence-edu .eyebrow { margin-bottom: 6px; }
 .consequence-edu p { font-size: 13px; color: var(--muted); line-height: 1.5; margin: 0; }
 
+.chain-continue-btn {
+  background: linear-gradient(90deg, #F4212E, #F59E0B) !important;
+  animation: chainPulse 1.8s ease-in-out infinite;
+}
+@keyframes chainPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(244,33,46,.4); }
+  50%       { box-shadow: 0 0 0 8px rgba(244,33,46,0); }
+}
+
 /* ── Achievements Strip ─────────────────────────────────────────────────────*/
 .achievements-empty-msg { font-size: 13px; color: var(--muted); margin: 6px 0 0; }
 .achievements-scroll {

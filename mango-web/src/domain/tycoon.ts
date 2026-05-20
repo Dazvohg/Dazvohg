@@ -239,15 +239,28 @@ export type EventResolution = {
   prevLevel: number;
   newAchievements: string[];
   eduNote: string;
+  chainEventId?: string; // si hay cadena narrativa, el próximo evento
 };
 
 export function startNextMonth(state: AppState): AppState {
-  const nextEvent = getNextEvent(state.tycoon.level, state.tycoon.eventHistory);
+  let nextEventId: string;
+  let remainingTriggered = state.tycoon.triggeredEventIds;
+
+  if (state.tycoon.triggeredEventIds.length > 0) {
+    const [first, ...rest] = state.tycoon.triggeredEventIds;
+    const exists = GAME_EVENTS.find((e) => e.id === first);
+    nextEventId = exists ? first : getNextEvent(state.tycoon.level, state.tycoon.eventHistory).id;
+    remainingTriggered = rest;
+  } else {
+    nextEventId = getNextEvent(state.tycoon.level, state.tycoon.eventHistory).id;
+  }
+
   return {
     ...state,
     tycoon: {
       ...state.tycoon,
-      currentEventId: nextEvent.id,
+      currentEventId: nextEventId,
+      triggeredEventIds: remainingTriggered,
     },
   };
 }
@@ -308,6 +321,7 @@ export function resolveGameEvent(
     prevLevel,
     newAchievements: justEarned,
     eduNote: event.eduNote,
+    chainEventId: choice.chainEventId,
   };
 
   const newState: AppState = {

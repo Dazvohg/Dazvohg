@@ -1,5 +1,6 @@
 import { budgetHealth, money, totalDebt, totalLiquid } from "./finance";
 import type { AppState } from "./types";
+import { getTriggeredEventsForLesson } from "./events";
 
 export type Lesson = {
   id: string;
@@ -182,12 +183,19 @@ export const lessons: Lesson[] = [
 
 export function completeLesson(state: AppState, lessonId: string): AppState {
   if (state.tycoon.completedLessonIds.includes(lessonId)) return state;
+  const triggered = getTriggeredEventsForLesson(lessonId);
+  // Solo encola los que no están ya en cola ni ya jugados
+  const played = new Set(state.tycoon.eventHistory.map((h) => h.eventId));
+  const toAdd = triggered.filter(
+    (id) => !played.has(id) && !state.tycoon.triggeredEventIds.includes(id),
+  );
   return {
     ...state,
     tycoon: {
       ...state.tycoon,
       mangoCash: state.tycoon.mangoCash + lessonReward,
       completedLessonIds: [...state.tycoon.completedLessonIds, lessonId],
+      triggeredEventIds: [...state.tycoon.triggeredEventIds, ...toAdd],
     },
   };
 }

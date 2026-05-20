@@ -125,6 +125,7 @@ export type TycoonState = {
   currentEventId: string | null;
   eventHistory: GameEventRecord[];
   achievements: string[];
+  triggeredEventIds: string[]; // cola: eventos encolados por lecciones o cadenas
 };
 
 export type Rates = {

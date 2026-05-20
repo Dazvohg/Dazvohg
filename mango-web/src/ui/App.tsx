@@ -820,6 +820,7 @@ function ConsequenceCard({
   const qualityLabel = isGreat ? "¡Gran jugada!" : isBad ? "Podría ser mejor" : "No estuvo mal";
   const deltaPositive = resolution.delta >= 0;
   const deltaStr = `${deltaPositive ? "+" : ""}${resolution.delta.toLocaleString("es-AR")} M`;
+  const hasChain = !!resolution.chainEventId;
 
   return (
     <div className={`consequence-card panel consequence-card--${resolution.quality}`}>
@@ -872,8 +873,8 @@ function ConsequenceCard({
         <p>{resolution.eduNote}</p>
       </div>
 
-      <button className="primary" onClick={onContinue}>
-        Continuar →
+      <button className={`primary ${hasChain ? "chain-continue-btn" : ""}`} onClick={onContinue}>
+        {hasChain ? "⚡ Las consecuencias siguen →" : "Continuar →"}
       </button>
     </div>
   );
@@ -948,6 +949,17 @@ function TycoonTab({
     setResolution(res);
   }
 
+  function handleContinue() {
+    const chain = resolution?.chainEventId;
+    setResolution(null);
+    if (chain) {
+      setState((current) => ({
+        ...current,
+        tycoon: { ...current.tycoon, currentEventId: chain },
+      }));
+    }
+  }
+
   function handleAdvanceMonth() {
     setState((current) => startNextMonth(current));
   }
@@ -968,7 +980,7 @@ function TycoonTab({
       />
 
       {resolution ? (
-        <ConsequenceCard resolution={resolution} onContinue={() => setResolution(null)} />
+        <ConsequenceCard resolution={resolution} onContinue={handleContinue} />
       ) : currentEvent ? (
         <EventCard
           event={currentEvent}

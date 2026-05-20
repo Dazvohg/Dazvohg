@@ -25,6 +25,7 @@ export const initialState: AppState = {
     currentEventId: null,
     eventHistory: [],
     achievements: [],
+    triggeredEventIds: [],
   },
   simulator: initialSimulatorState,
   rates: defaultRates,
