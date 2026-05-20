@@ -50,9 +50,20 @@ import {
   collectRent,
   completeObjective,
   realWorldBridge,
+  startNextMonth,
+  resolveGameEvent,
   tycoonAssets,
   tycoonNetWorth,
 } from "../domain/tycoon";
+import type { EventResolution } from "../domain/tycoon";
+import {
+  GAME_EVENTS,
+  LEVEL_NAMES,
+  XP_THRESHOLDS,
+  xpForNextLevel,
+  ACHIEVEMENTS,
+} from "../domain/events";
+import type { GameEvent as TycoonGameEvent } from "../domain/events";
 import {
   SIM_ASSETS,
   SIM_STARTING_USD,
@@ -536,6 +547,253 @@ function LearnTab({
   );
 }
 
+// ── Tycoon Game Loop v3 ───────────────────────────────────────────────────────
+
+function LevelBar({
+  level,
+  levelName,
+  xp,
+  xpPct,
+  xpNext,
+}: {
+  level: number;
+  levelName: string;
+  xp: number;
+  xpPct: number;
+  xpNext: number;
+}) {
+  return (
+    <div className="level-bar-panel">
+      <div className="level-bar-header">
+        <div className="level-bar-left">
+          <span className="level-badge">Nv {level}</span>
+          <strong className="level-name">{levelName}</strong>
+        </div>
+        <span className="xp-label">{xp.toLocaleString("es-AR")} XP</span>
+      </div>
+      <div className="level-bar-track">
+        <div className="level-bar-fill" style={{ width: `${Math.max(2, Math.min(100, xpPct))}%` }} />
+      </div>
+      {xpNext < Infinity && (
+        <p className="level-bar-hint">
+          Faltan {(xpNext - xp).toLocaleString("es-AR")} XP para nivel {level + 1}
+        </p>
+      )}
+    </div>
+  );
+}
+
+const MONTH_NAMES = [
+  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
+];
+
+function MonthHub({
+  gameMonth,
+  gameYear,
+  mangoCash,
+  totalMonths,
+  onAdvance,
+}: {
+  gameMonth: number;
+  gameYear: number;
+  mangoCash: number;
+  totalMonths: number;
+  onAdvance: () => void;
+}) {
+  const monthName = MONTH_NAMES[gameMonth - 1] ?? "Enero";
+  return (
+    <div className="month-hub panel">
+      <div className="month-hub-header">
+        <div>
+          <p className="eyebrow">Mes en juego</p>
+          <h3 className="month-hub-title">
+            {monthName} {gameYear}
+          </h3>
+          <span className="month-hub-sub">
+            {totalMonths === 0
+              ? "Primer mes — ¡comenzá!"
+              : `${totalMonths} ${totalMonths === 1 ? "mes completado" : "meses completados"}`}
+          </span>
+        </div>
+        <div className="month-hub-cash">
+          <span className="eyebrow">Caja</span>
+          <strong>{mangoCash.toLocaleString("es-AR")} M</strong>
+        </div>
+      </div>
+      <button className="primary month-hub-btn" onClick={onAdvance}>
+        🎲 ¿Qué pasa este mes?
+      </button>
+    </div>
+  );
+}
+
+const CAT_STYLE: Record<string, { color: string; bg: string }> = {
+  inflacion:   { color: "#F4212E", bg: "rgba(244,33,46,.09)" },
+  dolar:       { color: "#00BA7C", bg: "rgba(0,186,124,.09)" },
+  deuda:       { color: "#F59E0B", bg: "rgba(245,158,11,.09)" },
+  oportunidad: { color: "#1D9BF0", bg: "rgba(29,155,240,.09)" },
+  emergencia:  { color: "#F4212E", bg: "rgba(244,33,46,.09)" },
+  bonus:       { color: "#00BA7C", bg: "rgba(0,186,124,.09)" },
+};
+
+function EventCard({
+  event,
+  completedLessonIds,
+  gameYear,
+  onChoice,
+}: {
+  event: TycoonGameEvent;
+  completedLessonIds: string[];
+  gameYear: number;
+  onChoice: (id: string) => void;
+}) {
+  const cat = CAT_STYLE[event.category] ?? { color: "#71767B", bg: "rgba(113,118,123,.09)" };
+  return (
+    <div className="event-card panel" style={{ borderColor: cat.color + "88" }}>
+      <div className="event-card-top">
+        <span className="event-category-badge" style={{ color: cat.color, background: cat.bg }}>
+          {event.categoryLabel}
+        </span>
+        <span className="event-card-emoji">{event.emoji}</span>
+      </div>
+      <h3 className="event-title">{event.title}</h3>
+      <p className="event-body">{event.body}</p>
+      {gameYear > 2024 && (
+        <p className="event-year-tag">Año {gameYear} · cifras escaladas</p>
+      )}
+      <div className="event-choices">
+        {event.choices.map((choice) => {
+          const locked =
+            !!choice.requiredLessonId && !completedLessonIds.includes(choice.requiredLessonId);
+          return (
+            <button
+              key={choice.id}
+              className={`event-choice choice-q--${choice.quality}${locked ? " event-choice--locked" : ""}`}
+              disabled={locked}
+              onClick={() => onChoice(choice.id)}
+            >
+              <div className="event-choice-body">
+                <strong>{choice.label}</strong>
+                <span>{choice.desc}</span>
+                {locked && (
+                  <span className="event-choice-lock-msg">
+                    🔒 Completá la lección "{choice.requiredLessonId}" primero
+                  </span>
+                )}
+              </div>
+              <span className="event-choice-indicator">
+                {choice.quality === "great" ? "▲▲" : choice.quality === "ok" ? "▲" : "▼"}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function ConsequenceCard({
+  resolution,
+  onContinue,
+}: {
+  resolution: EventResolution;
+  onContinue: () => void;
+}) {
+  const isGreat = resolution.quality === "great";
+  const isBad = resolution.quality === "bad";
+  const qualityEmoji = isGreat ? "🏆" : isBad ? "⚠️" : "👍";
+  const qualityLabel = isGreat ? "¡Gran jugada!" : isBad ? "Podría ser mejor" : "No estuvo mal";
+  const deltaPositive = resolution.delta >= 0;
+  const deltaStr = `${deltaPositive ? "+" : ""}${resolution.delta.toLocaleString("es-AR")} M`;
+
+  return (
+    <div className={`consequence-card panel consequence-card--${resolution.quality}`}>
+      <div className="consequence-top">
+        <span className="consequence-emoji-big">{qualityEmoji}</span>
+        <div className="consequence-meta">
+          <strong className={`consequence-quality-label cq--${resolution.quality}`}>
+            {qualityLabel}
+          </strong>
+          <span className="consequence-choice-label">Elegiste: {resolution.choiceLabel}</span>
+        </div>
+        <span
+          className="consequence-delta"
+          style={{ color: deltaPositive ? "var(--green)" : "var(--red)" }}
+        >
+          {deltaStr}
+        </span>
+      </div>
+
+      <p className="consequence-text">{resolution.consequence}</p>
+
+      <div className="consequence-xp-row">
+        <span className="xp-earned-badge">+{resolution.xpEarned} XP</span>
+        {resolution.newLevel > resolution.prevLevel && (
+          <span className="level-up-badge">⬆️ ¡Nivel {resolution.newLevel}!</span>
+        )}
+      </div>
+
+      {resolution.newAchievements.length > 0 && (
+        <div className="consequence-achievements">
+          <p className="eyebrow">🏅 Logros desbloqueados</p>
+          {resolution.newAchievements.map((id) => {
+            const a = ACHIEVEMENTS.find((ac) => ac.id === id);
+            if (!a) return null;
+            return (
+              <div key={id} className="achievement-new-row">
+                <span className="achievement-new-emoji">{a.emoji}</span>
+                <div>
+                  <strong>{a.title}</strong>
+                  <span>{a.desc}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="consequence-edu">
+        <p className="eyebrow">💡 ¿Por qué?</p>
+        <p>{resolution.eduNote}</p>
+      </div>
+
+      <button className="primary" onClick={onContinue}>
+        Continuar →
+      </button>
+    </div>
+  );
+}
+
+function AchievementsStrip({ achievements }: { achievements: string[] }) {
+  return (
+    <div className="achievements-strip panel">
+      <p className="eyebrow">
+        Logros · {achievements.length}/{ACHIEVEMENTS.length}
+      </p>
+      {achievements.length === 0 ? (
+        <p className="achievements-empty-msg">Jugá eventos para desbloquear logros</p>
+      ) : (
+        <div className="achievements-scroll">
+          {ACHIEVEMENTS.map((a) => {
+            const earned = achievements.includes(a.id);
+            return (
+              <div
+                key={a.id}
+                className={`achievement-chip ${earned ? "achievement-chip--earned" : "achievement-chip--locked"}`}
+                title={a.desc}
+              >
+                <span>{a.emoji}</span>
+                <span>{a.title}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function TycoonTab({
   state,
   setState,
@@ -543,48 +801,84 @@ function TycoonTab({
   state: AppState;
   setState: React.Dispatch<React.SetStateAction<AppState>>;
 }) {
-  const objectives = availableObjectives(state);
+  const [resolution, setResolution] = useState<EventResolution | null>(null);
+
+  const { level, xp, gameMonth, gameYear, currentEventId, eventHistory, achievements } =
+    state.tycoon;
+  const currentEvent = currentEventId
+    ? (GAME_EVENTS.find((e) => e.id === currentEventId) ?? null)
+    : null;
+
+  const xpCurrent = XP_THRESHOLDS[level - 1] ?? 0;
+  const xpNext = xpForNextLevel(level);
+  const xpPct =
+    xpNext === Infinity
+      ? 100
+      : Math.round(((xp - xpCurrent) / (xpNext - xpCurrent)) * 100);
+  const levelName = LEVEL_NAMES[level] ?? "Mango Master";
+
   const owned = state.tycoon.ownedAssets
-    .map((item) => ({ owned: item, asset: tycoonAssets.find((asset) => asset.id === item.assetId) }))
-    .filter((item): item is { owned: (typeof state.tycoon.ownedAssets)[number]; asset: (typeof tycoonAssets)[number] } => Boolean(item.asset));
-  const completed = objectives.filter((objective) => objective.completedAt).length;
+    .map((item) => ({ owned: item, asset: tycoonAssets.find((a) => a.id === item.assetId) }))
+    .filter(
+      (item): item is {
+        owned: (typeof state.tycoon.ownedAssets)[number];
+        asset: (typeof tycoonAssets)[number];
+      } => Boolean(item.asset),
+    );
+  const objectives = availableObjectives(state);
+  const completed = objectives.filter((o) => o.completedAt).length;
+
+  function handleChoice(choiceId: string) {
+    const { newState, resolution: res } = resolveGameEvent(state, choiceId);
+    setState(newState);
+    setResolution(res);
+  }
+
+  function handleAdvanceMonth() {
+    setState((current) => startNextMonth(current));
+  }
 
   return (
     <>
       <PageIntro
         title="Mango Tycoon"
-        text="El juego interno de Mango: cumplis habitos reales, ganas Mangos y construis tu imperio argentino."
+        text="Tomá decisiones de finanzas argentinas reales. Subí de nivel, desbloqueá logros."
       />
-      <section className="tycoon-hero">
-        <div>
-          <p className="eyebrow">Modo juego</p>
-          <h3>{state.tycoon.mangoCash.toLocaleString("es-AR")} Mangos</h3>
-          <p>{realWorldBridge(state)}</p>
-        </div>
-        <Coins size={42} />
-      </section>
 
-      <section className="panel game-rules">
-        <p className="eyebrow">Como se juega</p>
-        <div className="rules-grid">
-          <div><strong>1</strong><span>Cumpli misiones reales</span></div>
-          <div><strong>2</strong><span>Cobra Mangos ficticios</span></div>
-          <div><strong>3</strong><span>Compra propiedades y empresas</span></div>
-          <div><strong>4</strong><span>Cobra rentas y aprende finanzas</span></div>
-        </div>
-      </section>
+      <LevelBar
+        level={level}
+        levelName={levelName}
+        xp={xp}
+        xpPct={xpPct}
+        xpNext={xpNext}
+      />
 
-      <div className="tycoon-stats">
-        <Metric label="Patrimonio juego" value={`${tycoonNetWorth(state).toLocaleString("es-AR")} M`} />
-        <Metric label="Activos" value={`${owned.length}`} />
-        <Metric label="Misiones" value={`${completed}/${objectives.length}`} />
-      </div>
+      {resolution ? (
+        <ConsequenceCard resolution={resolution} onContinue={() => setResolution(null)} />
+      ) : currentEvent ? (
+        <EventCard
+          event={currentEvent}
+          completedLessonIds={state.tycoon.completedLessonIds}
+          gameYear={gameYear}
+          onChoice={handleChoice}
+        />
+      ) : (
+        <MonthHub
+          gameMonth={gameMonth}
+          gameYear={gameYear}
+          mangoCash={state.tycoon.mangoCash}
+          totalMonths={eventHistory.length}
+          onAdvance={handleAdvanceMonth}
+        />
+      )}
+
+      <AchievementsStrip achievements={achievements} />
 
       <section className="panel">
         <div className="section-title">
           <div>
             <p className="eyebrow">Misiones</p>
-            <h3>Habitos que pagan</h3>
+            <h3>Hábitos que pagan</h3>
           </div>
           <Trophy color="#C9742A" />
         </div>
@@ -593,7 +887,10 @@ function TycoonTab({
             const alreadyClaimed = state.tycoon.completedObjectiveIds.includes(objective.id);
             const canClaim = Boolean(objective.completedAt) && !alreadyClaimed;
             return (
-              <article className={`mission ${objective.completedAt ? "done" : ""}`} key={objective.id}>
+              <article
+                className={`mission ${objective.completedAt ? "done" : ""}`}
+                key={objective.id}
+              >
                 <div>
                   <strong>{objective.title}</strong>
                   <span>
@@ -602,7 +899,12 @@ function TycoonTab({
                   <p>{objective.lesson}</p>
                 </div>
                 {canClaim ? (
-                  <button className="primary compact" onClick={() => setState((current) => completeObjective(current, objective.id))}>
+                  <button
+                    className="primary compact"
+                    onClick={() =>
+                      setState((current) => completeObjective(current, objective.id))
+                    }
+                  >
                     Cobrar
                   </button>
                 ) : (
@@ -620,10 +922,12 @@ function TycoonTab({
         <section className="panel">
           <p className="eyebrow">Tu imperio</p>
           <div className="asset-list">
-            {owned.map(({ owned, asset }) => {
-              const collectedToday = owned.rentCollectedAt?.startsWith(new Date().toISOString().slice(0, 10));
+            {owned.map(({ owned: ownedItem, asset }) => {
+              const collectedToday = ownedItem.rentCollectedAt?.startsWith(
+                new Date().toISOString().slice(0, 10),
+              );
               return (
-                <article className="asset-card owned" key={owned.id}>
+                <article className="asset-card owned" key={ownedItem.id}>
                   <div>
                     <strong>{asset.name}</strong>
                     <span>
@@ -634,7 +938,7 @@ function TycoonTab({
                   <button
                     className="ghost small"
                     disabled={collectedToday}
-                    onClick={() => setState((current) => collectRent(current, owned.id))}
+                    onClick={() => setState((current) => collectRent(current, ownedItem.id))}
                   >
                     {collectedToday ? "Cobrado" : "Cobrar renta"}
                   </button>

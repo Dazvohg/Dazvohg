@@ -28,7 +28,7 @@ const state: AppState = {
   expenses: [{ id: "e", amount: 12000, myShare: 12000, category: "super", date: new Date().toISOString(), description: "Coto", shared: false }],
   budgets: [{ id: "b", category: "super", monthlyLimit: 20000 }],
   goals: [],
-  tycoon: { mangoCash: 2500, ownedAssets: [], completedObjectiveIds: [], completedLessonIds: [] },
+  tycoon: { mangoCash: 2500, ownedAssets: [], completedObjectiveIds: [], completedLessonIds: [], gameMonth: 1, gameYear: 2024, level: 1, xp: 0, currentEventId: null, eventHistory: [], achievements: [] },
   simulator: initialSimulatorState,
     rates: defaultRates,
   live: {},

@@ -1,5 +1,7 @@
 import { budgetHealth, monthlyExpenses, totalDebt, totalLiquid, uid } from "./finance";
 import type { AppState, OwnedTycoonAsset, TycoonAsset, TycoonObjective } from "./types";
+import { GAME_EVENTS, checkNewAchievements, getNextEvent, levelFromXP } from "./events";
+import type { GameEventRecord } from "./events";
 
 export const tycoonAssets: TycoonAsset[] = [
   {
@@ -221,6 +223,109 @@ export function tycoonNetWorth(state: AppState) {
     return sum + (asset?.price ?? 0);
   }, 0);
   return state.tycoon.mangoCash + assets;
+}
+
+// ── Game Loop v3 ──────────────────────────────────────────────────────────────
+
+export type EventResolution = {
+  eventId: string;
+  choiceId: string;
+  choiceLabel: string;
+  consequence: string;
+  delta: number;
+  quality: "great" | "ok" | "bad";
+  xpEarned: number;
+  newLevel: number;
+  prevLevel: number;
+  newAchievements: string[];
+  eduNote: string;
+};
+
+export function startNextMonth(state: AppState): AppState {
+  const nextEvent = getNextEvent(state.tycoon.level, state.tycoon.eventHistory);
+  return {
+    ...state,
+    tycoon: {
+      ...state.tycoon,
+      currentEventId: nextEvent.id,
+    },
+  };
+}
+
+export function resolveGameEvent(
+  state: AppState,
+  choiceId: string,
+): { newState: AppState; resolution: EventResolution } {
+  const event = GAME_EVENTS.find((e) => e.id === state.tycoon.currentEventId);
+  if (!event) return { newState: state, resolution: {} as EventResolution };
+
+  const choice = event.choices.find((c) => c.id === choiceId);
+  if (!choice) return { newState: state, resolution: {} as EventResolution };
+
+  const yearScale = 1 + (state.tycoon.gameYear - 2024) * 0.15;
+  const delta = Math.round(choice.baseDelta * yearScale);
+  const xpEarned = choice.xp;
+
+  const newXp = state.tycoon.xp + xpEarned;
+  const newLevel = levelFromXP(newXp);
+  const prevLevel = state.tycoon.level;
+
+  let nextMonth = state.tycoon.gameMonth + 1;
+  let nextYear = state.tycoon.gameYear;
+  if (nextMonth > 12) {
+    nextMonth = 1;
+    nextYear += 1;
+  }
+
+  const record: GameEventRecord = {
+    month: state.tycoon.gameMonth,
+    year: state.tycoon.gameYear,
+    eventId: event.id,
+    choiceId,
+    delta,
+    xpEarned,
+  };
+
+  const totalMonths = state.tycoon.eventHistory.length + 1;
+  const newAchievements = checkNewAchievements(
+    state.tycoon.achievements,
+    event.id,
+    choiceId,
+    newLevel,
+    totalMonths,
+  );
+  const justEarned = newAchievements.filter((a) => !state.tycoon.achievements.includes(a));
+
+  const resolution: EventResolution = {
+    eventId: event.id,
+    choiceId,
+    choiceLabel: choice.label,
+    consequence: choice.consequence,
+    delta,
+    quality: choice.quality,
+    xpEarned,
+    newLevel,
+    prevLevel,
+    newAchievements: justEarned,
+    eduNote: event.eduNote,
+  };
+
+  const newState: AppState = {
+    ...state,
+    tycoon: {
+      ...state.tycoon,
+      mangoCash: Math.max(0, state.tycoon.mangoCash + delta),
+      xp: newXp,
+      level: newLevel,
+      gameMonth: nextMonth,
+      gameYear: nextYear,
+      currentEventId: null,
+      eventHistory: [...state.tycoon.eventHistory, record],
+      achievements: newAchievements,
+    },
+  };
+
+  return { newState, resolution };
 }
 
 export function realWorldBridge(state: AppState) {

@@ -1,3 +1,5 @@
+import type { GameEventRecord } from "./events";
+
 export type RiskLevel = "conservador" | "moderado" | "agresivo";
 
 export type UserProfile = {
@@ -115,6 +117,14 @@ export type TycoonState = {
   ownedAssets: OwnedTycoonAsset[];
   completedObjectiveIds: string[];
   completedLessonIds: string[];
+  // game loop v3
+  gameMonth: number;
+  gameYear: number;
+  level: number;
+  xp: number;
+  currentEventId: string | null;
+  eventHistory: GameEventRecord[];
+  achievements: string[];
 };
 
 export type Rates = {

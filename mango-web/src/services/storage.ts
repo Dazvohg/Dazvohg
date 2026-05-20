@@ -2,8 +2,8 @@ import { defaultRates } from "../domain/finance";
 import { initialSimulatorState } from "../domain/simulator";
 import type { AppState } from "../domain/types";
 
-// v2: agrega SimulatorState
-const KEY = "mango:state:v2";
+// v3: agrega game loop (level, xp, events, achievements)
+const KEY = "mango:state:v3";
 
 export const initialState: AppState = {
   user: null,
@@ -18,6 +18,13 @@ export const initialState: AppState = {
     ownedAssets: [],
     completedObjectiveIds: [],
     completedLessonIds: [],
+    gameMonth: 1,
+    gameYear: 2024,
+    level: 1,
+    xp: 0,
+    currentEventId: null,
+    eventHistory: [],
+    achievements: [],
   },
   simulator: initialSimulatorState,
   rates: defaultRates,
