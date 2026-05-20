@@ -179,6 +179,110 @@ export const lessons: Lesson[] = [
       explanation: "Bien. Un CEDEAR combina mercado externo y tipo de cambio financiero.",
     },
   },
+  {
+    id: "fci",
+    title: "FCI Mercado de Dinero: mejor que la caja de ahorro",
+    subtitle: "Tu plata genera interés diario y la rescatás en 24 horas.",
+    level: "inicial",
+    tags: ["Ahorro", "Liquidez", "Rendimiento"],
+    sections: [
+      {
+        title: "Qué es un FCI",
+        body: "Un Fondo Común de Inversión (FCI) es un pool de inversores que le encarga a un gestor profesional invertir en conjunto. El de Mercado de Dinero invierte en instrumentos seguros de muy corto plazo: LECAPs, plazos fijos bancarios, cheques de pago diferido. No tenés que hacer nada vos.",
+      },
+      {
+        title: "Por qué es mejor que la caja de ahorro",
+        body: "La caja de ahorro paga entre 0 y 15% anual. Un FCI de Mercado de Dinero paga entre 40 y 70% anual, acreditando los intereses todos los días hábiles. En Mercado Pago, Naranja X o cualquier broker accedés en segundos. El rescate llega a tu cuenta en 24 horas hábiles.",
+      },
+      {
+        title: "El riesgo real",
+        body: "Es muy bajo, pero no nulo. En crisis extremas puede haber días de tasa negativa. Para el colchón de emergencias o dinero de corto plazo, es siempre mejor que tenerlo parado en cuenta corriente. Para plazos más largos, MEP o CEDEARs pueden rendir más.",
+      },
+    ],
+    example: (state) => {
+      const liquid = state.wallets.reduce((s, w) => s + w.balance, 0)
+        + state.accounts.reduce((s, a) => s + a.balance, 0);
+      if (liquid > 0) {
+        const rendimiento = Math.round(liquid * 0.055);
+        return `Con tus $${liquid.toLocaleString("es-AR")} en cuentas, en un FCI MM ganarías aproximadamente $${rendimiento.toLocaleString("es-AR")} por mes (5.5% mensual aprox). Parado en cuenta corriente: $0.`;
+      }
+      return "Ejemplo: $200.000 en caja de ahorro → $0 por mes. En FCI MM → $11.000 por mes. En un año, la diferencia es $130.000.";
+    },
+    quiz: {
+      question: "¿En cuánto tiempo rescatás el dinero de un FCI de Mercado de Dinero?",
+      options: ["Al instante, igual que una caja de ahorro", "En 24 horas hábiles", "En 30 días como un plazo fijo"],
+      answerIndex: 1,
+      explanation: "Exacto. El rescate del FCI MM tarda 24 horas hábiles — casi inmediato y con rendimiento diario.",
+    },
+  },
+  {
+    id: "cuotas-math",
+    title: "La matemática real de las cuotas",
+    subtitle: "Cuándo conviene pagar en cuotas y cuándo el descuento contado gana.",
+    level: "inicial",
+    tags: ["Deuda", "Consumo", "Calculo"],
+    sections: [
+      {
+        title: "Cuotas en inflación alta",
+        body: "En Argentina, 12 cuotas 'sin interés' son una ventaja real cuando la inflación es alta. Pagás las últimas cuotas con pesos que valen mucho menos. Una cuota de $10.000 en el mes 12 con 4% mensual de inflación equivale a $6.200 del mes 1. Es como pagar a descuento.",
+      },
+      {
+        title: "El descuento contado",
+        body: "Algunas tiendas ofrecen 10-15% de descuento por pago en efectivo. La pregunta clave: ¿ese descuento supera lo que ganarías invirtiendo ese dinero mes a mes mientras pagás cuotas? Si la tasa de inflación mensual × número de cuotas supera el descuento, las cuotas ganan.",
+      },
+      {
+        title: "El CFT que nadie te muestra",
+        body: "El Costo Financiero Total (CFT) incluye todo: intereses, seguros, comisiones y el IVA de esos intereses. Un crédito que parece al 40% TNA puede tener CFT del 80%. Antes de firmar, pedí el CFT en papel. Por ley el banco debe informarlo. Si el CFT supera la inflación esperada, pagá contado.",
+      },
+    ],
+    example: () =>
+      "Ejemplo: TV $200.000 contado o 12 cuotas de $18.000 (CFT 30%). Con inflación 4% mensual, el valor real de todas las cuotas sumadas es $168.000 — pagás menos que el precio de etiqueta, porque el dinero se licúa.",
+    quiz: {
+      question: "Con inflación del 4% mensual, ¿qué conviene para comprar un lavarropas de $180.000?",
+      options: [
+        "Pagar $180.000 contado hoy",
+        "12 cuotas de $15.000 sin interés — el valor real baja",
+        "No comprarlo hasta bajar la inflación",
+      ],
+      answerIndex: 1,
+      explanation: "Correcto. Con 4% mensual las últimas cuotas valen casi la mitad en términos reales. Las cuotas sin interés en inflación alta son una ventaja.",
+    },
+  },
+  {
+    id: "freelance-dolar",
+    title: "Cobrar en dólares siendo argentino",
+    subtitle: "La ventaja del talento argentino: cobrás global, gastás local.",
+    level: "medio",
+    tags: ["Dolares", "Trabajo", "AFIP"],
+    sections: [
+      {
+        title: "La ventaja competitiva",
+        body: "Un desarrollador, diseñador o marketer argentino puede cobrar tarifas internacionales en USD y gastar sus pesos con costos locales. El tipo de cambio crea una ventaja estructural que puede triplicar o cuadriplicar el poder adquisitivo respecto a un trabajo en pesos.",
+      },
+      {
+        title: "Cómo cobrar y convertir",
+        body: "Wise y Payoneer reciben transferencias internacionales con comisiones bajas. Crypto (USDT/USDC) es otra opción. Al convertir a pesos, el MEP es 100% legal, transparente y mejor que el tipo oficial. El blue da más pesos pero implica riesgo legal y dificultad para justificar el origen.",
+      },
+      {
+        title: "AFIP y la declaración correcta",
+        body: "La exportación de servicios digitales tiene beneficios impositivos en Argentina. Como monotributista podés facturar al exterior. Los ingresos en USD deben declararse. No declarar puede derivar en intimaciones de AFIP, cierre de cuentas bancarias y multas que superan el ahorro fiscal.",
+      },
+    ],
+    example: (state) => {
+      const salary = state.user?.salary ?? 0;
+      if (salary > 0) {
+        const usd = Math.round(salary / 1200);
+        return `Tu sueldo de $${salary.toLocaleString("es-AR")} equivale a USD $${usd} al cambio MEP. Un freelancer que cobra USD $${usd + 500} al mes tiene un 40% más de poder adquisitivo real sin cambiar de rubro.`;
+      }
+      return "Ejemplo: USD $1.500/mes al MEP de $1.200 = $1.800.000 pesos. El mismo trabajo en dependencia típicamente pagaría $700.000-$900.000.";
+    },
+    quiz: {
+      question: "¿Qué tipo de cambio es 100% legal para convertir dólares del exterior?",
+      options: ["Dólar blue — el que más pesos da", "MEP o CCL — cambio financiero legal", "Dólar oficial — el del banco"],
+      answerIndex: 1,
+      explanation: "El MEP (y el CCL) son 100% legales. Se operan a través de brokers regulados comprando y vendiendo bonos. Es la forma más conveniente y segura.",
+    },
+  },
 ];
 
 export function completeLesson(state: AppState, lessonId: string): AppState {
