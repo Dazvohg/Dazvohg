@@ -4,7 +4,7 @@
 // Ante cualquier fallo, los precios quedan en el último valor conocido.
 
 const COINGECKO =
-  "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,cardano,dogecoin,shiba-inu&vs_currencies=usd";
+  "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,cardano,dogecoin,shiba-inu,ethereum&vs_currencies=usd";
 
 const YAHOO =
   "https://query1.finance.yahoo.com/v7/finance/quote?symbols=AAPL,TSLA,GGAL,YPF,SPY,NVDA&fields=regularMarketPrice";
@@ -30,6 +30,7 @@ async function fetchCrypto(prices: Record<string, number>): Promise<void> {
   if (data.cardano?.usd)       prices.ADA  = data.cardano.usd;
   if (data.dogecoin?.usd)      prices.DOGE = data.dogecoin.usd;
   if (data["shiba-inu"]?.usd)  prices.SHIB = data["shiba-inu"].usd;
+  if (data.ethereum?.usd)      prices.ETH  = data.ethereum.usd;
 }
 
 async function fetchStocks(prices: Record<string, number>): Promise<void> {

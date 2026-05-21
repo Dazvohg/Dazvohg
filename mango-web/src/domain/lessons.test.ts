@@ -29,6 +29,7 @@ const state: AppState = {
   simulator: initialSimulatorState,
     rates: defaultRates,
   live: {},
+  netWorthHistory: [],
 };
 
 describe("lessons", () => {

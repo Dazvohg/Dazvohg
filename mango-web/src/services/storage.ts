@@ -30,6 +30,7 @@ export const initialState: AppState = {
   simulator: initialSimulatorState,
   rates: defaultRates,
   live: {},
+  netWorthHistory: [],
 };
 
 export function loadState(): AppState {
@@ -49,7 +50,23 @@ export function loadState(): AppState {
 }
 
 export function saveState(state: AppState) {
-  localStorage.setItem(KEY, JSON.stringify(state));
+  const ph = state.simulator.priceHistory ?? {};
+  const trimmed: AppState = {
+    ...state,
+    simulator: {
+      ...state.simulator,
+      trades: state.simulator.trades.slice(0, 50),
+      priceHistory: Object.fromEntries(
+        Object.entries(ph).map(([k, v]) => [k, v.slice(-48)]),
+      ),
+    },
+    tycoon: {
+      ...state.tycoon,
+      eventHistory: state.tycoon.eventHistory.slice(-30),
+    },
+    netWorthHistory: (state.netWorthHistory ?? []).slice(-36), // max 3 años de datos
+  };
+  localStorage.setItem(KEY, JSON.stringify(trimmed));
 }
 
 export function resetState() {

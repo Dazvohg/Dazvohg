@@ -34,9 +34,11 @@ import {
   categories,
   daysUntilDeadline,
   goalProgress,
+  goalProjection,
   money,
   monthlyExpenses,
   netWorth,
+  netWorthGrowth,
   riskPortfolios,
   totalDebt,
   totalLiquid,
@@ -82,7 +84,7 @@ import {
   formatSimQty,
   updateSimPrices,
 } from "../domain/simulator";
-import { fetchRates } from "../services/liveData";
+import { fetchRates, fetchLiveData } from "../services/liveData";
 import { fetchSimPrices } from "../services/prices";
 import { resetState } from "../services/storage";
 import { usePersistentState } from "./usePersistentState";
@@ -174,7 +176,24 @@ export function App() {
     fetchRates(state.rates).then((rates) => {
       if (rates !== state.rates) setState((current) => ({ ...current, rates }));
     });
+    fetchLiveData(state.live).then((live) => {
+      setState((current) => ({ ...current, live }));
+    });
   }, [state.user]);
+
+  // Snapshot de patrimonio neto: se registra cuando cambia el mes del juego o al inicio
+  useEffect(() => {
+    if (!state.user) return;
+    const today = new Date().toISOString().slice(0, 10);
+    const history = state.netWorthHistory ?? [];
+    const lastEntry = history[history.length - 1];
+    if (lastEntry?.date === today) return; // ya hay snapshot hoy
+    const value = netWorth(state);
+    setState((current) => ({
+      ...current,
+      netWorthHistory: [...(current.netWorthHistory ?? []), { date: today, value }],
+    }));
+  }, [state.user, state.tycoon.gameMonth, state.tycoon.gameYear]);
 
   if (!state.user) return <Onboarding setState={setState} />;
 
@@ -299,6 +318,102 @@ function Header({
   );
 }
 
+function MacroPanel({ live, rates }: { live: AppState["live"]; rates: AppState["rates"] }) {
+  const { inflationMonthly, inflationAnnual, countryRisk, source } = live;
+  if (inflationMonthly == null) return null;
+
+  // Qué tan bien le va al FCI vs inflación (referencial TNA ~110% → TEM ~6.25%)
+  const fciTemRef = 6.25;
+  const fciMonthly = fciTemRef;
+  const realReturn = +(fciMonthly - inflationMonthly).toFixed(1);
+  const positive = realReturn >= 0;
+
+  // Escala de riesgo país
+  const riskLabel =
+    (countryRisk ?? 0) < 500 ? "bajo" : (countryRisk ?? 0) < 1500 ? "medio" : "alto";
+  const riskColor = riskLabel === "bajo" ? "#10b981" : riskLabel === "medio" ? "#f59e0b" : "#ef4444";
+
+  // Spread MEP / blue
+  const spread = rates.mep > 0 && rates.blue > 0
+    ? +(((rates.blue - rates.mep) / rates.mep) * 100).toFixed(1)
+    : null;
+
+  return (
+    <section className="panel macro-panel">
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+        <p className="eyebrow" style={{ margin: 0 }}>Macro Argentina</p>
+        <span className="fine-print" style={{ color: source === "live" ? "#10b981" : "#94a3b8" }}>
+          {source === "live" ? "🟢 BCRA" : "⚪ referencial"}
+        </span>
+      </div>
+      <div className="macro-grid">
+        <div className="macro-cell">
+          <span>Inflación mensual</span>
+          <strong style={{ color: "#ef4444" }}>{inflationMonthly.toFixed(1)}%</strong>
+        </div>
+        <div className="macro-cell">
+          <span>Inflación anual</span>
+          <strong style={{ color: "#ef4444" }}>{inflationAnnual ?? "—"}%</strong>
+        </div>
+        {countryRisk != null && (
+          <div className="macro-cell">
+            <span>Riesgo país</span>
+            <strong style={{ color: riskColor }}>{countryRisk.toLocaleString("es-AR")} pts</strong>
+          </div>
+        )}
+        <div className="macro-cell">
+          <span>FCI vs inflación</span>
+          <strong style={{ color: positive ? "#10b981" : "#ef4444" }}>
+            {positive ? "+" : ""}{realReturn}% real
+          </strong>
+        </div>
+        {spread !== null && Math.abs(spread) > 1 && (
+          <div className="macro-cell" style={{ gridColumn: "span 2" }}>
+            <span>Spread MEP/blue</span>
+            <strong style={{ color: spread < 3 ? "#10b981" : "#f59e0b" }}>
+              {spread > 0 ? "+" : ""}{spread}%
+              {spread < 3 ? " — oportunidad de dolarizar barato" : " — blue más caro que MEP"}
+            </strong>
+          </div>
+        )}
+      </div>
+      <p className="fine-print" style={{ marginTop: 8, color: "#64748b" }}>
+        Inflación INDEC · Riesgo país EMBI · FCI MM referencial ~6.25% TEM
+      </p>
+    </section>
+  );
+}
+
+function TycoonBridgeBanner({
+  state,
+  setTab,
+}: {
+  state: AppState;
+  setTab: (tab: Tab) => void;
+}) {
+  const uncollected = availableObjectives(state).filter(
+    (obj) => obj.completedAt && !state.tycoon.completedObjectiveIds.includes(obj.id),
+  );
+  if (uncollected.length === 0) return null;
+  const total = uncollected.reduce((s, o) => s + o.reward, 0);
+  return (
+    <button
+      className="tycoon-bridge-banner"
+      onClick={() => setTab("tycoon")}
+      type="button"
+    >
+      <Zap size={16} style={{ color: "#f59e0b", flexShrink: 0 }} />
+      <div>
+        <strong>
+          {uncollected.length} {uncollected.length === 1 ? "misión" : "misiones"} disponibles en Tycoon
+        </strong>
+        <span>{uncollected[0].title}{uncollected.length > 1 ? ` y ${uncollected.length - 1} más` : ""} · {total.toLocaleString("es-AR")} M</span>
+      </div>
+      <span style={{ marginLeft: "auto", color: "#f59e0b", fontSize: 18 }}>›</span>
+    </button>
+  );
+}
+
 function HomeTab({
   state,
   setState,
@@ -308,7 +423,9 @@ function HomeTab({
   setState: React.Dispatch<React.SetStateAction<AppState>>;
   setTab: (tab: Tab) => void;
 }) {
-  const currentAdvice = advice(state);
+  const advices = advice(state);
+  const [adviceIdx, setAdviceIdx] = useState(0);
+  const currentAdvice = advices[Math.min(adviceIdx, advices.length - 1)];
   const expenses = monthlyExpenses(state);
   const budget = budgetHealth(state);
   const nextCard = [...state.cards].sort((a, b) => cardUrgency(a) - cardUrgency(b))[0];
@@ -318,16 +435,49 @@ function HomeTab({
     setState((current) => ({ ...current, rates }));
   }
 
+  const urgencyBorder: Record<string, string> = {
+    high: "#ef4444",
+    medium: "#f59e0b",
+    low: "#10b981",
+  };
+
   return (
     <>
       <MangoScoreCard state={state} setTab={setTab} />
 
       <ArenaWeekCard state={state} setTab={setTab} />
 
-      <section className="panel advice">
-        <p className="eyebrow">Asesor Mango</p>
+      <section
+        className="panel advice"
+        style={{ borderLeft: `3px solid ${urgencyBorder[currentAdvice.urgency]}` }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <p className="eyebrow">Asesor Mango</p>
+          {advices.length > 1 && (
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <button
+                className="ghost small"
+                style={{ padding: "2px 6px", minHeight: 0 }}
+                onClick={() => setAdviceIdx((i) => (i - 1 + advices.length) % advices.length)}
+              >‹</button>
+              <span className="fine-print">{adviceIdx + 1}/{advices.length}</span>
+              <button
+                className="ghost small"
+                style={{ padding: "2px 6px", minHeight: 0 }}
+                onClick={() => setAdviceIdx((i) => (i + 1) % advices.length)}
+              >›</button>
+            </div>
+          )}
+        </div>
         <h3>{currentAdvice.title}</h3>
         <p>{currentAdvice.body}</p>
+        <button
+          className="ghost small"
+          style={{ marginTop: 8 }}
+          onClick={() => setTab(currentAdvice.tab)}
+        >
+          Ir → {currentAdvice.tab === "profile" ? "Mi perfil" : currentAdvice.tab === "learn" ? "Aprender" : currentAdvice.tab === "expenses" ? "Gastos" : currentAdvice.tab === "goals" ? "Metas" : currentAdvice.tab === "simulador" ? "Simulador" : currentAdvice.tab === "mercados" ? "Mercados" : "Tycoon"}
+        </button>
       </section>
 
       <button className="tycoon-entry" onClick={() => setTab("tycoon")}>
@@ -370,6 +520,8 @@ function HomeTab({
         </p>
       </section>
 
+      <MacroPanel live={state.live} rates={state.rates} />
+
       <section className="panel">
         <div className="split">
           <div>
@@ -403,6 +555,8 @@ function HomeTab({
           </button>
         </div>
       </section>
+
+      <TycoonBridgeBanner state={state} setTab={setTab} />
 
       <div className="quick-grid">
         <button className="quick-card" onClick={() => setTab("expenses")}>
@@ -523,8 +677,11 @@ function LearnTab({
   state: AppState;
   setState: React.Dispatch<React.SetStateAction<AppState>>;
 }) {
+  const [learnView, setLearnView] = useState<"lecciones" | "cartera">("lecciones");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
+  const [cartAmount, setCartAmount] = useState(totalLiquid(state) || 300000);
+  const [cartRisk, setCartRisk] = useState<RiskLevel>(state.user?.riskLevel ?? "moderado");
   const selected = lessons.find((lesson) => lesson.id === selectedId);
 
   if (selected) {
@@ -620,43 +777,129 @@ function LearnTab({
   return (
     <>
       <PageIntro title="Aprender" text="Lecciones claras, ejemplos reales y mini quizzes con recompensa." />
-      <section className="panel learning-summary">
-        <p className="eyebrow">Progreso</p>
-        <h3>
-          {state.tycoon.completedLessonIds.length}/{lessons.length} lecciones completadas
-        </h3>
-        <p>
-          Cada quiz correcto suma {lessonReward} Mangos. Aprender tambien capitaliza.
-        </p>
-      </section>
-      <div className="lesson-grid">
-        {lessons.map((lesson) => {
-          const unlockCount = LESSON_UNLOCK_COUNT[lesson.id] ?? 0;
-          const done = state.tycoon.completedLessonIds.includes(lesson.id);
-          return (
-            <button className="lesson-card" key={lesson.id} onClick={() => setSelectedId(lesson.id)}>
-              <div>
-                <p className="eyebrow">Modulo · {lesson.level}</p>
-                <h3>{lesson.title}</h3>
-                <p>{lesson.subtitle}</p>
-                <div className="tag-row">
-                  {lesson.tags.map((tag) => (
-                    <span key={tag}>{tag}</span>
-                  ))}
-                  {unlockCount > 0 && (
-                    <span className={`lesson-tycoon-badge ${done ? "done" : ""}`}>
-                      🎮 {unlockCount} en Tycoon
-                    </span>
-                  )}
-                </div>
-              </div>
-              <strong>
-                {done ? "✓" : `+${lessonReward} M`}
-              </strong>
-            </button>
-          );
-        })}
+
+      {/* Subtabs Lecciones / Mi Cartera */}
+      <div className="segmented" style={{ margin: "0 0 12px" }}>
+        {(["lecciones", "cartera"] as const).map((v) => (
+          <button key={v} className={learnView === v ? "active" : ""} onClick={() => setLearnView(v)} type="button">
+            {v === "lecciones" ? "Lecciones" : "Mi Cartera"}
+          </button>
+        ))}
       </div>
+
+      {learnView === "lecciones" && (() => {
+        const userRisk = state.user?.riskLevel ?? "moderado";
+        const sorted = [...lessons].sort((a, b) => {
+          const aDone = state.tycoon.completedLessonIds.includes(a.id);
+          const bDone = state.tycoon.completedLessonIds.includes(b.id);
+          if (aDone !== bDone) return aDone ? 1 : -1; // completadas al fondo
+          const aRec = a.recommendedFor.includes(userRisk) ? 0 : 1;
+          const bRec = b.recommendedFor.includes(userRisk) ? 0 : 1;
+          return aRec - bRec;
+        });
+        const nextRecommended = sorted.find(
+          (l) => !state.tycoon.completedLessonIds.includes(l.id) && l.recommendedFor.includes(userRisk),
+        );
+        return (
+          <>
+            <section className="panel learning-summary">
+              <p className="eyebrow">Progreso</p>
+              <h3>
+                {state.tycoon.completedLessonIds.length}/{lessons.length} lecciones completadas
+              </h3>
+              {nextRecommended && (
+                <p style={{ fontSize: 12, color: "#10b981", marginTop: 4 }}>
+                  Siguiente para tu perfil: <strong>{nextRecommended.title}</strong>
+                </p>
+              )}
+            </section>
+            <div className="lesson-grid">
+              {sorted.map((lesson) => {
+                const unlockCount = LESSON_UNLOCK_COUNT[lesson.id] ?? 0;
+                const done = state.tycoon.completedLessonIds.includes(lesson.id);
+                const isRecommended = lesson.recommendedFor.includes(userRisk) && !done;
+                return (
+                  <button
+                    className={`lesson-card${isRecommended ? " recommended" : ""}`}
+                    key={lesson.id}
+                    onClick={() => setSelectedId(lesson.id)}
+                  >
+                    <div>
+                      <p className="eyebrow">Modulo · {lesson.level}</p>
+                      <h3>{lesson.title}</h3>
+                      <p>{lesson.subtitle}</p>
+                      <div className="tag-row">
+                        {isRecommended && (
+                          <span style={{ background: "rgba(16,185,129,.15)", color: "#10b981", padding: "1px 6px", borderRadius: 99, fontSize: 11, fontWeight: 700 }}>
+                            ⭐ Tu perfil
+                          </span>
+                        )}
+                        {lesson.tags.map((tag) => (
+                          <span key={tag}>{tag}</span>
+                        ))}
+                        {unlockCount > 0 && (
+                          <span className={`lesson-tycoon-badge ${done ? "done" : ""}`}>
+                            🎮 {unlockCount} en Tycoon
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <strong>
+                      {done ? "✓" : `+${lessonReward} M`}
+                    </strong>
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        );
+      })()}
+
+      {learnView === "cartera" && (
+        <>
+          <section className="panel">
+            <p className="eyebrow" style={{ marginBottom: 8 }}>Cartera sugerida para tu perfil</p>
+            {totalDebt(state) > 100000 && (
+              <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, padding: "8px 12px", marginBottom: 12 }}>
+                <p style={{ fontSize: 12, color: "#dc2626", margin: 0 }}>
+                  Tenés {money(totalDebt(state))} en tarjetas. Pagar deuda suele ganarle a cualquier inversión.
+                </p>
+              </div>
+            )}
+            <div className="segmented" style={{ marginBottom: 12 }}>
+              {(["conservador", "moderado", "agresivo"] as const).map((r) => (
+                <button key={r} className={cartRisk === r ? "active" : ""} type="button" onClick={() => setCartRisk(r)}>
+                  {r}
+                </button>
+              ))}
+            </div>
+            <label style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 12 }}>
+              <span style={{ fontSize: 12, color: "#64748b" }}>Monto a distribuir</span>
+              <input value={cartAmount} onChange={(e) => setCartAmount(Number(e.target.value) || 0)} inputMode="numeric" />
+            </label>
+            <div className="portfolio-list">
+              {riskPortfolios[cartRisk].map((item) => (
+                <div className="portfolio-row" key={item.name}>
+                  <div>
+                    <strong>{item.name}</strong>
+                    <span>{item.detail}</span>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <strong>{money((cartAmount * item.pct) / 100)}</strong>
+                    <span>{item.pct}%</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+          <section className="panel muted">
+            <ShieldCheck size={18} style={{ color: "#10b981" }} />
+            <p style={{ fontSize: 13 }}>
+              Esto es educación financiera, no asesoramiento registrado. Ajustá los porcentajes a tu situación real.
+            </p>
+          </section>
+        </>
+      )}
     </>
   );
 }
@@ -1329,6 +1572,7 @@ function GoalsTab({
   }
 
   const done = state.goals.filter((g) => goalProgress(g).done).length;
+  const monthlySavings = Math.max(0, (state.user?.salary ?? 0) - monthlyExpenses(state));
 
   return (
     <>
@@ -1340,6 +1584,11 @@ function GoalsTab({
           <h3>
             {done}/{state.goals.length} metas cumplidas
           </h3>
+          {monthlySavings > 0 && (
+            <p className="fine-print" style={{ color: "#64748b", marginTop: 4 }}>
+              Ahorro estimado este mes: {money(monthlySavings)} (sueldo − gastos)
+            </p>
+          )}
         </section>
       )}
 
@@ -1348,6 +1597,8 @@ function GoalsTab({
           const { pct, remaining, done } = goalProgress(goal);
           const isDepositing = depositGoalId === goal.id;
           const daysLeft = goal.deadline ? daysUntilDeadline(goal.deadline) : null;
+          const proj = goalProjection(goal, monthlySavings);
+          const salary = state.user?.salary ?? 0;
 
           return (
             <article className={`panel goal-card ${done ? "done" : ""}`} key={goal.id}>
@@ -1395,6 +1646,42 @@ function GoalsTab({
                   ? "Meta alcanzada."
                   : `${pct.toFixed(0)}% · te faltan ${money(remaining)}`}
               </p>
+
+              {/* Proyección educativa */}
+              {!done && (
+                <div className="goal-projection">
+                  {proj.monthsToGoal != null && monthlySavings > 0 && (
+                    <span>
+                      A este ritmo: <strong>{proj.monthsToGoal} {proj.monthsToGoal === 1 ? "mes" : "meses"}</strong>
+                    </span>
+                  )}
+                  {proj.requiredMonthly != null && (
+                    <span style={{ color: proj.onTrack ? "#10b981" : "#ef4444" }}>
+                      {proj.onTrack ? "En tiempo" : `Necesitás ${money(proj.requiredMonthly)}/mes`}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* Depósitos rápidos */}
+              {!done && !isDepositing && salary > 0 && (
+                <div className="goal-quick-deposits">
+                  {[0.05, 0.1, 0.2].map((pctS) => {
+                    const amt = Math.round((salary * pctS) / 100) * 100;
+                    if (amt <= 0 || amt > remaining) return null;
+                    return (
+                      <button
+                        key={pctS}
+                        className="ghost small"
+                        type="button"
+                        onClick={() => setState((cur) => addToGoal(cur, goal.id, amt))}
+                      >
+                        +{money(amt)}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
 
               {isDepositing && (
                 <form className="goal-deposit" onSubmit={submitDeposit}>
@@ -1495,9 +1782,34 @@ function ProfileTab({
   state: AppState;
   setState: React.Dispatch<React.SetStateAction<AppState>>;
 }) {
+  const history = state.netWorthHistory ?? [];
+  const growth = history.length >= 2 ? netWorthGrowth(history) : null;
+  const currentNW = netWorth(state);
+
   return (
     <>
       <PageIntro title="Yo" text="Cuentas, tarjetas y configuracion." />
+
+      {/* Patrimonio neto y evolución */}
+      <section className="panel">
+        <p className="eyebrow">Patrimonio neto</p>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
+          <span style={{ fontSize: 26, fontWeight: 800 }}>{money(currentNW, state.user?.hidden)}</span>
+          {growth && (
+            <span style={{ fontSize: 13, fontWeight: 700, color: growth.trend === "up" ? "#10b981" : growth.trend === "down" ? "#ef4444" : "var(--muted)" }}>
+              {growth.trend === "up" ? "▲" : growth.trend === "down" ? "▼" : "→"} {Math.abs(growth.pct).toFixed(1)}% desde inicio
+            </span>
+          )}
+        </div>
+        {history.length >= 2 ? (
+          <NetWorthChart history={history} />
+        ) : (
+          <p style={{ fontSize: 12, color: "var(--muted)", margin: 0 }}>
+            La evolución de tu patrimonio aparecerá aquí con el tiempo. Cargá tus cuentas y avanzá en Mango Tycoon.
+          </p>
+        )}
+      </section>
+
       <AccountForm setState={setState} />
       <CardForm setState={setState} />
       <section className="panel">
@@ -2193,8 +2505,9 @@ function SimulatorTab({
           </div>
           <div className="asset-list">
             {SIM_ASSETS.filter((a) => catFilter === "todos" || a.category === catFilter).map((asset) => {
-              const price = sim.prices[asset.id] ?? asset.defaultPrice;
-              const pos   = sim.positions.find((p) => p.assetId === asset.id);
+              const price   = sim.prices[asset.id] ?? asset.defaultPrice;
+              const pos     = sim.positions.find((p) => p.assetId === asset.id);
+              const history = sim.priceHistory?.[asset.id] ?? [];
               return (
                 <article className="asset-card" key={asset.id}>
                   <div className="asset-topline">
@@ -2222,6 +2535,11 @@ function SimulatorTab({
                       )}
                     </div>
                   </div>
+                  {history.length >= 2 && (
+                    <div style={{ marginBottom: 4 }}>
+                      <Sparkline data={history} width={90} height={26} />
+                    </div>
+                  )}
                   <p style={{ fontSize: 12, color: "#64748b", margin: "6px 0 8px" }}>{asset.lesson}</p>
                   <button
                     className="primary"
@@ -2446,7 +2764,7 @@ function MercadosTab({
     { label: "Cripto", value: rates.cripto },
   ];
 
-  const cryptoIds = ["BTC", "ADA", "DOGE", "SHIB"];
+  const cryptoIds = ["BTC", "ETH", "ADA", "DOGE", "SHIB"];
 
   return (
     <>
@@ -2472,6 +2790,8 @@ function MercadosTab({
           ))}
         </div>
       </section>
+
+      <MacroPanel live={state.live} rates={state.rates} />
 
       {/* ── Tasas de referencia Argentina ── */}
       <section className="panel">
@@ -2564,6 +2884,91 @@ function MercadosTab({
         </p>
       </section>
     </>
+  );
+}
+
+function NetWorthChart({ history }: { history: Array<{ date: string; value: number }> }) {
+  if (history.length < 2) return null;
+  const values = history.map((d) => d.value);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+  const W = 300; const H = 80; const pad = 10;
+  const w = W - pad * 2; const h = H - pad * 2;
+  const pts = history.map((d, i) => {
+    const x = pad + (i / (history.length - 1)) * w;
+    const y = pad + h - ((d.value - min) / range) * h;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  });
+  const zeroY = min >= 0 ? H : max <= 0 ? pad : pad + h - ((0 - min) / range) * h;
+  const last = values[values.length - 1];
+  const first = values[0];
+  const rising = last >= first;
+  const color = rising ? "#10b981" : "#ef4444";
+  const pct = first !== 0 ? ((last - first) / Math.abs(first)) * 100 : 0;
+  const firstDate = history[0].date.slice(0, 7);
+  const lastDate = history[history.length - 1].date.slice(0, 7);
+
+  return (
+    <div className="net-worth-chart">
+      <svg width="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet" style={{ display: "block" }}>
+        <line x1={pad} y1={zeroY} x2={W - pad} y2={zeroY} stroke="var(--border)" strokeWidth="1" strokeDasharray="3 3" />
+        <polyline points={pts.join(" ")} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+        {history.map((d, i) => {
+          const x = pad + (i / (history.length - 1)) * w;
+          const y = pad + h - ((d.value - min) / range) * h;
+          return <circle key={i} cx={x.toFixed(1)} cy={y.toFixed(1)} r="3" fill={color} />;
+        })}
+      </svg>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--muted)", marginTop: 4 }}>
+        <span>{firstDate}</span>
+        <span style={{ color, fontWeight: 700 }}>{pct >= 0 ? "+" : ""}{pct.toFixed(1)}% total</span>
+        <span>{lastDate}</span>
+      </div>
+    </div>
+  );
+}
+
+function Sparkline({
+  data,
+  width = 80,
+  height = 28,
+}: {
+  data: Array<{ t: number; p: number }>;
+  width?: number;
+  height?: number;
+}) {
+  if (data.length < 2) return null;
+  const prices = data.map((d) => d.p);
+  const min = Math.min(...prices);
+  const max = Math.max(...prices);
+  const range = max - min || 1;
+  const pad = 2;
+  const w = width - pad * 2;
+  const h = height - pad * 2;
+  const pts = data.map((d, i) => {
+    const x = pad + (i / (data.length - 1)) * w;
+    const y = pad + h - ((d.p - min) / range) * h;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  });
+  const rising = prices[prices.length - 1] >= prices[0];
+  const color = rising ? "#10b981" : "#ef4444";
+  const pct = ((prices[prices.length - 1] - prices[0]) / prices[0]) * 100;
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+      <svg width={width} height={height} style={{ flex: `0 0 ${width}px` }}>
+        <polyline
+          points={pts.join(" ")}
+          fill="none"
+          stroke={color}
+          strokeWidth="1.5"
+          strokeLinejoin="round"
+        />
+      </svg>
+      <span style={{ fontSize: 11, color, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>
+        {pct >= 0 ? "+" : ""}{pct.toFixed(1)}%
+      </span>
+    </div>
   );
 }
 

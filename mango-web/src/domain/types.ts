@@ -142,6 +142,8 @@ export type LiveData = {
   inflationMonthly?: number;
   inflationAnnual?: number;
   countryRisk?: number;
+  updatedAt?: number;
+  source?: "live" | "referencial";
 };
 
 export type SimAssetCategory = "crypto" | "memecoin" | "stock" | "cedear" | "bono";
@@ -168,6 +170,12 @@ export type SimulatorState = {
   trades: SimTrade[];
   prices: Record<string, number>; // assetId → USD price
   pricesUpdatedAt?: number;
+  priceHistory: Record<string, Array<{ t: number; p: number }>>; // últimos 48 puntos por asset
+};
+
+export type NetWorthSnapshot = {
+  date: string;  // ISO date "YYYY-MM-DD"
+  value: number; // net worth in ARS at that point
 };
 
 export type AppState = {
@@ -182,4 +190,5 @@ export type AppState = {
   simulator: SimulatorState;
   rates: Rates;
   live: LiveData;
+  netWorthHistory: NetWorthSnapshot[];
 };

@@ -2,12 +2,15 @@ import { budgetHealth, money, totalDebt, totalLiquid } from "./finance";
 import type { AppState } from "./types";
 import { getTriggeredEventsForLesson } from "./events";
 
+import type { RiskLevel } from "./types";
+
 export type Lesson = {
   id: string;
   title: string;
   subtitle: string;
   level: "inicial" | "medio";
   tags: string[];
+  recommendedFor: RiskLevel[]; // perfiles que deberían priorizarla
   sections: Array<{ title: string; body: string }>;
   example: (state: AppState) => string;
   quiz: {
@@ -27,6 +30,7 @@ export const lessons: Lesson[] = [
     subtitle: "No es prohibirte vivir: es decidir antes de gastar.",
     level: "inicial",
     tags: ["Gastos", "Habitos"],
+    recommendedFor: ["conservador", "moderado", "agresivo"],
     sections: [
       {
         title: "La idea simple",
@@ -61,6 +65,7 @@ export const lessons: Lesson[] = [
     subtitle: "La tarjeta refinanciada suele ganarle a cualquier rendimiento posible.",
     level: "inicial",
     tags: ["Tarjetas", "Interes"],
+    recommendedFor: ["conservador", "moderado", "agresivo"],
     sections: [
       {
         title: "La comparacion correcta",
@@ -93,6 +98,7 @@ export const lessons: Lesson[] = [
     subtitle: "La plata mas aburrida es la que te salva de endeudarte.",
     level: "inicial",
     tags: ["Ahorro", "Seguridad"],
+    recommendedFor: ["conservador", "moderado", "agresivo"],
     sections: [
       {
         title: "Que es",
@@ -124,6 +130,7 @@ export const lessons: Lesson[] = [
     subtitle: "Dolarizar ahorro blanco sin comprar dolar oficial.",
     level: "inicial",
     tags: ["Dolar", "Argentina"],
+    recommendedFor: ["conservador", "moderado"],
     sections: [
       {
         title: "Que es",
@@ -156,6 +163,7 @@ export const lessons: Lesson[] = [
     subtitle: "Empresas de afuera compradas desde Argentina.",
     level: "medio",
     tags: ["Inversion", "Dolares"],
+    recommendedFor: ["moderado", "agresivo"],
     sections: [
       {
         title: "Que compras",
@@ -185,6 +193,7 @@ export const lessons: Lesson[] = [
     subtitle: "Tu plata genera interés diario y la rescatás en 24 horas.",
     level: "inicial",
     tags: ["Ahorro", "Liquidez", "Rendimiento"],
+    recommendedFor: ["conservador", "moderado"],
     sections: [
       {
         title: "Qué es un FCI",
@@ -221,6 +230,7 @@ export const lessons: Lesson[] = [
     subtitle: "Cuándo conviene pagar en cuotas y cuándo el descuento contado gana.",
     level: "inicial",
     tags: ["Deuda", "Consumo", "Calculo"],
+    recommendedFor: ["conservador", "moderado", "agresivo"],
     sections: [
       {
         title: "Cuotas en inflación alta",
@@ -254,6 +264,7 @@ export const lessons: Lesson[] = [
     subtitle: "La ventaja del talento argentino: cobrás global, gastás local.",
     level: "medio",
     tags: ["Dolares", "Trabajo", "AFIP"],
+    recommendedFor: ["moderado", "agresivo"],
     sections: [
       {
         title: "La ventaja competitiva",

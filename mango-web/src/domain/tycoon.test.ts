@@ -34,6 +34,7 @@ function makeState(): AppState {
     simulator: initialSimulatorState,
     rates: defaultRates,
     live: {},
+    netWorthHistory: [],
   };
 }
 

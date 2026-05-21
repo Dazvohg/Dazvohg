@@ -27,6 +27,16 @@ export const SIM_ASSETS: SimAsset[] = [
     defaultPrice: 65000,
   },
   {
+    id: "ETH",
+    symbol: "ETH",
+    name: "Ethereum",
+    category: "crypto",
+    description: "La plataforma de contratos inteligentes más usada.",
+    lesson: "ETH es la infraestructura de DeFi, NFTs y Web3. Más volátil que BTC pero con más casos de uso. Siempre BTC antes que ETH si sos principiante.",
+    coingeckoId: "ethereum",
+    defaultPrice: 3200,
+  },
+  {
     id: "ADA",
     symbol: "ADA",
     name: "Cardano",
@@ -157,6 +167,7 @@ export const initialSimulatorState: SimulatorState = {
   positions: [],
   trades: [],
   prices: Object.fromEntries(SIM_ASSETS.map((a) => [a.id, a.defaultPrice])),
+  priceHistory: {},
 };
 
 export function simPortfolioValue(state: SimulatorState): number {
@@ -273,21 +284,31 @@ export function resetSimulator(state: AppState): AppState {
     ...state,
     simulator: {
       ...initialSimulatorState,
-      prices: state.simulator.prices, // mantener precios actuales
+      prices: state.simulator.prices,
+      priceHistory: state.simulator.priceHistory, // conservar histórico al reiniciar
     },
   };
 }
+
+const MAX_HISTORY = 48;
 
 export function updateSimPrices(
   state: AppState,
   prices: Record<string, number>,
 ): AppState {
+  const now = Date.now();
+  const history = { ...(state.simulator.priceHistory ?? {}) };
+  for (const [id, price] of Object.entries(prices)) {
+    const prev = history[id] ?? [];
+    history[id] = [...prev, { t: now, p: price }].slice(-MAX_HISTORY);
+  }
   return {
     ...state,
     simulator: {
       ...state.simulator,
       prices: { ...state.simulator.prices, ...prices },
-      pricesUpdatedAt: Date.now(),
+      priceHistory: history,
+      pricesUpdatedAt: now,
     },
   };
 }

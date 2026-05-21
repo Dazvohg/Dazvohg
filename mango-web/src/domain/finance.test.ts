@@ -32,6 +32,7 @@ const state: AppState = {
   simulator: initialSimulatorState,
     rates: defaultRates,
   live: {},
+  netWorthHistory: [],
 };
 
 describe("finance domain", () => {
@@ -50,7 +51,9 @@ describe("finance domain", () => {
   });
 
   it("returns actionable advice", () => {
-    expect(advice(state).title.length).toBeGreaterThan(5);
+    const items = advice(state);
+    expect(items.length).toBeGreaterThan(0);
+    expect(items[0].title.length).toBeGreaterThan(5);
   });
 
   it("calculates budget usage", () => {

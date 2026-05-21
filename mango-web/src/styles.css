@@ -1185,6 +1185,21 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 .achievement-chip--earned { background: rgba(0,186,124,.12); color: var(--green); }
 .achievement-chip--locked { background: var(--surface); color: var(--muted); opacity: .45; filter: grayscale(1); }
 
+/* ── Macro panel (inflación, riesgo país) ───────────────────────────────────*/
+.macro-panel { border-left: 3px solid #ef4444; }
+.macro-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 12px;
+}
+.macro-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.macro-cell span { font-size: 11px; color: var(--muted); }
+.macro-cell strong { font-size: 15px; font-variant-numeric: tabular-nums; }
+
 /* ── Mercados: cotizaciones dólar ───────────────────────────────────────────*/
 .dollar-grid {
   display: flex;
@@ -1248,7 +1263,49 @@ button:disabled { opacity: .45; cursor: not-allowed; }
   border-color: var(--accent);
 }
 
+/* ── Tycoon bridge banner ───────────────────────────────────────────────────*/
+.tycoon-bridge-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(245,158,11,.08);
+  border: 1px solid rgba(245,158,11,.25);
+  border-radius: 12px;
+  padding: 10px 14px;
+  width: 100%;
+  cursor: pointer;
+  text-align: left;
+  margin-bottom: 4px;
+}
+.tycoon-bridge-banner strong { display: block; font-size: 13px; color: var(--text); }
+.tycoon-bridge-banner span   { display: block; font-size: 11px; color: var(--muted); margin-top: 1px; }
+
+/* ── Goal projection ────────────────────────────────────────────────────────*/
+.goal-projection {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 6px 0 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.goal-quick-deposits {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
 /* ── Misc ───────────────────────────────────────────────────────────────────*/
 @media (max-width: 380px) {
   .budget-form { grid-template-columns: 1fr; }
+}
+
+/* ── Net Worth Chart ────────────────────────────────────────────────────────*/
+.net-worth-chart {
+  margin-top: 8px;
+  padding: 8px;
+  background: var(--surface2);
+  border-radius: 10px;
+  border: 1px solid var(--border);
 }

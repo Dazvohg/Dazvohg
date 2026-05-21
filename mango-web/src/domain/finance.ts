@@ -1,4 +1,4 @@
-import type { AppState, Budget, Card, ExpenseCategory, Goal, Rates, RiskLevel } from "./types";
+import type { AppState, Budget, Card, ExpenseCategory, Goal, NetWorthSnapshot, Rates, RiskLevel } from "./types";
 
 export const defaultRates: Rates = {
   oficial: 1020,
@@ -140,43 +140,259 @@ export function daysUntilDeadline(deadline: string) {
   return Math.ceil(diff / (1000 * 60 * 60 * 24));
 }
 
-export function advice(state: AppState) {
+export function goalProjection(
+  goal: { target: number; current: number; deadline?: string },
+  monthlySavings: number,
+): {
+  monthsToGoal: number | null; // null si monthlySavings <= 0
+  requiredMonthly: number | null; // para llegar al deadline; null si no hay deadline
+  onTrack: boolean;
+  dailyRequired: number | null;
+} {
+  const remaining = Math.max(0, goal.target - goal.current);
+  if (remaining === 0) return { monthsToGoal: 0, requiredMonthly: null, onTrack: true, dailyRequired: null };
+
+  const monthsToGoal = monthlySavings > 0 ? Math.ceil(remaining / monthlySavings) : null;
+
+  if (!goal.deadline) {
+    return { monthsToGoal, requiredMonthly: null, onTrack: true, dailyRequired: null };
+  }
+
+  const daysLeft = daysUntilDeadline(goal.deadline);
+  const monthsLeft = daysLeft / 30;
+  const requiredMonthly = monthsLeft > 0 ? Math.ceil(remaining / monthsLeft) : null;
+  const dailyRequired = daysLeft > 0 ? Math.ceil(remaining / daysLeft) : null;
+  const onTrack = monthlySavings > 0 && requiredMonthly != null && monthlySavings >= requiredMonthly;
+
+  return { monthsToGoal, requiredMonthly, onTrack, dailyRequired };
+}
+
+export function netWorthGrowth(history: NetWorthSnapshot[]): {
+  trend: "up" | "down" | "flat";
+  pct: number;
+  firstValue: number;
+  lastValue: number;
+} {
+  if (history.length < 2) return { trend: "flat", pct: 0, firstValue: 0, lastValue: 0 };
+  const first = history[0].value;
+  const last = history[history.length - 1].value;
+  if (first === 0) return { trend: last > 0 ? "up" : "flat", pct: 0, firstValue: first, lastValue: last };
+  const pct = ((last - first) / Math.abs(first)) * 100;
+  const trend = pct > 1 ? "up" : pct < -1 ? "down" : "flat";
+  return { trend, pct, firstValue: first, lastValue: last };
+}
+
+export type AdviceItem = {
+  title: string;
+  body: string;
+  tab: "expenses" | "goals" | "learn" | "profile" | "simulador" | "mercados" | "tycoon";
+  urgency: "high" | "medium" | "low";
+};
+
+export function advice(state: AppState): AdviceItem[] {
   const liquid = totalLiquid(state);
   const debt = totalDebt(state);
   const budgets = budgetHealth(state);
-  const mp = state.wallets.find((wallet) => wallet.name.toLowerCase().includes("mercado"));
+  const { inflationAnnual, inflationMonthly } = state.live;
+  const { mep, blue } = state.rates;
+  const items: AdviceItem[] = [];
+
+  // ── HIGH urgency ──────────────────────────────────────────────────────────
+
+  // Tarjeta venciendo en < 5 días
+  const urgentCard = state.cards
+    .map((c) => ({ card: c, days: cardUrgency(c) }))
+    .find(({ days }) => days < 5);
+  if (urgentCard) {
+    const { card, days } = urgentCard;
+    const interest = cardMonthlyInterest(card);
+    items.push({
+      title: `${card.issuer} vence en ${days} ${days === 1 ? "día" : "días"}`,
+      body: `Mínimo ${money(card.minimum)}. Si refinancias, el interés mensual es ${money(interest)}. Pagá hoy lo que puedas.`,
+      tab: "profile",
+      urgency: "high",
+    });
+  }
+
+  // Deuda alta vs liquidez
   if (debt > 100000 && debt > liquid * 0.35) {
-    return {
-      title: "Primero deuda, despues inversion",
-      body: `Tenes ${money(debt)} en tarjetas. A tasas de refinanciacion, pagar deuda suele ganarle a cualquier inversion razonable.`,
-      action: "Tarjetas",
-    };
+    items.push({
+      title: "Primero deuda, después inversión",
+      body: `Tenés ${money(debt)} en tarjetas. A tasas de refinanciación, pagar deuda suele ganarle a cualquier inversión razonable.`,
+      tab: "profile",
+      urgency: "high",
+    });
   }
+
+  // Presupuesto en rojo
   if (budgets.status === "red") {
-    return {
-      title: "El presupuesto pide atencion",
-      body: `Ya usaste ${budgets.pct.toFixed(0)}% del presupuesto mensual. Ajustar ahora vale mas que lamentarlo a fin de mes.`,
-      action: "Gastos",
-    };
+    items.push({
+      title: "El presupuesto pide atención",
+      body: `Ya usaste ${budgets.pct.toFixed(0)}% del presupuesto mensual (${money(budgets.totalSpent)} de ${money(budgets.totalLimit)}). Ajustar ahora vale más que lamentarlo a fin de mes.`,
+      tab: "expenses",
+      urgency: "high",
+    });
   }
-  if (mp && mp.balance > 100000 && mp.annualRate < 24) {
-    const diff = (mp.balance * (27 - mp.annualRate)) / 100 / 12;
-    return {
-      title: "Tu plata parada puede rendir mas",
-      body: `Mover ${money(mp.balance)} desde ${mp.name} a una alternativa al 27% TNA suma cerca de ${money(diff)} por mes.`,
-      action: "Cuentas",
-    };
+
+  // Meta con deadline urgente
+  const urgentGoal = state.goals.find((g) => {
+    if (!g.deadline) return false;
+    const days = daysUntilDeadline(g.deadline);
+    const pct = g.target > 0 ? g.current / g.target : 1;
+    return days < 7 && pct < 0.5;
+  });
+  if (urgentGoal) {
+    const days = daysUntilDeadline(urgentGoal.deadline!);
+    const missing = urgentGoal.target - urgentGoal.current;
+    items.push({
+      title: `Meta "${urgentGoal.name}" vence en ${days} días`,
+      body: `Falta ${money(missing)} para completarla. Si depositás hoy, llegás. Después puede ser tarde.`,
+      tab: "goals",
+      urgency: "high",
+    });
   }
-  if (liquid > 50000) {
-    return {
-      title: "Podemos empezar una cartera",
-      body: `Con ${money(liquid)} liquidos, Mango puede separar colchon, deuda y una cartera segun tu perfil.`,
-      action: "Invertir",
-    };
+
+  // ── MEDIUM urgency ────────────────────────────────────────────────────────
+
+  // Billetera pierde vs inflación anual
+  if (inflationAnnual != null) {
+    const loserWallet = state.wallets.find(
+      (w) => w.balance > 50000 && w.annualRate < inflationAnnual - 10,
+    );
+    if (loserWallet) {
+      const lossPerMonth = Math.round((loserWallet.balance * (inflationAnnual - loserWallet.annualRate)) / 100 / 12);
+      items.push({
+        title: `${loserWallet.name} pierde vs inflación`,
+        body: `Con ${inflationAnnual}% anual, ${money(loserWallet.balance)} en ${loserWallet.name} al ${loserWallet.annualRate}% TNA pierde ${money(lossPerMonth)}/mes de poder adquisitivo real.`,
+        tab: "mercados",
+        urgency: "medium",
+      });
+    }
   }
-  return {
-    title: "Carguemos tu foto financiera",
-    body: "Agrega sueldo, bancos, billeteras y tarjetas. Con eso Mango empieza a darte decisiones concretas.",
-    action: "Cuentas",
-  };
+
+  // Presupuesto amarillo
+  if (budgets.status === "yellow") {
+    items.push({
+      title: "Presupuesto en zona amarilla",
+      body: `Usaste ${budgets.pct.toFixed(0)}% del presupuesto. Bajar un cambio ahora es más fácil que recuperar a fin de mes.`,
+      tab: "expenses",
+      urgency: "medium",
+    });
+  }
+
+  // Meta con deadline en 30 días
+  const nearGoal = state.goals.find((g) => {
+    if (!g.deadline || urgentGoal?.name === g.name) return false;
+    const days = daysUntilDeadline(g.deadline);
+    const pct = g.target > 0 ? g.current / g.target : 1;
+    return days < 30 && pct < 0.7;
+  });
+  if (nearGoal) {
+    const days = daysUntilDeadline(nearGoal.deadline!);
+    const missing = nearGoal.target - nearGoal.current;
+    const perDay = Math.round(missing / days);
+    items.push({
+      title: `"${nearGoal.name}" vence en ${days} días`,
+      body: `Falta ${money(missing)}. Depositando ${money(perDay)}/día llegas justo. Empezá ahora para no correr.`,
+      tab: "goals",
+      urgency: "medium",
+    });
+  }
+
+  // Oportunidad MEP vs blue
+  if (mep > 0 && blue > 0) {
+    const spread = ((blue - mep) / mep) * 100;
+    if (spread < 2 && spread > 0) {
+      items.push({
+        title: "MEP casi igual al blue: dolarizá barato",
+        body: `El spread MEP/blue es solo ${spread.toFixed(1)}%. Comprar dólar MEP es legal, seguro y hoy casi igual de barato que el blue.`,
+        tab: "mercados",
+        urgency: "medium",
+      });
+    }
+  }
+
+  // No completó lección de deuda y tiene tarjeta
+  if (
+    debt > 0 &&
+    !state.tycoon.completedLessonIds.includes("deuda-cara")
+  ) {
+    items.push({
+      title: "Hay una lección que podría ahorrarte plata",
+      body: `Tenés ${money(debt)} en tarjetas. La lección "Por qué pagar deuda puede ser invertir" explica exactamente cuánto cuesta refinanciar y qué hacer primero.`,
+      tab: "learn",
+      urgency: "medium",
+    });
+  }
+
+  // Inflación alta con plata parada
+  if (inflationMonthly != null && inflationMonthly > 4) {
+    const allLiquid = state.accounts.reduce((s, a) => s + a.balance, 0);
+    if (allLiquid > 100000) {
+      items.push({
+        title: `Inflación en ${inflationMonthly.toFixed(1)}% mensual: el efectivo parado pierde`,
+        body: `${money(allLiquid)} en cuenta corriente o caja de ahorro no rinden nada. FCI Mercado de Dinero devenga diario y rinde más que la inflación proyectada.`,
+        tab: "mercados",
+        urgency: "medium",
+      });
+    }
+  }
+
+  // ── LOW urgency ───────────────────────────────────────────────────────────
+
+  // Mercado Pago con tasa baja
+  const mp = state.wallets.find((w) => w.name.toLowerCase().includes("mercado"));
+  if (mp && mp.balance > 100000 && mp.annualRate < 50) {
+    const diff = Math.round((mp.balance * (65 - mp.annualRate)) / 100 / 12);
+    items.push({
+      title: "Tu plata en Mercado Pago puede rendir más",
+      body: `Mover ${money(mp.balance)} a una alternativa al 65% TNA suma cerca de ${money(diff)}/mes extra sin riesgo adicional.`,
+      tab: "mercados",
+      urgency: "low",
+    });
+  }
+
+  // Sin presupuestos
+  if (budgets.status === "empty" && state.expenses.length > 3) {
+    items.push({
+      title: "Con datos: poné límites que te convengan",
+      body: "Ya cargaste gastos. Crear presupuestos por categoría tarda 2 minutos y Mango Tycoon te premia por cumplirlos.",
+      tab: "expenses",
+      urgency: "low",
+    });
+  }
+
+  // Liquid > $50k sin inversiones
+  if (liquid > 50000 && state.simulator.positions.length === 0) {
+    items.push({
+      title: "Podemos empezar una cartera educativa",
+      body: `Con ${money(liquid)} líquidos, el simulador de Mango te muestra cómo distribuir sin riesgo real, según tu perfil ${state.user?.riskLevel ?? "moderado"}.`,
+      tab: "simulador",
+      urgency: "low",
+    });
+  }
+
+  // Sin metas
+  if (state.goals.length === 0) {
+    items.push({
+      title: "¿Para qué estás ahorrando?",
+      body: "Definir una meta concreta (viaje, auto, colchón de emergencia) multiplica la probabilidad de cumplirla. Tarda 30 segundos.",
+      tab: "goals",
+      urgency: "low",
+    });
+  }
+
+  // Fallback
+  if (items.length === 0) {
+    items.push({
+      title: "Cargá tu foto financiera",
+      body: "Agregá sueldo, bancos, billeteras y tarjetas. Con eso Mango empieza a darte decisiones concretas.",
+      tab: "profile",
+      urgency: "low",
+    });
+  }
+
+  // Ordenar: high → medium → low
+  const order = { high: 0, medium: 1, low: 2 };
+  return items.sort((a, b) => order[a.urgency] - order[b.urgency]);
 }
