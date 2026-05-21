@@ -87,6 +87,8 @@ import {
 import { fetchRates, fetchLiveData } from "../services/liveData";
 import { fetchSimPrices } from "../services/prices";
 import { resetState } from "../services/storage";
+import { supabase } from "../services/supabase";
+import { deleteRemoteState } from "../services/db";
 import { usePersistentState } from "./usePersistentState";
 
 type Tab = "home" | "simulador" | "learn" | "tycoon" | "expenses" | "goals" | "mercados" | "profile";
@@ -171,7 +173,26 @@ const RATES_INTERVAL_MS    = 5  * 60 * 1000;  // 5 minutos  — el blue/MEP se m
 const LIVE_DATA_INTERVAL_MS = 30 * 60 * 1000;  // 30 minutos — inflación y riesgo país no cambian a cada rato
 
 export function App() {
-  const [state, setState] = usePersistentState();
+  // ── Auth ───────────────────────────────────────────────────────────────────
+  const [authUserId, setAuthUserId] = useState<string | null>(null);
+  const [authLoading, setAuthLoading] = useState(!!supabase);
+  const [guestMode,   setGuestMode]   = useState(!supabase); // true si no hay Supabase configurado
+
+  useEffect(() => {
+    if (!supabase) return;
+    supabase.auth.getSession().then(({ data }) => {
+      setAuthUserId(data.session?.user?.id ?? null);
+      setAuthLoading(false);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_ev, session) => {
+      setAuthUserId(session?.user?.id ?? null);
+    });
+    return () => subscription.unsubscribe();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const userId = guestMode ? undefined : (authUserId ?? undefined);
+
+  const [state, setState] = usePersistentState(userId);
   const [tab, setTab] = useState<Tab>("home");
 
   const refreshRates = useCallback(() => {
@@ -213,6 +234,19 @@ export function App() {
     }));
   }, [state.user, state.tycoon.gameMonth, state.tycoon.gameYear, state.rates.updatedAt]);  // eslint-disable-line react-hooks/exhaustive-deps
 
+  async function handleSignOut() {
+    if (authUserId) await deleteRemoteState(authUserId);
+    await supabase?.auth.signOut();
+    resetState();
+    location.reload();
+  }
+
+  // Gates de autenticación
+  if (authLoading) return <AuthSplash />;
+  if (!guestMode && !authUserId) {
+    return <AuthScreen onGuest={() => setGuestMode(true)} />;
+  }
+
   if (!state.user) return <Onboarding setState={setState} />;
 
   return (
@@ -226,7 +260,7 @@ export function App() {
         {tab === "expenses"  && <ExpensesTab state={state} setState={setState} />}
         {tab === "goals"     && <GoalsTab state={state} setState={setState} />}
         {tab === "mercados"  && <MercadosTab state={state} setTab={setTab} />}
-        {tab === "profile"   && <ProfileTab state={state} setState={setState} />}
+        {tab === "profile"   && <ProfileTab state={state} setState={setState} authUserId={authUserId} onSignOut={handleSignOut} />}
       </main>
       <TabBar tab={tab} setTab={setTab} />
     </div>
@@ -297,6 +331,106 @@ function Onboarding({ setState }: { setState: React.Dispatch<React.SetStateActio
           Empezar
         </button>
       </form>
+    </div>
+  );
+}
+
+// ─── Auth Splash (cargando sesión) ────────────────────────────────────────────
+function AuthSplash() {
+  return (
+    <div className="onboarding" style={{ justifyContent: "center", alignItems: "center" }}>
+      <Brand />
+      <p style={{ color: "var(--muted)", marginTop: 16, fontSize: 14 }}>Cargando…</p>
+    </div>
+  );
+}
+
+// ─── Auth Screen ──────────────────────────────────────────────────────────────
+function AuthScreen({ onGuest }: { onGuest: () => void }) {
+  const [email,   setEmail]   = useState("");
+  const [sent,    setSent]    = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error,   setError]   = useState("");
+
+  async function handleMagicLink(e: FormEvent) {
+    e.preventDefault();
+    if (!email.trim() || !supabase) return;
+    setLoading(true);
+    setError("");
+    const { error: err } = await supabase.auth.signInWithOtp({
+      email: email.trim(),
+      options: { emailRedirectTo: window.location.origin },
+    });
+    setLoading(false);
+    if (err) { setError(err.message); return; }
+    setSent(true);
+  }
+
+  async function handleGoogle() {
+    if (!supabase) return;
+    await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: window.location.origin },
+    });
+  }
+
+  return (
+    <div className="onboarding">
+      <section className="hero">
+        <Brand />
+        <h1>Tu plata, en orden.</h1>
+        <p>Creá una cuenta para guardar tu progreso en la nube y acceder desde cualquier dispositivo.</p>
+      </section>
+
+      {sent ? (
+        <div className="panel" style={{ textAlign: "center" }}>
+          <p style={{ fontSize: 32, marginBottom: 8 }}>📬</p>
+          <strong style={{ fontSize: 16 }}>Revisá tu email</strong>
+          <p style={{ color: "var(--muted)", marginTop: 8, fontSize: 14 }}>
+            Enviamos un link a <strong>{email}</strong>.<br />
+            Hacé click en el link para ingresar.
+          </p>
+        </div>
+      ) : (
+        <form className="panel setup" onSubmit={handleMagicLink}>
+          <label>
+            Email
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="tu@email.com"
+              required
+            />
+          </label>
+          {error && <p style={{ color: "var(--red)", fontSize: 12 }}>{error}</p>}
+          <button className="primary" type="submit" disabled={loading}>
+            {loading ? "Enviando…" : "Entrar con email"}
+          </button>
+          <button
+            type="button"
+            className="ghost"
+            onClick={handleGoogle}
+            style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+          >
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+              <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/>
+              <path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+              <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+            </svg>
+            Continuar con Google
+          </button>
+          <p style={{ textAlign: "center", marginTop: 4 }}>
+            <button type="button" className="link-btn" onClick={onGuest}>
+              Continuar sin cuenta →
+            </button>
+          </p>
+          <p className="fine-print" style={{ textAlign: "center", color: "var(--muted)" }}>
+            Sin contraseña · Link de acceso por email
+          </p>
+        </form>
+      )}
     </div>
   );
 }
@@ -1733,9 +1867,13 @@ function GoalForm({ setState }: { setState: React.Dispatch<React.SetStateAction<
 function ProfileTab({
   state,
   setState,
+  authUserId,
+  onSignOut,
 }: {
   state: AppState;
   setState: React.Dispatch<React.SetStateAction<AppState>>;
+  authUserId: string | null;
+  onSignOut: () => void;
 }) {
   const history = state.netWorthHistory ?? [];
   const growth = history.length >= 2 ? netWorthGrowth(history) : null;
@@ -1847,15 +1985,29 @@ function ProfileTab({
       </section>
       <section className="panel danger">
         <p className="eyebrow">Zona sensible</p>
+        {authUserId && (
+          <div style={{ marginBottom: 10 }}>
+            <p className="fine-print" style={{ marginBottom: 6 }}>
+              <span style={{ color: "#10b981" }}>● Sincronizado con la nube</span>
+              {" · "}cuenta activa
+            </p>
+            <button
+              className="ghost small"
+              style={{ width: "100%", marginBottom: 8 }}
+              onClick={() => { if (confirm("¿Cerrar sesión? Tus datos quedan guardados.")) onSignOut(); }}
+            >
+              Cerrar sesión
+            </button>
+          </div>
+        )}
         <button
           className="danger-button"
           onClick={() => {
-            if (!confirm("Borrar todos los datos locales de Mango?")) return;
-            resetState();
-            location.reload();
+            if (!confirm("Borrar todos los datos de Mango? Esta acción no se puede deshacer.")) return;
+            onSignOut();
           }}
         >
-          Borrar datos locales
+          {authUserId ? "Borrar cuenta y datos" : "Borrar datos locales"}
         </button>
       </section>
     </>
