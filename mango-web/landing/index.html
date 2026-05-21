@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mango — Tu plata, en orden.</title>
+  <meta name="description" content="El asistente financiero para Argentina. Controlá gastos, simulá inversiones y aprendé con datos reales del BCRA, dólar y mercados." />
+
+  <!-- Open Graph -->
+  <meta property="og:type"        content="website" />
+  <meta property="og:title"       content="Mango — Tu plata, en orden." />
+  <meta property="og:description" content="Controlá tus gastos, simulá inversiones y aprendé finanzas con datos reales. Gratis, sin publicidad." />
+  <meta property="og:url"         content="https://usemango.app" />
+  <meta property="og:image"       content="https://usemango.app/og.png" />
+
+  <!-- Twitter -->
+  <meta name="twitter:card"        content="summary_large_image" />
+  <meta name="twitter:title"       content="Mango — Tu plata, en orden." />
+  <meta name="twitter:description" content="Controlá tus gastos, simulá inversiones y aprendé finanzas con datos reales." />
+
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🥭</text></svg>" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- ── Nav ── -->
+  <nav class="nav">
+    <a href="/" class="brand">
+      <span class="brand-icon">🥭</span>
+      <strong>Mango</strong>
+    </a>
+    <a href="APP_URL" class="btn-nav">Entrar →</a>
+  </nav>
+
+  <!-- ── Hero ── -->
+  <section class="hero">
+    <div class="hero-inner">
+      <div class="hero-copy">
+        <p class="badge">🇦🇷 Hecho para Argentina</p>
+        <h1>Tu plata,<br><span class="accent">en orden.</span></h1>
+        <p class="hero-sub">
+          Controlá gastos, simulá inversiones con precios reales y aprendé finanzas
+          a través de un juego. Todo en una app, sin publicidad, sin vender tus datos.
+        </p>
+        <div class="hero-actions">
+          <a href="APP_URL" class="btn-primary">Empezar gratis →</a>
+          <span class="hero-note">Instalable en Android · Sin tarjeta requerida</span>
+        </div>
+      </div>
+
+      <!-- Phone mockup -->
+      <div class="phone-wrap">
+        <div class="phone">
+          <div class="phone-screen">
+            <div class="mock-header">
+              <span class="mock-greeting">Buen día, Brian 👋</span>
+              <span class="mock-badge live">● en vivo</span>
+            </div>
+            <div class="mock-stats">
+              <div class="mock-stat">
+                <span>Patrimonio neto</span>
+                <strong class="green">$4.280.000</strong>
+              </div>
+              <div class="mock-stat">
+                <span>Inflación mensual</span>
+                <strong class="red">3.8%</strong>
+              </div>
+            </div>
+            <div class="mock-card">
+              <span class="mock-card-title">💡 Consejo del día</span>
+              <p class="mock-card-body">Tu FCI rinde +2.1% real vs inflación este mes.</p>
+            </div>
+            <div class="mock-rates">
+              <div class="mock-rate"><span>MEP</span><strong>$1.287</strong></div>
+              <div class="mock-rate"><span>Blue</span><strong>$1.295</strong></div>
+              <div class="mock-rate"><span>Riesgo país</span><strong>712 pts</strong></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Live data trust bar ── -->
+  <div class="trust-bar">
+    <div class="trust-bar-inner">
+      <span>🟢 BCRA en tiempo real</span>
+      <span>🟢 Dólar MEP, blue y oficial</span>
+      <span>🟢 Cripto y CEDEARs</span>
+      <span>🟢 Inflación e IPC del INDEC</span>
+      <span>🟢 Riesgo país (EMBI)</span>
+      <span>🟢 LECAP precio de mercado</span>
+      <!-- duplicado para loop infinito del marquee -->
+      <span>🟢 BCRA en tiempo real</span>
+      <span>🟢 Dólar MEP, blue y oficial</span>
+      <span>🟢 Cripto y CEDEARs</span>
+      <span>🟢 Inflación e IPC del INDEC</span>
+      <span>🟢 Riesgo país (EMBI)</span>
+      <span>🟢 LECAP precio de mercado</span>
+    </div>
+  </div>
+
+  <!-- ── Módulos ── -->
+  <section class="section" id="modulos">
+    <div class="container">
+      <p class="section-label">Todo en una app</p>
+      <h2 class="section-title">Cuatro herramientas,<br>un solo lugar.</h2>
+
+      <div class="modules-grid">
+        <div class="module-card">
+          <div class="module-icon">💰</div>
+          <h3>Mis Finanzas</h3>
+          <p>Registrá gastos por categoría, creá presupuestos y seguí tus metas de ahorro. El asesor analiza tu situación y te da consejos personalizados.</p>
+          <ul class="module-list">
+            <li>Cuentas, billeteras y tarjetas</li>
+            <li>Presupuestos por categoría</li>
+            <li>Evolución de tu patrimonio</li>
+            <li>Consejo financiero inteligente</li>
+          </ul>
+        </div>
+
+        <div class="module-card">
+          <div class="module-icon">📈</div>
+          <h3>Simulador</h3>
+          <p>Comprá y vendé activos con dinero ficticio usando precios reales del mercado. Aprendé sin arriesgar ni un peso.</p>
+          <ul class="module-list">
+            <li>CEDEARs: AAPL, TSLA, NVDA, SPY</li>
+            <li>Cripto: BTC, ETH, ADA, DOGE</li>
+            <li>Bonos: AL30, GD30</li>
+            <li>Precios actualizados cada 60 segundos</li>
+          </ul>
+        </div>
+
+        <div class="module-card highlight">
+          <div class="module-badge">Popular</div>
+          <div class="module-icon">🎮</div>
+          <h3>Mango Tycoon</h3>
+          <p>Tomá decisiones financieras en un juego narrativo. ¿Invertís el aguinaldo o lo guardás? ¿Comprás dólares antes de la devaluación?</p>
+          <ul class="module-list">
+            <li>35+ eventos financieros reales</li>
+            <li>Sistema de XP y niveles</li>
+            <li>Activos: inmuebles, negocios, startups</li>
+            <li>Logros y misiones semanales</li>
+          </ul>
+        </div>
+
+        <div class="module-card">
+          <div class="module-icon">📚</div>
+          <h3>Aprender</h3>
+          <p>Lecciones cortas sobre los conceptos financieros más importantes para Argentina, ordenadas por tu perfil de riesgo.</p>
+          <ul class="module-list">
+            <li>FCI, plazos fijos, CEDEARs</li>
+            <li>Inflación y cobertura cambiaria</li>
+            <li>Bonos soberanos y caución</li>
+            <li>Freelance en dólares</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Datos en vivo ── -->
+  <section class="section section-dark" id="datos">
+    <div class="container">
+      <p class="section-label">Sin datos viejos</p>
+      <h2 class="section-title">Información actualizada<br>automáticamente.</h2>
+      <p class="section-sub">Mango conecta con APIs oficiales y públicas para mostrarte siempre los datos más frescos, sin que tengas que hacer nada.</p>
+
+      <div class="data-grid">
+        <div class="data-card">
+          <div class="data-source">BCRA</div>
+          <div class="data-items">
+            <span>Inflación mensual (IPC-INDEC)</span>
+            <span>Riesgo país EMBI</span>
+            <span>BADLAR y tasa de pases</span>
+            <span>FCI, PF y caución derivados</span>
+          </div>
+        </div>
+        <div class="data-card">
+          <div class="data-source">dolarapi.com</div>
+          <div class="data-items">
+            <span>Dólar oficial</span>
+            <span>Dólar MEP (bolsa)</span>
+            <span>Dólar CCL</span>
+            <span>Dólar blue y cripto</span>
+          </div>
+        </div>
+        <div class="data-card">
+          <div class="data-source">CoinGecko</div>
+          <div class="data-items">
+            <span>Bitcoin (BTC)</span>
+            <span>Ethereum (ETH)</span>
+            <span>Cardano, Dogecoin</span>
+            <span>Actualiza cada 60 segundos</span>
+          </div>
+        </div>
+        <div class="data-card">
+          <div class="data-source">Yahoo Finance / BYMA</div>
+          <div class="data-items">
+            <span>AAPL, TSLA, NVDA, SPY</span>
+            <span>GGAL, YPF (CEDEARs)</span>
+            <span>AL30, GD30 (bonos)</span>
+            <span>LECAP (precio de mercado)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Cómo funciona ── -->
+  <section class="section" id="como">
+    <div class="container">
+      <p class="section-label">En 3 pasos</p>
+      <h2 class="section-title">Empezás en minutos.</h2>
+
+      <div class="steps-grid">
+        <div class="step">
+          <div class="step-num">01</div>
+          <h3>Elegí tu objetivo</h3>
+          <p>¿Ordenar tus finanzas, aprender a invertir o jugar el Tycoon? Mango se adapta a lo que necesitás.</p>
+        </div>
+        <div class="step-arrow">→</div>
+        <div class="step">
+          <div class="step-num">02</div>
+          <h3>Cargás tu situación</h3>
+          <p>Sueldo, cuentas, gastos del mes. Solo lo básico — no pedimos más de lo necesario.</p>
+        </div>
+        <div class="step-arrow">→</div>
+        <div class="step">
+          <div class="step-num">03</div>
+          <h3>Mango trabaja solo</h3>
+          <p>Los datos se actualizan en tiempo real. El asesor analiza tu situación y te avisa si algo requiere atención.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Trust ── -->
+  <section class="section section-dark">
+    <div class="container">
+      <div class="trust-grid">
+        <div class="trust-item">
+          <div class="trust-icon">🔒</div>
+          <h3>Tus datos son tuyos</h3>
+          <p>Sin publicidad. Sin venta de datos. Lo que cargás en Mango se queda en Mango. Podés borrar todo desde la app en cualquier momento.</p>
+        </div>
+        <div class="trust-item">
+          <div class="trust-icon">📱</div>
+          <h3>Instalable en Android</h3>
+          <p>Funciona como app nativa desde el navegador. Sin Play Store necesario para empezar — aunque también viene.</p>
+        </div>
+        <div class="trust-item">
+          <div class="trust-icon">☁️</div>
+          <h3>Sync entre dispositivos</h3>
+          <p>Creá una cuenta gratuita y tus datos viajan con vos. Empezá en el celular y continuá en la PC.</p>
+        </div>
+        <div class="trust-item">
+          <div class="trust-icon">🎓</div>
+          <h3>100% educativo</h3>
+          <p>El simulador opera con dinero ficticio. Ningún dato de Mango es asesoramiento financiero — es educación.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── CTA final ── -->
+  <section class="section cta-section">
+    <div class="container container-narrow">
+      <h2 class="cta-title">Empezá hoy.<br>Es gratis.</h2>
+      <p class="cta-sub">Sin tarjeta de crédito. Sin configuración compleja. En 2 minutos tenés tu perfil y Mango empieza a trabajar para vos.</p>
+      <a href="APP_URL" class="btn-primary btn-large">Empezar gratis →</a>
+      <p class="cta-note">Instalable en Android · Funciona en cualquier navegador</p>
+    </div>
+  </section>
+
+  <!-- ── Footer ── -->
+  <footer class="footer">
+    <div class="container footer-inner">
+      <div class="footer-brand">
+        <span class="brand-icon">🥭</span>
+        <strong>Mango</strong>
+        <span class="footer-tagline">Tu plata, en orden.</span>
+      </div>
+      <div class="footer-links">
+        <a href="APP_URL">Entrar a la app</a>
+        <a href="mailto:hola@usemango.app">Contacto</a>
+        <a href="APP_URL/legal/tos">Términos</a>
+        <a href="APP_URL/legal/privacy">Privacidad</a>
+      </div>
+      <p class="footer-disclaimer">
+        Mango es una herramienta educativa. No constituye asesoramiento financiero, bursátil ni impositivo.
+        Los precios provienen de APIs públicas y pueden presentar demoras. Consultá un profesional antes de tomar decisiones de inversión.
+      </p>
+      <p class="footer-copy">© 2025 Mango · hola@usemango.app</p>
+    </div>
+  </footer>
+
+</body>
+</html>
