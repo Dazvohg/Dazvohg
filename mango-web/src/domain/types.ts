@@ -151,6 +151,9 @@ export type LiveData = {
   inflationAnnual?: number;
   countryRisk?: number;
   countryRiskSource?: "live" | "referencial";
+  badlarTNA?: number;        // tasa BADLAR bancos privados (variable 7 BCRA)
+  pasesTNA?: number;         // tasa pases pasivos / política monetaria (variable 6 BCRA)
+  ratesSource?: "live" | "referencial";  // fuente de badlarTNA y pasesTNA
   updatedAt?: number;
   source?: "live" | "referencial";
 };

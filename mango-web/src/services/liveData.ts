@@ -30,54 +30,70 @@ export async function fetchRates(current: Rates): Promise<Rates> {
 
 // ── Datos macro Argentina ─────────────────────────────────────────────────────
 // BCRA API pública CORS-habilitada: https://api.bcra.gob.ar/estadisticas/v3.0/Monetarias/{id}
-//   Variable 25 = IPC mensual (INDEC)
+//
+//   Variable 6  = Tasa de política monetaria / pases pasivos (TNA %)
+//   Variable 7  = BADLAR bancos privados (TNA %)
+//   Variable 25 = IPC mensual (INDEC, %)
 //   Variable 5  = Riesgo País EMBI (puntos básicos)
-const BCRA_IPC  = "https://api.bcra.gob.ar/estadisticas/v3.0/Monetarias/25?limit=1";
-const BCRA_EMBI = "https://api.bcra.gob.ar/estadisticas/v3.0/Monetarias/5?limit=1";
+//
+// De BADLAR y pases se derivan las tasas de referencia para FCI MM, Plazo Fijo y Caución.
 
-// Usados solo si ambas llamadas al BCRA fallan completamente
-const FALLBACK_INFLATION_MONTHLY = 3.7;
-const FALLBACK_COUNTRY_RISK      = 700;
+const BCRA = (id: number) =>
+  `https://api.bcra.gob.ar/estadisticas/v3.0/Monetarias/${id}?limit=1`;
+
+// Rangos de validación para descartar datos erróneos si el BCRA cambia variable IDs
+const VALID = {
+  inflation: { min: 0.1,  max: 50   },   // % mensual
+  embi:      { min: 100,  max: 5000  },   // puntos básicos
+  tna:       { min: 1,    max: 200   },   // % TNA (tasas monetarias)
+};
 
 type BcraBody = { results?: Array<{ valor: number }> };
 
-async function fetchBcraVariable(url: string): Promise<number | null> {
+async function fetchVar(id: number, valid: { min: number; max: number }): Promise<number | null> {
   try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
+    const res = await fetch(BCRA(id), { signal: AbortSignal.timeout(6000) });
     if (!res.ok) return null;
     const body = (await res.json()) as BcraBody;
-    const valor = body?.results?.[0]?.valor;
-    return typeof valor === "number" ? valor : null;
+    const v = body?.results?.[0]?.valor;
+    if (typeof v !== "number") return null;
+    return v >= valid.min && v <= valid.max ? v : null;
   } catch {
     return null;
   }
 }
 
+// Fallbacks educativos usados solo si el BCRA falla completamente
+const FALLBACK = {
+  inflationMonthly: 3.7,
+  countryRisk:      700,
+  badlarTNA:        38,
+  pasesTNA:         32,
+};
+
 export async function fetchLiveData(current: LiveData): Promise<LiveData> {
-  // Fetch paralelo: inflación + riesgo país
-  const [ipcVal, embiVal] = await Promise.all([
-    fetchBcraVariable(BCRA_IPC),
-    fetchBcraVariable(BCRA_EMBI),
+  // Cuatro fetches paralelos al BCRA
+  const [ipc, embi, badlar, pases] = await Promise.all([
+    fetchVar(25, VALID.inflation),
+    fetchVar(5,  VALID.embi),
+    fetchVar(7,  VALID.tna),
+    fetchVar(6,  VALID.tna),
   ]);
 
-  const inflationMonthly = ipcVal ?? (current.inflationMonthly ?? FALLBACK_INFLATION_MONTHLY);
-  const inflationSource  = ipcVal != null ? "live" as const : "referencial" as const;
-
-  // Validar rango razonable para EMBI (100–5000 puntos básicos)
-  const embiIsValid = embiVal != null && embiVal >= 100 && embiVal <= 5000;
-  const countryRisk = embiIsValid
-    ? embiVal
-    : (current.countryRisk ?? FALLBACK_COUNTRY_RISK);
-  const countryRiskSource = embiIsValid ? "live" as const : "referencial" as const;
-
-  const inflationAnnual = Math.round(((1 + inflationMonthly / 100) ** 12 - 1) * 100);
+  const inflationMonthly = ipc   ?? (current.inflationMonthly ?? FALLBACK.inflationMonthly);
+  const countryRisk      = embi  ?? (current.countryRisk      ?? FALLBACK.countryRisk);
+  const badlarTNA        = badlar ?? (current.badlarTNA        ?? FALLBACK.badlarTNA);
+  const pasesTNA         = pases  ?? (current.pasesTNA         ?? FALLBACK.pasesTNA);
 
   return {
     inflationMonthly,
-    inflationAnnual,
+    inflationAnnual: Math.round(((1 + inflationMonthly / 100) ** 12 - 1) * 100),
     countryRisk,
-    countryRiskSource,
+    countryRiskSource: embi   != null ? "live" : "referencial",
+    badlarTNA,
+    pasesTNA,
+    ratesSource:      badlar != null ? "live" : "referencial",
     updatedAt: Date.now(),
-    source: inflationSource,
+    source: ipc != null ? "live" : "referencial",
   };
 }

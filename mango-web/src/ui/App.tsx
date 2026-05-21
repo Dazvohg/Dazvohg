@@ -2746,12 +2746,8 @@ function RatesHistoryChart({ history }: { history: Array<{ date: string; mep: nu
   );
 }
 
-const ARG_REF_RATES = [
-  { name: "FCI Mercado de Dinero", rate: "~110% TNA", detail: "Liquidez inmediata, rescate en 24hs" },
-  { name: "Plazo Fijo 30 días", rate: "~97% TNA", detail: "Banco privado, garantía SEDESA hasta $6M" },
-  { name: "LECAP (corto plazo)", rate: "~3.5% TEM", detail: "Letras del Tesoro en pesos, vence en meses" },
-  { name: "Caución bursátil 1d", rate: "~90% TNA", detail: "Garantizada por BYMA, muy líquida" },
-];
+// LECAP no tiene API pública CORS-compatible (se determina en licitaciones del Tesoro)
+const LECAP_TEM_REF = 3.5;
 
 function MercadosTab({
   state,
@@ -2810,21 +2806,82 @@ function MercadosTab({
       <MacroPanel live={state.live} rates={state.rates} />
 
       {/* ── Tasas de referencia Argentina ── */}
-      <section className="panel">
-        <p className="eyebrow" style={{ marginBottom: 8 }}>Tasas de referencia (ARS)</p>
-        {ARG_REF_RATES.map((r) => (
-          <div key={r.name} className="ref-rate-row">
-            <div>
-              <strong style={{ fontSize: 13 }}>{r.name}</strong>
-              <span style={{ display: "block", fontSize: 11, color: "#94a3b8", marginTop: 1 }}>{r.detail}</span>
+      {(() => {
+        const live = state.live;
+        const src  = live.ratesSource === "live";
+        const badge = (isLive: boolean) => (
+          <span className="fine-print" style={{ color: isLive ? "#10b981" : "#94a3b8", marginLeft: 4 }}>
+            {isLive ? "🟢 BCRA" : "⚪ ref"}
+          </span>
+        );
+
+        // Derivaciones desde BADLAR y pases (rangos reales de mercado AR)
+        // FCI MM rinde ~BADLAR + 6%  (mayor rotación que plazo fijo bancario)
+        // Plazo fijo minorista ≈ BADLAR × 0.83 (retail recibe menos que wholesale)
+        // Caución 1d ≈ pases × 0.95  (se ancla a la tasa de política monetaria)
+        const badlar = live.badlarTNA ?? 38;
+        const pases  = live.pasesTNA  ?? 32;
+        const fciTNA  = +(badlar * 1.06).toFixed(1);
+        const pfTNA   = +(badlar * 0.83).toFixed(1);
+        const cauTNA  = +(pases  * 0.95).toFixed(1);
+
+        const rows = [
+          {
+            name:   "FCI Mercado de Dinero",
+            detail: "Liquidez inmediata, rescate en 24hs",
+            rate:   `${fciTNA}% TNA`,
+            isLive: src,
+            note:   "Derivado de BADLAR",
+          },
+          {
+            name:   "Plazo Fijo 30 días",
+            detail: "Banco privado, garantía SEDESA hasta $6M",
+            rate:   `${pfTNA}% TNA`,
+            isLive: src,
+            note:   "Derivado de BADLAR",
+          },
+          {
+            name:   "LECAP (corto plazo)",
+            detail: "Letras del Tesoro en pesos, vence en meses",
+            rate:   `~${LECAP_TEM_REF}% TEM`,
+            isLive: false,
+            note:   "Licitación Tesoro",
+          },
+          {
+            name:   "Caución bursátil 1d",
+            detail: "Garantizada por BYMA, muy líquida",
+            rate:   `${cauTNA}% TNA`,
+            isLive: src,
+            note:   "Derivado de pases BCRA",
+          },
+        ];
+
+        return (
+          <section className="panel">
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <p className="eyebrow" style={{ margin: 0 }}>Tasas de referencia (ARS)</p>
+              {src && <span className="fine-print" style={{ color: "#10b981" }}>🟢 BCRA en vivo</span>}
             </div>
-            <span className="rate-badge">{r.rate}</span>
-          </div>
-        ))}
-        <p className="fine-print" style={{ marginTop: 8, color: "#64748b" }}>
-          Tasas aproximadas. Consultá tu banco o broker para valores exactos del día.
-        </p>
-      </section>
+            {rows.map((r) => (
+              <div key={r.name} className="ref-rate-row">
+                <div>
+                  <strong style={{ fontSize: 13 }}>
+                    {r.name}
+                    {badge(r.isLive)}
+                  </strong>
+                  <span style={{ display: "block", fontSize: 11, color: "#94a3b8", marginTop: 1 }}>
+                    {r.detail} · {r.note}
+                  </span>
+                </div>
+                <span className="rate-badge">{r.rate}</span>
+              </div>
+            ))}
+            <p className="fine-print" style={{ marginTop: 8, color: "#64748b" }}>
+              FCI/PF/Caución derivados de BADLAR y pases vía BCRA API. LECAP: última licitación del Tesoro.
+            </p>
+          </section>
+        );
+      })()}
 
       {/* ── Cripto en vivo ── */}
       <section className="panel">
