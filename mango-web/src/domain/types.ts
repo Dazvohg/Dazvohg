@@ -150,6 +150,7 @@ export type LiveData = {
   inflationMonthly?: number;
   inflationAnnual?: number;
   countryRisk?: number;
+  countryRiskSource?: "live" | "referencial";
   updatedAt?: number;
   source?: "live" | "referencial";
 };

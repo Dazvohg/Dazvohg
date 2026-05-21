@@ -167,19 +167,37 @@ function SpendingDonut({
   );
 }
 
+const RATES_INTERVAL_MS    = 5  * 60 * 1000;  // 5 minutos  — el blue/MEP se mueve durante el día
+const LIVE_DATA_INTERVAL_MS = 30 * 60 * 1000;  // 30 minutos — inflación y riesgo país no cambian a cada rato
+
 export function App() {
   const [state, setState] = usePersistentState();
   const [tab, setTab] = useState<Tab>("home");
 
-  useEffect(() => {
-    if (!state.user) return;
+  const refreshRates = useCallback(() => {
     fetchRates(state.rates).then((rates) => {
       if (rates !== state.rates) setState((current) => ({ ...current, rates }));
     });
+  }, [state.rates, setState]);
+
+  const refreshLive = useCallback(() => {
     fetchLiveData(state.live).then((live) => {
       setState((current) => ({ ...current, live }));
     });
-  }, [state.user]);
+  }, [state.live, setState]);
+
+  // Fetch inicial + refresh periódico mientras la app esté abierta
+  useEffect(() => {
+    if (!state.user) return;
+    refreshRates();
+    refreshLive();
+    const ratesTimer = setInterval(refreshRates, RATES_INTERVAL_MS);
+    const liveTimer  = setInterval(refreshLive,  LIVE_DATA_INTERVAL_MS);
+    return () => {
+      clearInterval(ratesTimer);
+      clearInterval(liveTimer);
+    };
+  }, [state.user]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   // Snapshot de patrimonio neto: se registra cuando cambia el mes del juego o al inicio
   useEffect(() => {
@@ -319,36 +337,40 @@ function Header({
 }
 
 function MacroPanel({ live, rates }: { live: AppState["live"]; rates: AppState["rates"] }) {
-  const { inflationMonthly, inflationAnnual, countryRisk, source } = live;
+  const { inflationMonthly, inflationAnnual, countryRisk, source, countryRiskSource } = live;
   if (inflationMonthly == null) return null;
 
-  // Qué tan bien le va al FCI vs inflación (referencial TNA ~110% → TEM ~6.25%)
-  const fciTemRef = 6.25;
-  const fciMonthly = fciTemRef;
+  const fciMonthly = 6.25; // TEM referencial FCI MM ~110% TNA
   const realReturn = +(fciMonthly - inflationMonthly).toFixed(1);
   const positive = realReturn >= 0;
 
-  // Escala de riesgo país
   const riskLabel =
     (countryRisk ?? 0) < 500 ? "bajo" : (countryRisk ?? 0) < 1500 ? "medio" : "alto";
   const riskColor = riskLabel === "bajo" ? "#10b981" : riskLabel === "medio" ? "#f59e0b" : "#ef4444";
 
-  // Spread MEP / blue
   const spread = rates.mep > 0 && rates.blue > 0
     ? +(((rates.blue - rates.mep) / rates.mep) * 100).toFixed(1)
     : null;
 
+  const inflationBadge = source === "live"
+    ? { label: "🟢 BCRA", color: "#10b981" }
+    : { label: "⚪ referencial", color: "#94a3b8" };
+
+  const riskBadge = countryRiskSource === "live"
+    ? { label: "🟢 BCRA", color: "#10b981" }
+    : { label: "⚪ ref", color: "#94a3b8" };
+
   return (
     <section className="panel macro-panel">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-        <p className="eyebrow" style={{ margin: 0 }}>Macro Argentina</p>
-        <span className="fine-print" style={{ color: source === "live" ? "#10b981" : "#94a3b8" }}>
-          {source === "live" ? "🟢 BCRA" : "⚪ referencial"}
-        </span>
-      </div>
+      <p className="eyebrow" style={{ marginBottom: 10 }}>Macro Argentina</p>
       <div className="macro-grid">
         <div className="macro-cell">
-          <span>Inflación mensual</span>
+          <span>
+            Inflación mensual
+            <span className="fine-print" style={{ color: inflationBadge.color, marginLeft: 4 }}>
+              {inflationBadge.label}
+            </span>
+          </span>
           <strong style={{ color: "#ef4444" }}>{inflationMonthly.toFixed(1)}%</strong>
         </div>
         <div className="macro-cell">
@@ -357,7 +379,12 @@ function MacroPanel({ live, rates }: { live: AppState["live"]; rates: AppState["
         </div>
         {countryRisk != null && (
           <div className="macro-cell">
-            <span>Riesgo país</span>
+            <span>
+              Riesgo país
+              <span className="fine-print" style={{ color: riskBadge.color, marginLeft: 4 }}>
+                {riskBadge.label}
+              </span>
+            </span>
             <strong style={{ color: riskColor }}>{countryRisk.toLocaleString("es-AR")} pts</strong>
           </div>
         )}
@@ -372,13 +399,13 @@ function MacroPanel({ live, rates }: { live: AppState["live"]; rates: AppState["
             <span>Spread MEP/blue</span>
             <strong style={{ color: spread < 3 ? "#10b981" : "#f59e0b" }}>
               {spread > 0 ? "+" : ""}{spread}%
-              {spread < 3 ? " — oportunidad de dolarizar barato" : " — blue más caro que MEP"}
+              {spread < 3 ? " — dolarizar MEP = casi igual que blue" : " — blue más caro que MEP"}
             </strong>
           </div>
         )}
       </div>
       <p className="fine-print" style={{ marginTop: 8, color: "#64748b" }}>
-        Inflación INDEC · Riesgo país EMBI · FCI MM referencial ~6.25% TEM
+        Inflación: INDEC vía BCRA API · Riesgo país: EMBI vía BCRA API · FCI MM: ~6.25% TEM (referencial)
       </p>
     </section>
   );
