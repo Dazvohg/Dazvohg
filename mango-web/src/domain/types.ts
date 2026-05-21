@@ -2,11 +2,14 @@ import type { GameEventRecord } from "./events";
 
 export type RiskLevel = "conservador" | "moderado" | "agresivo";
 
+export type OnboardingGoal = "finanzas" | "invertir" | "tycoon" | "todo";
+
 export type UserProfile = {
   name: string;
   salary: number;
   payday: number;
   riskLevel: RiskLevel;
+  goal?: OnboardingGoal;
   hidden: boolean;
   createdAt: string;
 };

@@ -911,8 +911,118 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 .onboarding {
   display: flex;
   flex-direction: column;
+  min-height: 100dvh;
+  overflow-y: auto;
 }
 
+/* ── Onboarding multi-step ──────────────────────────────────────────────────*/
+.onboard-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding: 32px 24px 0;
+}
+
+.onboard-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 24px 20px 32px;
+}
+
+/* Progress dots */
+.step-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+.step-dot {
+  height: 6px;
+  width: 6px;
+  border-radius: 99px;
+  background: var(--border);
+  transition: width .25s ease, background .25s ease;
+}
+.step-dot.active {
+  width: 22px;
+  background: var(--blue);
+}
+
+/* Step header */
+.step-header { text-align: center; }
+.step-header h2 { font-size: 21px; font-weight: 800; margin: 0 0 6px; }
+.step-header p  { color: var(--muted); font-size: 14px; margin: 0; line-height: 1.4; }
+
+/* Goal cards 2×2 */
+.goal-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.goal-card {
+  border: 2px solid var(--border);
+  border-radius: 18px;
+  padding: 18px 12px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  background: var(--surface);
+  text-align: center;
+  transition: border-color .15s, background .15s;
+}
+.goal-card:hover  { border-color: var(--border); background: var(--surface2); }
+.goal-card.selected {
+  border-color: var(--blue);
+  background: var(--blue-dim);
+}
+.goal-emoji { font-size: 30px; line-height: 1; }
+.goal-title { font-size: 13px; font-weight: 800; color: var(--text); }
+.goal-desc  { font-size: 11px; color: var(--muted); line-height: 1.3; }
+
+/* Risk cards */
+.risk-cards { display: flex; flex-direction: column; gap: 10px; }
+.risk-card {
+  border: 2px solid var(--border);
+  border-radius: 14px;
+  padding: 14px 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface);
+  transition: border-color .15s, background .15s;
+  width: 100%;
+  text-align: left;
+}
+.risk-card:hover   { border-color: var(--border); background: var(--surface2); }
+.risk-card.selected { border-color: var(--blue); background: var(--blue-dim); }
+.risk-icon  { font-size: 22px; flex-shrink: 0; line-height: 1; }
+.risk-info strong { display: block; font-size: 14px; font-weight: 800; color: var(--text); }
+.risk-info span   { font-size: 12px; color: var(--muted); }
+
+/* Step form fields */
+.step-form { display: flex; flex-direction: column; gap: 14px; }
+
+/* Back / Next nav */
+.step-nav {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  margin-top: auto;
+}
+
+/* Step slide-in animation */
+@keyframes stepIn {
+  from { opacity: 0; transform: translateX(18px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.step-anim { animation: stepIn .2s ease-out; }
+
+/* legacy (AuthScreen reutiliza .setup) */
 .onboarding .setup {
   margin: 0;
   padding: 24px 20px;

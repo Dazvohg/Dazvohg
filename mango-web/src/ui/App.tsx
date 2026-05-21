@@ -44,7 +44,7 @@ import {
   totalLiquid,
   uid,
 } from "../domain/finance";
-import type { AppState, ExpenseCategory, RiskLevel, SimAssetCategory } from "../domain/types";
+import type { AppState, ExpenseCategory, OnboardingGoal, RiskLevel, SimAssetCategory } from "../domain/types";
 import { completeLesson, lessonReward, lessons } from "../domain/lessons";
 import {
   availableObjectives,
@@ -247,7 +247,7 @@ export function App() {
     return <AuthScreen onGuest={() => setGuestMode(true)} />;
   }
 
-  if (!state.user) return <Onboarding setState={setState} />;
+  if (!state.user) return <Onboarding setState={setState} setTab={setTab} />;
 
   return (
     <div className="app-shell">
@@ -267,70 +267,195 @@ export function App() {
   );
 }
 
-function Onboarding({ setState }: { setState: React.Dispatch<React.SetStateAction<AppState>> }) {
-  const [name, setName] = useState("");
-  const [salary, setSalary] = useState("1500000");
-  const [payday, setPayday] = useState("28");
+// ─── Onboarding multi-step ────────────────────────────────────────────────────
+
+type OnboardStep = 1 | 2 | 3;
+
+const GOALS: Array<{ id: OnboardingGoal; emoji: string; title: string; desc: string }> = [
+  { id: "finanzas", emoji: "💰", title: "Mis finanzas",  desc: "Gastos, metas y patrimonio" },
+  { id: "invertir", emoji: "📈", title: "Invertir",      desc: "Mercados reales, sin riesgo" },
+  { id: "tycoon",   emoji: "🎮", title: "Tycoon",        desc: "Aprendé tomando decisiones" },
+  { id: "todo",     emoji: "✨", title: "Todo junto",    desc: "La experiencia completa" },
+];
+
+const RISK_OPTIONS: Array<{ id: RiskLevel; emoji: string; title: string; desc: string }> = [
+  { id: "conservador", emoji: "🛡️", title: "Conservador", desc: "Protejo lo que tengo, prefiero bajo riesgo" },
+  { id: "moderado",    emoji: "⚖️", title: "Moderado",    desc: "Crezco con equilibrio entre seguridad y retorno" },
+  { id: "agresivo",    emoji: "🚀", title: "Agresivo",    desc: "Acepto volatilidad para maximizar el retorno" },
+];
+
+function StepDots({ current }: { current: OnboardStep }) {
+  return (
+    <div className="step-dots">
+      {([1, 2, 3] as OnboardStep[]).map((n) => (
+        <span key={n} className={`step-dot${current === n ? " active" : ""}`} />
+      ))}
+    </div>
+  );
+}
+
+function Onboarding({
+  setState,
+  setTab,
+}: {
+  setState: React.Dispatch<React.SetStateAction<AppState>>;
+  setTab: (t: Tab) => void;
+}) {
+  const [step,      setStep]      = useState<OnboardStep>(1);
+  const [goal,      setGoal]      = useState<OnboardingGoal>("todo");
+  const [name,      setName]      = useState("");
+  const [salary,    setSalary]    = useState("1500000");
+  const [payday,    setPayday]    = useState("28");
   const [riskLevel, setRiskLevel] = useState<RiskLevel>("moderado");
 
-  function submit(event: FormEvent) {
-    event.preventDefault();
-    setState((state) => ({
-      ...state,
+  function goToStep2() {
+    // Sugerir perfil de riesgo según objetivo elegido
+    if (goal === "finanzas") setRiskLevel("conservador");
+    else setRiskLevel("moderado");
+    setStep(2);
+  }
+
+  function finish(e: FormEvent) {
+    e.preventDefault();
+    setState((s) => ({
+      ...s,
       user: {
-        name: name.trim() || "Tu cuenta",
-        salary: Number(salary) || 0,
-        payday: Number(payday) || 28,
+        name:      name.trim() || "Vos",
+        salary:    Number(salary)  || 0,
+        payday:    Number(payday)  || 28,
         riskLevel,
-        hidden: false,
+        goal,
+        hidden:    false,
         createdAt: new Date().toISOString(),
       },
     }));
+    if (goal === "invertir") setTab("simulador");
+    else if (goal === "tycoon") setTab("tycoon");
   }
+
+  const riskTip: Record<typeof goal, string> = {
+    finanzas: "Para ordenar tus finanzas, empezar conservador es lo más común.",
+    invertir: "El simulador ajusta los portfolios recomendados a tu perfil.",
+    tycoon:   "El Tycoon presenta eventos acordes a tu perfil de riesgo.",
+    todo:     "Podés cambiar tu perfil cuando quieras desde la sección Perfil.",
+  };
 
   return (
     <div className="onboarding">
-      <section className="hero">
+      {/* Cabecera compacta con logo y dots */}
+      <div className="onboard-header">
         <Brand />
-        <p className="eyebrow">Mango PWA</p>
-        <h1>Tu plata, en orden.</h1>
-        <p>
-          Web primero, instalable en Android, lista para Play Store. Arrancamos con tus
-          numeros basicos y despues vamos sumando modulos.
-        </p>
-      </section>
-      <form className="panel setup" onSubmit={submit}>
-        <label>
-          Nombre o apodo
-          <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Brian" />
-        </label>
-        <label>
-          Sueldo neto mensual
-          <input value={salary} onChange={(event) => setSalary(event.target.value)} inputMode="numeric" />
-        </label>
-        <label>
-          Dia de cobro
-          <input value={payday} onChange={(event) => setPayday(event.target.value)} inputMode="numeric" />
-        </label>
-        <div>
-          <span className="field-title">Perfil inicial</span>
-          <div className="segmented">
-            {(["conservador", "moderado", "agresivo"] as const).map((risk) => (
+        <StepDots current={step} />
+      </div>
+
+      {/* ── Step 1: Objetivo ── */}
+      {step === 1 && (
+        <div className="onboard-body step-anim">
+          <div className="step-header">
+            <h2>¿Para qué vas a usar Mango?</h2>
+            <p>Elegí tu objetivo principal. Después podés usar todo.</p>
+          </div>
+
+          <div className="goal-grid">
+            {GOALS.map((g) => (
               <button
-                className={riskLevel === risk ? "active" : ""}
-                key={risk}
-                onClick={() => setRiskLevel(risk)}
+                key={g.id}
                 type="button"
+                className={`goal-card${goal === g.id ? " selected" : ""}`}
+                onClick={() => setGoal(g.id)}
               >
-                {risk}
+                <span className="goal-emoji">{g.emoji}</span>
+                <span className="goal-title">{g.title}</span>
+                <span className="goal-desc">{g.desc}</span>
               </button>
             ))}
           </div>
+
+          <button className="primary" onClick={goToStep2}>
+            Siguiente →
+          </button>
         </div>
-        <button className="primary" type="submit">
-          Empezar
-        </button>
-      </form>
+      )}
+
+      {/* ── Step 2: Perfil básico ── */}
+      {step === 2 && (
+        <form className="onboard-body step-anim" onSubmit={(e) => { e.preventDefault(); setStep(3); }}>
+          <div className="step-header">
+            <h2>Tu perfil</h2>
+            <p>Solo necesitamos lo básico para personalizar Mango.</p>
+          </div>
+
+          <div className="step-form">
+            <label>
+              Nombre o apodo
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Brian"
+                autoFocus
+              />
+            </label>
+            <label>
+              Sueldo neto mensual (ARS)
+              <input
+                value={salary}
+                onChange={(e) => setSalary(e.target.value)}
+                inputMode="numeric"
+                placeholder="1500000"
+              />
+            </label>
+            <label>
+              Día de cobro
+              <input
+                value={payday}
+                onChange={(e) => setPayday(e.target.value)}
+                inputMode="numeric"
+                placeholder="28"
+              />
+            </label>
+          </div>
+
+          <div className="step-nav">
+            <button type="button" className="ghost" onClick={() => setStep(1)}>← Volver</button>
+            <button type="submit" className="primary">Siguiente →</button>
+          </div>
+        </form>
+      )}
+
+      {/* ── Step 3: Perfil de riesgo ── */}
+      {step === 3 && (
+        <form className="onboard-body step-anim" onSubmit={finish}>
+          <div className="step-header">
+            <h2>Tu estilo inversor</h2>
+            <p>{riskTip[goal]}</p>
+          </div>
+
+          <div className="risk-cards">
+            {RISK_OPTIONS.map((r) => (
+              <button
+                key={r.id}
+                type="button"
+                className={`risk-card${riskLevel === r.id ? " selected" : ""}`}
+                onClick={() => setRiskLevel(r.id)}
+              >
+                <span className="risk-icon">{r.emoji}</span>
+                <div className="risk-info">
+                  <strong>{r.title}</strong>
+                  <span>{r.desc}</span>
+                </div>
+                {riskLevel === r.id && (
+                  <span style={{ marginLeft: "auto", color: "var(--blue)", fontSize: 18 }}>✓</span>
+                )}
+              </button>
+            ))}
+          </div>
+
+          <div className="step-nav">
+            <button type="button" className="ghost" onClick={() => setStep(2)}>← Volver</button>
+            <button type="submit" className="primary">¡Empezar! 🎉</button>
+          </div>
+        </form>
+      )}
     </div>
   );
 }
