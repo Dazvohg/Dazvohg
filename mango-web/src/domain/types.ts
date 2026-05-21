@@ -128,6 +128,13 @@ export type TycoonState = {
   triggeredEventIds: string[]; // cola: eventos encolados por lecciones o cadenas
 };
 
+export type RateSnapshot = {
+  date: string;   // "YYYY-MM-DD"
+  mep: number;
+  blue: number;
+  oficial: number;
+};
+
 export type Rates = {
   oficial: number;
   mep: number;
@@ -136,6 +143,7 @@ export type Rates = {
   cripto: number;
   updatedAt?: number;
   source: "demo" | "live";
+  history?: RateSnapshot[];
 };
 
 export type LiveData = {

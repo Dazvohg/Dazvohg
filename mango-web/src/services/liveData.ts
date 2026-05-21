@@ -14,6 +14,14 @@ export async function fetchRates(current: Rates): Promise<Rates> {
       if (item.casa === "blue") next.blue = item.venta;
       if (item.casa === "cripto") next.cripto = item.venta;
     }
+    // Snapshot diario: si hoy no hay entry, agregar uno (máx 30 días)
+    const today = new Date().toISOString().slice(0, 10);
+    const history = current.history ?? [];
+    if (history[history.length - 1]?.date !== today && next.mep > 0 && next.blue > 0) {
+      next.history = [...history, { date: today, mep: next.mep, blue: next.blue, oficial: next.oficial }].slice(-30);
+    } else {
+      next.history = history;
+    }
     return next;
   } catch {
     return current;

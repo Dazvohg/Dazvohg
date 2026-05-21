@@ -53,6 +53,10 @@ export function saveState(state: AppState) {
   const ph = state.simulator.priceHistory ?? {};
   const trimmed: AppState = {
     ...state,
+    rates: {
+      ...state.rates,
+      history: (state.rates.history ?? []).slice(-30),
+    },
     simulator: {
       ...state.simulator,
       trades: state.simulator.trades.slice(0, 50),
@@ -64,7 +68,7 @@ export function saveState(state: AppState) {
       ...state.tycoon,
       eventHistory: state.tycoon.eventHistory.slice(-30),
     },
-    netWorthHistory: (state.netWorthHistory ?? []).slice(-36), // max 3 años de datos
+    netWorthHistory: (state.netWorthHistory ?? []).slice(-36),
   };
   localStorage.setItem(KEY, JSON.stringify(trimmed));
 }

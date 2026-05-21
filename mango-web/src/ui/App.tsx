@@ -590,85 +590,6 @@ function HomeTab({
   );
 }
 
-function InvestTab({
-  state,
-  setState,
-}: {
-  state: AppState;
-  setState: React.Dispatch<React.SetStateAction<AppState>>;
-}) {
-  const [amount, setAmount] = useState(300000);
-  const risk = state.user?.riskLevel ?? "moderado";
-  const portfolio = riskPortfolios[risk];
-  const debt = totalDebt(state);
-
-  return (
-    <>
-      <PageIntro title="Invertir" text="Simulador educativo. Mango informa, vos decidis." />
-      {debt > 100000 && (
-        <section className="panel danger">
-          <p className="eyebrow">Prioridad financiera</p>
-          <h3>Pagar deuda rinde mas</h3>
-          <p>
-            Tenes {money(debt)} en tarjetas. Antes de invertir, bajar esa deuda suele ser
-            la decision matematicamente mas fuerte.
-          </p>
-        </section>
-      )}
-      <section className="panel">
-        <label>
-          Monto a simular
-          <input
-            value={amount}
-            onChange={(event) => setAmount(Number(event.target.value) || 0)}
-            inputMode="numeric"
-          />
-        </label>
-        <div className="segmented">
-          {(["conservador", "moderado", "agresivo"] as const).map((item) => (
-            <button
-              className={risk === item ? "active" : ""}
-              key={item}
-              onClick={() =>
-                setState((current) => ({
-                  ...current,
-                  user: current.user ? { ...current.user, riskLevel: item } : null,
-                }))
-              }
-              type="button"
-            >
-              {item}
-            </button>
-          ))}
-        </div>
-      </section>
-      <section className="panel">
-        <p className="eyebrow">Cartera {risk}</p>
-        <div className="portfolio-list">
-          {portfolio.map((item) => (
-            <div className="portfolio-row" key={item.name}>
-              <div>
-                <strong>{item.name}</strong>
-                <span>{item.detail}</span>
-              </div>
-              <div>
-                <strong>{money((amount * item.pct) / 100)}</strong>
-                <span>{item.pct}%</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-      <section className="panel muted">
-        <ShieldCheck />
-        <p>
-          Disclaimer: esto es educacion financiera y simulacion. No es recomendacion de
-          compra ni asesoramiento registrado.
-        </p>
-      </section>
-    </>
-  );
-}
 
 function LearnTab({
   state,
@@ -2736,6 +2657,68 @@ function SimulatorTab({
 
 // ─── Mercados ─────────────────────────────────────────────────────────────────
 
+function RatesHistoryChart({ history }: { history: Array<{ date: string; mep: number; blue: number; oficial: number }> }) {
+  if (history.length < 2) return null;
+  const W = 300; const H = 70; const pad = 10;
+  const w = W - pad * 2; const h = H - pad * 2;
+
+  function toPoints(vals: number[]) {
+    const min = Math.min(...vals);
+    const max = Math.max(...vals);
+    const range = max - min || 1;
+    return vals.map((v, i) => {
+      const x = pad + (i / (vals.length - 1)) * w;
+      const y = pad + h - ((v - min) / range) * h;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(" ");
+  }
+
+  const mepVals = history.map((d) => d.mep);
+  const blueVals = history.map((d) => d.blue);
+  const allVals = [...mepVals, ...blueVals];
+  const min = Math.min(...allVals);
+  const max = Math.max(...allVals);
+  const range = max - min || 1;
+
+  function toSharedPoints(vals: number[]) {
+    return vals.map((v, i) => {
+      const x = pad + (i / (vals.length - 1)) * w;
+      const y = pad + h - ((v - min) / range) * h;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(" ");
+  }
+
+  const firstDate = history[0].date.slice(5);  // MM-DD
+  const lastDate = history[history.length - 1].date.slice(5);
+  const lastMep = mepVals[mepVals.length - 1];
+  const lastBlue = blueVals[blueVals.length - 1];
+  const spread = lastMep > 0 ? (((lastBlue - lastMep) / lastMep) * 100).toFixed(1) : "—";
+
+  return (
+    <div className="net-worth-chart" style={{ marginTop: 10 }}>
+      <div style={{ display: "flex", gap: 12, fontSize: 11, marginBottom: 6 }}>
+        <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          <span style={{ display: "inline-block", width: 16, height: 2, background: "#1D9BF0", borderRadius: 1 }} />
+          MEP
+        </span>
+        <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          <span style={{ display: "inline-block", width: 16, height: 2, background: "#10b981", borderRadius: 1 }} />
+          Blue
+        </span>
+        <span style={{ marginLeft: "auto", color: "var(--muted)" }}>brecha: {spread}%</span>
+      </div>
+      <svg width="100%" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid meet" style={{ display: "block" }}>
+        <polyline points={toSharedPoints(mepVals)} fill="none" stroke="#1D9BF0" strokeWidth="1.5" strokeLinejoin="round" />
+        <polyline points={toSharedPoints(blueVals)} fill="none" stroke="#10b981" strokeWidth="1.5" strokeLinejoin="round" strokeDasharray="4 2" />
+      </svg>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--muted)", marginTop: 4 }}>
+        <span>{firstDate}</span>
+        <span>{lastDate}</span>
+      </div>
+    </div>
+  );
+}
+
 const ARG_REF_RATES = [
   { name: "FCI Mercado de Dinero", rate: "~110% TNA", detail: "Liquidez inmediata, rescate en 24hs" },
   { name: "Plazo Fijo 30 días", rate: "~97% TNA", detail: "Banco privado, garantía SEDESA hasta $6M" },
@@ -2789,6 +2772,12 @@ function MercadosTab({
             </div>
           ))}
         </div>
+        {(rates.history?.length ?? 0) >= 2 && (
+          <>
+            <p className="eyebrow" style={{ marginTop: 14, marginBottom: 0 }}>Histórico MEP vs Blue (últimos {rates.history!.length} días)</p>
+            <RatesHistoryChart history={rates.history!} />
+          </>
+        )}
       </section>
 
       <MacroPanel live={state.live} rates={state.rates} />
