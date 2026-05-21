@@ -154,6 +154,8 @@ export type LiveData = {
   badlarTNA?: number;        // tasa BADLAR bancos privados (variable 7 BCRA)
   pasesTNA?: number;         // tasa pases pasivos / política monetaria (variable 6 BCRA)
   ratesSource?: "live" | "referencial";  // fuente de badlarTNA y pasesTNA
+  lecapTEM?: number;         // TEM implícito calculado desde precio de mercado BYMA
+  lecapSource?: "live" | "referencial";
   updatedAt?: number;
   source?: "live" | "referencial";
 };

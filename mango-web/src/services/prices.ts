@@ -17,17 +17,23 @@ const COINGECKO =
 const YAHOO_DEV =
   "https://query1.finance.yahoo.com/v7/finance/quote?symbols=AAPL,TSLA,GGAL,YPF,SPY,NVDA&fields=regularMarketPrice";
 
+export type SimPricesResult = {
+  prices: Record<string, number>;
+  lecapTEM?: number;
+};
+
 export async function fetchSimPrices(
   current: Record<string, number>,
-): Promise<Record<string, number>> {
+): Promise<SimPricesResult> {
   const prices = { ...current };
+  let lecapTEM: number | undefined;
 
   await Promise.allSettled([
     fetchCrypto(prices),
-    fetchStocks(prices),
+    fetchStocks(prices).then((tem) => { lecapTEM = tem; }),
   ]);
 
-  return prices;
+  return { prices, lecapTEM };
 }
 
 async function fetchCrypto(prices: Record<string, number>): Promise<void> {
@@ -41,25 +47,30 @@ async function fetchCrypto(prices: Record<string, number>): Promise<void> {
   if (data.ethereum?.usd)     prices.ETH  = data.ethereum.usd;
 }
 
-async function fetchStocks(prices: Record<string, number>): Promise<void> {
+async function fetchStocks(prices: Record<string, number>): Promise<number | undefined> {
   if (WORKER_URL) {
-    await fetchViaWorker(prices);
+    return fetchViaWorker(prices);
   } else {
     await fetchYahooDirect(prices);
+    return undefined;
   }
 }
 
 // Producción: Worker devuelve { SYMBOL: price_usd } plano, con CORS correcto.
-// Incluye AAPL, TSLA, GGAL, YPF, SPY, NVDA, AL30 y GD30 (convertidos de ARS via MEP).
-async function fetchViaWorker(prices: Record<string, number>): Promise<void> {
+// Incluye AAPL, TSLA, GGAL, YPF, SPY, NVDA, AL30, GD30 y opcionalmente LECAP_TEM.
+async function fetchViaWorker(prices: Record<string, number>): Promise<number | undefined> {
   const res = await fetch(WORKER_URL, { signal: AbortSignal.timeout(10000) });
-  if (!res.ok) return;
+  if (!res.ok) return undefined;
   const data = await res.json() as Record<string, number>;
+  let lecapTEM: number | undefined;
   for (const [symbol, price] of Object.entries(data)) {
-    if (typeof price === "number" && price > 0) {
-      prices[symbol] = price;
-    }
+    if (typeof price !== "number" || price <= 0) continue;
+    // LECAP_TEM y LECAP_LIVE son metadatos del Worker, no precios de assets
+    if (symbol === "LECAP_TEM") { lecapTEM = price; continue; }
+    if (symbol === "LECAP_LIVE") continue;
+    prices[symbol] = price;
   }
+  return lecapTEM;
 }
 
 // Desarrollo (localhost): Yahoo Finance directo, sin AL30/GD30.

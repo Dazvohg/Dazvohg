@@ -2347,8 +2347,17 @@ function SimulatorTab({
     setLoadingPrices(true);
     setPriceError(false);
     try {
-      const prices = await fetchSimPrices(sim.prices);
-      setState((cur) => updateSimPrices(cur, prices));
+      const { prices, lecapTEM } = await fetchSimPrices(sim.prices);
+      setState((cur) => {
+        const updated = updateSimPrices(cur, prices);
+        if (lecapTEM !== undefined) {
+          return {
+            ...updated,
+            live: { ...updated.live, lecapTEM, lecapSource: "live" as const },
+          };
+        }
+        return updated;
+      });
     } catch {
       setPriceError(true);
     } finally {
@@ -2756,8 +2765,8 @@ function RatesHistoryChart({ history }: { history: Array<{ date: string; mep: nu
   );
 }
 
-// LECAP no tiene API pública CORS-compatible (se determina en licitaciones del Tesoro)
-const LECAP_TEM_REF = 3.5;
+// Fallback educativo: se usa solo si el Worker no devuelve precio de LECAP activa en BYMA
+const LECAP_TEM_FALLBACK = 3.5;
 
 function MercadosTab({
   state,
@@ -2853,9 +2862,9 @@ function MercadosTab({
           {
             name:   "LECAP (corto plazo)",
             detail: "Letras del Tesoro en pesos, vence en meses",
-            rate:   `~${LECAP_TEM_REF}% TEM`,
-            isLive: false,
-            note:   "Licitación Tesoro",
+            rate:   `${live.lecapTEM ?? LECAP_TEM_FALLBACK}% TEM`,
+            isLive: live.lecapSource === "live",
+            note:   live.lecapSource === "live" ? "Precio BYMA en vivo" : "Referencial",
           },
           {
             name:   "Caución bursátil 1d",
@@ -2887,7 +2896,7 @@ function MercadosTab({
               </div>
             ))}
             <p className="fine-print" style={{ marginTop: 8, color: "#64748b" }}>
-              FCI/PF/Caución derivados de BADLAR y pases vía BCRA API. LECAP: última licitación del Tesoro.
+              FCI/PF/Caución: BADLAR y pases vía BCRA API. LECAP: precio de mercado BYMA vía Yahoo Finance.
             </p>
           </section>
         );
