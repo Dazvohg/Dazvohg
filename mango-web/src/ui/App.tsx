@@ -301,12 +301,14 @@ function Onboarding({
   setState: React.Dispatch<React.SetStateAction<AppState>>;
   setTab: (t: Tab) => void;
 }) {
-  const [step,      setStep]      = useState<OnboardStep>(1);
-  const [goal,      setGoal]      = useState<OnboardingGoal>("todo");
-  const [name,      setName]      = useState("");
-  const [salary,    setSalary]    = useState("1500000");
-  const [payday,    setPayday]    = useState("28");
-  const [riskLevel, setRiskLevel] = useState<RiskLevel>("moderado");
+  const [step,       setStep]      = useState<OnboardStep>(1);
+  const [goal,       setGoal]      = useState<OnboardingGoal>("todo");
+  const [name,       setName]      = useState("");
+  const [salary,     setSalary]    = useState("1500000");
+  const [payday,     setPayday]    = useState("28");
+  const [riskLevel,  setRiskLevel] = useState<RiskLevel>("moderado");
+  const [accepted,   setAccepted]  = useState(false);
+  const [legalModal, setLegalModal] = useState<"tos" | "privacy" | null>(null);
 
   function goToStep2() {
     // Sugerir perfil de riesgo según objetivo elegido
@@ -317,16 +319,19 @@ function Onboarding({
 
   function finish(e: FormEvent) {
     e.preventDefault();
+    if (!accepted) return;
+    const now = new Date().toISOString();
     setState((s) => ({
       ...s,
       user: {
-        name:      name.trim() || "Vos",
-        salary:    Number(salary)  || 0,
-        payday:    Number(payday)  || 28,
+        name:             name.trim() || "Vos",
+        salary:           Number(salary) || 0,
+        payday:           Number(payday) || 28,
         riskLevel,
         goal,
-        hidden:    false,
-        createdAt: new Date().toISOString(),
+        hidden:           false,
+        createdAt:        now,
+        acceptedTermsAt:  now,
       },
     }));
     if (goal === "invertir") setTab("simulador");
@@ -422,7 +427,7 @@ function Onboarding({
         </form>
       )}
 
-      {/* ── Step 3: Perfil de riesgo ── */}
+      {/* ── Step 3: Perfil de riesgo + aceptación legal ── */}
       {step === 3 && (
         <form className="onboard-body step-anim" onSubmit={finish}>
           <div className="step-header">
@@ -450,12 +455,130 @@ function Onboarding({
             ))}
           </div>
 
+          <label className="legal-check">
+            <input
+              type="checkbox"
+              checked={accepted}
+              onChange={(e) => setAccepted(e.target.checked)}
+            />
+            <span>
+              Leí y acepto los{" "}
+              <button type="button" className="link-btn" onClick={() => setLegalModal("tos")}>
+                Términos de Servicio
+              </button>{" "}
+              y la{" "}
+              <button type="button" className="link-btn" onClick={() => setLegalModal("privacy")}>
+                Política de Privacidad
+              </button>
+              . Entiendo que Mango es educativo y no constituye asesoramiento financiero.
+            </span>
+          </label>
+
           <div className="step-nav">
             <button type="button" className="ghost" onClick={() => setStep(2)}>← Volver</button>
-            <button type="submit" className="primary">¡Empezar! 🎉</button>
+            <button type="submit" className="primary" disabled={!accepted}>¡Empezar! 🎉</button>
           </div>
         </form>
       )}
+
+      {legalModal && <LegalModal type={legalModal} onClose={() => setLegalModal(null)} />}
+    </div>
+  );
+}
+
+// ─── Legal ───────────────────────────────────────────────────────────────────
+
+const CONTACT_EMAIL = "hola@usemango.app";
+const TERMS_DATE    = "Mayo 2026";
+
+function TosContent() {
+  return (
+    <div className="legal-text">
+      <p className="legal-updated">Última actualización: {TERMS_DATE}</p>
+
+      <h3>1. Servicio educativo</h3>
+      <p>Mango es una aplicación de educación financiera personal. La información, precios, tasas y proyecciones que muestra son de carácter exclusivamente educativo e informativo. No somos un broker, banco, asesor financiero ni entidad regulada.</p>
+
+      <h3>2. No asesoramiento financiero</h3>
+      <p>Nada en Mango constituye asesoramiento financiero, bursátil, legal ni impositivo. Los datos mostrados no deben interpretarse como recomendaciones de inversión. Consultá a un profesional habilitado (asesor financiero, contador, abogado) antes de tomar decisiones financieras reales.</p>
+
+      <h3>3. Exactitud de la información</h3>
+      <p>Los precios y tasas provienen de APIs públicas (dolarapi.com, CoinGecko, Yahoo Finance, BCRA) y pueden presentar demoras, diferencias o errores respecto al mercado real. Mango no garantiza la exactitud, completitud ni disponibilidad de estos datos en ningún momento.</p>
+
+      <h3>4. Simulador de inversiones</h3>
+      <p>El simulador opera con dinero ficticio. Las ganancias o pérdidas que se muestran no tienen valor económico real, no pueden retirarse ni transferirse. Su único fin es educativo y de práctica.</p>
+
+      <h3>5. Elegibilidad</h3>
+      <p>Al usar Mango confirmás que tenés 18 años o más, o que contás con la autorización expresa de tu tutor legal para utilizar la aplicación.</p>
+
+      <h3>6. Uso aceptable</h3>
+      <p>No podés usar Mango para actividades ilegales, fraudulentas ni para inducir a error a terceros. Está prohibido intentar acceder a datos de otros usuarios o comprometer la seguridad de la aplicación.</p>
+
+      <h3>7. Propiedad intelectual</h3>
+      <p>El código, diseño, textos y contenido educativo de Mango son propiedad de sus creadores. Podés usar la aplicación para tu uso personal pero no podés reproducir ni distribuir su contenido sin autorización.</p>
+
+      <h3>8. Limitación de responsabilidad</h3>
+      <p>En ningún caso Mango ni sus creadores serán responsables por pérdidas financieras, daños directos, indirectos, incidentales o consecuentes derivados del uso de la aplicación o de decisiones tomadas en base a su información.</p>
+
+      <h3>9. Modificaciones</h3>
+      <p>Podemos actualizar estos Términos con aviso previo en la aplicación. El uso continuado implica aceptación de los nuevos términos.</p>
+
+      <h3>10. Contacto</h3>
+      <p><a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a></p>
+    </div>
+  );
+}
+
+function PrivacyContent() {
+  return (
+    <div className="legal-text">
+      <p className="legal-updated">Última actualización: {TERMS_DATE}</p>
+
+      <h3>1. Información que recopilamos</h3>
+      <p><strong>Datos que vos ingresás:</strong> nombre o apodo, sueldo, gastos, presupuestos, metas y objetivos financieros. Esta información nunca sale de tu dispositivo salvo que inicies sesión voluntariamente.</p>
+      <p><strong>Datos de cuenta (opcional):</strong> si te registrás, recopilamos tu dirección de email y un ID de usuario único generado por Supabase Auth.</p>
+      <p><strong>Datos técnicos:</strong> no recopilamos analytics de comportamiento, no usamos cookies de seguimiento ni fingerprinting.</p>
+
+      <h3>2. Cómo usamos la información</h3>
+      <p>Exclusivamente para brindar y personalizar el servicio de Mango. No usamos tus datos para publicidad, no los cruzamos con bases de datos externas ni los vendemos o cedemos a terceros con fines comerciales.</p>
+
+      <h3>3. Almacenamiento</h3>
+      <p><strong>Sin cuenta:</strong> todos los datos se guardan solo en el almacenamiento local de tu dispositivo (localStorage). Si borrás los datos del navegador o la app, la información se pierde.</p>
+      <p><strong>Con cuenta:</strong> los datos se sincronizan con Supabase, un servicio de base de datos en la nube con cifrado en tránsito (TLS 1.3) y en reposo (AES-256). Los servidores de Supabase están ubicados en la Unión Europea.</p>
+
+      <h3>4. Compartición de datos</h3>
+      <p>No vendemos, alquilamos ni cedemos tus datos personales a ningún tercero. Podemos compartir estadísticas agregadas y completamente anonimizadas (sin identificadores personales) para reportes internos.</p>
+
+      <h3>5. Tus derechos</h3>
+      <p>Tenés derecho a acceder, corregir y eliminar tus datos en cualquier momento. Para eliminarlos completamente: <strong>Mi perfil → Zona sensible → Borrar cuenta y datos</strong>. Para consultas: <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a></p>
+
+      <h3>6. Seguridad</h3>
+      <p>Implementamos medidas técnicas razonables para proteger tu información. Sin embargo, ningún sistema es 100% seguro. Te recomendamos usar contraseñas fuertes y no compartir tu acceso.</p>
+
+      <h3>7. Menores de edad</h3>
+      <p>Mango no está dirigido a menores de 18 años. Si tenemos conocimiento de que un menor usa la aplicación sin autorización, eliminaremos su cuenta y datos.</p>
+
+      <h3>8. Cambios a esta política</h3>
+      <p>Notificaremos cambios significativos a través de la aplicación con al menos 15 días de anticipación.</p>
+
+      <h3>9. Contacto</h3>
+      <p><a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a></p>
+    </div>
+  );
+}
+
+function LegalModal({ type, onClose }: { type: "tos" | "privacy"; onClose: () => void }) {
+  const title = type === "tos" ? "Términos de Servicio" : "Política de Privacidad";
+  return (
+    <div className="legal-overlay">
+      <div className="legal-topbar">
+        <button className="ghost small" onClick={onClose}>← Volver</button>
+        <strong style={{ fontSize: 14 }}>{title}</strong>
+        <div style={{ width: 60 }} />
+      </div>
+      <div className="legal-scroll">
+        {type === "tos" ? <TosContent /> : <PrivacyContent />}
+      </div>
     </div>
   );
 }
@@ -2000,6 +2123,7 @@ function ProfileTab({
   authUserId: string | null;
   onSignOut: () => void;
 }) {
+  const [legalModal, setLegalModal] = useState<"tos" | "privacy" | null>(null);
   const history = state.netWorthHistory ?? [];
   const growth = history.length >= 2 ? netWorthGrowth(history) : null;
   const currentNW = netWorth(state);
@@ -2108,6 +2232,27 @@ function ProfileTab({
           ))}
         </div>
       </section>
+      <section className="panel">
+        <p className="eyebrow" style={{ marginBottom: 10 }}>Legal</p>
+        <p className="fine-print" style={{ marginBottom: 12, lineHeight: 1.5 }}>
+          Mango es una herramienta educativa. Los precios y tasas son de APIs públicas y pueden
+          tener demoras. Nada aquí constituye asesoramiento financiero.
+        </p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <button className="ghost small" style={{ justifyContent: "flex-start" }} onClick={() => setLegalModal("tos")}>
+            📄 Términos de Servicio
+          </button>
+          <button className="ghost small" style={{ justifyContent: "flex-start" }} onClick={() => setLegalModal("privacy")}>
+            🔒 Política de Privacidad
+          </button>
+        </div>
+        {state.user?.acceptedTermsAt && (
+          <p className="fine-print" style={{ marginTop: 10, color: "var(--muted)" }}>
+            Aceptado el {new Date(state.user.acceptedTermsAt).toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" })}
+          </p>
+        )}
+      </section>
+
       <section className="panel danger">
         <p className="eyebrow">Zona sensible</p>
         {authUserId && (
@@ -2135,6 +2280,8 @@ function ProfileTab({
           {authUserId ? "Borrar cuenta y datos" : "Borrar datos locales"}
         </button>
       </section>
+
+      {legalModal && <LegalModal type={legalModal} onClose={() => setLegalModal(null)} />}
     </>
   );
 }
@@ -2932,6 +3079,10 @@ function SimulatorTab({
           </p>
         </section>
       )}
+
+      <p className="fine-print" style={{ textAlign: "center", color: "var(--muted)", padding: "0 16px 8px" }}>
+        Simulador con dinero ficticio · Precios de APIs públicas con posibles demoras · No constituye asesoramiento financiero
+      </p>
 
       {/* ── Modal de compra ── */}
       {buyAssetId && buyAssetObj && (

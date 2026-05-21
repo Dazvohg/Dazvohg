@@ -12,6 +12,7 @@ export type UserProfile = {
   goal?: OnboardingGoal;
   hidden: boolean;
   createdAt: string;
+  acceptedTermsAt?: string;  // ISO date — registra cuándo aceptó los términos
 };
 
 export type Account = {
