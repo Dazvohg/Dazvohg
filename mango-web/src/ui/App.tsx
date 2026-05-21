@@ -211,7 +211,7 @@ export function App() {
       ...current,
       netWorthHistory: [...(current.netWorthHistory ?? []), { date: today, value }],
     }));
-  }, [state.user, state.tycoon.gameMonth, state.tycoon.gameYear]);
+  }, [state.user, state.tycoon.gameMonth, state.tycoon.gameYear, state.rates.updatedAt]);  // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!state.user) return <Onboarding setState={setState} />;
 
@@ -340,7 +340,9 @@ function MacroPanel({ live, rates }: { live: AppState["live"]; rates: AppState["
   const { inflationMonthly, inflationAnnual, countryRisk, source, countryRiskSource } = live;
   if (inflationMonthly == null) return null;
 
-  const fciMonthly = 6.25; // TEM referencial FCI MM ~110% TNA
+  const fciTNA = (live.badlarTNA ?? 38) * 1.06;
+  const fciMonthly = +(fciTNA / 12).toFixed(2);
+  const fciIsLive = live.ratesSource === "live";
   const realReturn = +(fciMonthly - inflationMonthly).toFixed(1);
   const positive = realReturn >= 0;
 
@@ -389,7 +391,12 @@ function MacroPanel({ live, rates }: { live: AppState["live"]; rates: AppState["
           </div>
         )}
         <div className="macro-cell">
-          <span>FCI vs inflación</span>
+          <span>
+            FCI MM ({fciMonthly}% TEM)
+            <span className="fine-print" style={{ color: fciIsLive ? "#10b981" : "#94a3b8", marginLeft: 4 }}>
+              {fciIsLive ? "🟢 BCRA" : "⚪ ref"}
+            </span>
+          </span>
           <strong style={{ color: positive ? "#10b981" : "#ef4444" }}>
             {positive ? "+" : ""}{realReturn}% real
           </strong>
@@ -405,7 +412,7 @@ function MacroPanel({ live, rates }: { live: AppState["live"]; rates: AppState["
         )}
       </div>
       <p className="fine-print" style={{ marginTop: 8, color: "#64748b" }}>
-        Inflación: INDEC vía BCRA API · Riesgo país: EMBI vía BCRA API · FCI MM: ~6.25% TEM (referencial)
+        Inflación: INDEC vía BCRA API · Riesgo país: EMBI vía BCRA API · FCI MM: BADLAR×1.06/12{fciIsLive ? " (BCRA)" : " (ref)"}
       </p>
     </section>
   );
@@ -2135,7 +2142,7 @@ function ArenaWeekCard({ state, setTab }: { state: AppState; setTab: (t: Tab) =>
       <div className="arena-head">
         <div>
           <p className="eyebrow" style={{ margin: "0 0 1px", color: "var(--amber)" }}>⚔️ Arena Semanal</p>
-          <strong style={{ fontSize: 15, fontWeight: 800 }}>Semana #{weekNum} · {totalUsers.toLocaleString()} usuarios</strong>
+          <strong style={{ fontSize: 15, fontWeight: 800 }}>Semana #{weekNum} · Benchmark simulado</strong>
         </div>
         <div style={{ textAlign: "right" }}>
           <div style={{ fontSize: 10, color: "var(--muted)" }}>Termina en</div>
@@ -2167,9 +2174,12 @@ function ArenaWeekCard({ state, setTab }: { state: AppState; setTab: (t: Tab) =>
             {pos ? "+" : ""}{pnlUsd >= 0 ? "" : "-"}${Math.abs(pnlUsd).toFixed(0)}
           </span>
         </div>
-        <p style={{ fontSize: 11, color: "var(--muted)", margin: "2px 0 8px" }}>
-          Top {topPct}% de la comunidad
+        <p style={{ fontSize: 11, color: "var(--muted)", margin: "2px 0 4px" }}>
+          Top {topPct}% del benchmark
           {topPct <= 20 ? " 🔥 Excelente semana" : topPct <= 50 ? " — Seguís sumando" : " — Simulá más para subir 💪"}
+        </p>
+        <p style={{ fontSize: 10, color: "#64748b", margin: "0 0 8px", fontStyle: "italic" }}>
+          Benchmark educativo simulado · Datos históricos · Sin competencia real
         </p>
       </div>
 

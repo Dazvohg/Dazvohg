@@ -343,13 +343,16 @@ export function advice(state: AppState): AdviceItem[] {
   // Mercado Pago con tasa baja
   const mp = state.wallets.find((w) => w.name.toLowerCase().includes("mercado"));
   if (mp && mp.balance > 100000 && mp.annualRate < 50) {
-    const diff = Math.round((mp.balance * (65 - mp.annualRate)) / 100 / 12);
-    items.push({
-      title: "Tu plata en Mercado Pago puede rendir más",
-      body: `Mover ${money(mp.balance)} a una alternativa al 65% TNA suma cerca de ${money(diff)}/mes extra sin riesgo adicional.`,
-      tab: "mercados",
-      urgency: "low",
-    });
+    const altTNA = Math.round((state.live.badlarTNA ?? 38) * 1.06);
+    const diff = Math.round((mp.balance * (altTNA - mp.annualRate)) / 100 / 12);
+    if (diff > 0) {
+      items.push({
+        title: "Tu plata en Mercado Pago puede rendir más",
+        body: `Mover ${money(mp.balance)} a un FCI MM al ${altTNA}% TNA suma cerca de ${money(diff)}/mes extra sin riesgo adicional.`,
+        tab: "mercados",
+        urgency: "low",
+      });
+    }
   }
 
   // Sin presupuestos
