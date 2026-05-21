@@ -144,7 +144,7 @@ export type LiveData = {
   countryRisk?: number;
 };
 
-export type SimAssetCategory = "crypto" | "memecoin" | "stock" | "cedear";
+export type SimAssetCategory = "crypto" | "memecoin" | "stock" | "cedear" | "bono";
 
 export type SimPosition = {
   assetId: string;

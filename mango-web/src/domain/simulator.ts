@@ -96,6 +96,44 @@ export const SIM_ASSETS: SimAsset[] = [
     yahooSymbol: "YPF",
     defaultPrice: 18,
   },
+  {
+    id: "SPY",
+    symbol: "SPY",
+    name: "CEDEAR SPY — S&P 500",
+    category: "cedear",
+    description: "El ETF más diversificado del mundo, accesible desde Argentina como CEDEAR.",
+    lesson: "SPY replica las 500 empresas más grandes de EE.UU. Es la base de casi toda cartera moderada o agresiva. Si el dólar sube, el CEDEAR en pesos sube con él. Ideal como ancla de largo plazo.",
+    yahooSymbol: "SPY",
+    defaultPrice: 535,
+  },
+  {
+    id: "NVDA",
+    symbol: "NVDA",
+    name: "NVIDIA Corp.",
+    category: "stock",
+    description: "Líder en chips de IA y gráficos. La acción de la década.",
+    lesson: "NVDA creció más de 10x con el boom de la IA. Alta concentración sectorial: si la tendencia cambia, cae fuerte. Ideal para entender riesgo sectorial vs diversificación.",
+    yahooSymbol: "NVDA",
+    defaultPrice: 135,
+  },
+  {
+    id: "AL30",
+    symbol: "AL30",
+    name: "Bono Soberano — AL30",
+    category: "bono",
+    description: "Bono argentino hard dollar, vencimiento 2030. Ley argentina.",
+    lesson: "El AL30 paga en dólares pero su precio refleja el riesgo país. Con riesgo alto, el precio baja y el rendimiento sube. Si Argentina mejora, este bono puede subir 30-50% desde pisos históricos.",
+    defaultPrice: 65.5,
+  },
+  {
+    id: "GD30",
+    symbol: "GD30",
+    name: "Bono Soberano — GD30",
+    category: "bono",
+    description: "Bono argentino hard dollar, ley Nueva York. Mayor protección legal.",
+    lesson: "GD30 tiene ley Nueva York: es más difícil de restructurar que el AL30. Los inversores institucionales lo prefieren. Suele tener menor TIR que AL30 pero más seguridad jurídica.",
+    defaultPrice: 72.0,
+  },
 ];
 
 export const CATEGORY_LABEL: Record<SimAssetCategory, string> = {
@@ -103,13 +141,15 @@ export const CATEGORY_LABEL: Record<SimAssetCategory, string> = {
   memecoin: "Memecoin",
   stock: "Acción S&P",
   cedear: "CEDEAR",
+  bono: "Bono AR",
 };
 
 export const CATEGORY_COLOR: Record<SimAssetCategory, string> = {
-  crypto:  "#f59e0b",
+  crypto:   "#f59e0b",
   memecoin: "#ec4899",
-  stock:   "#10b981",
-  cedear:  "#6366f1",
+  stock:    "#10b981",
+  cedear:   "#6366f1",
+  bono:     "#8b5cf6",
 };
 
 export const initialSimulatorState: SimulatorState = {

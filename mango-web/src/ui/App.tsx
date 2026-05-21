@@ -42,7 +42,7 @@ import {
   totalLiquid,
   uid,
 } from "../domain/finance";
-import type { AppState, ExpenseCategory, RiskLevel } from "../domain/types";
+import type { AppState, ExpenseCategory, RiskLevel, SimAssetCategory } from "../domain/types";
 import { completeLesson, lessonReward, lessons } from "../domain/lessons";
 import {
   availableObjectives,
@@ -188,7 +188,7 @@ export function App() {
         {tab === "tycoon"    && <TycoonTab state={state} setState={setState} />}
         {tab === "expenses"  && <ExpensesTab state={state} setState={setState} />}
         {tab === "goals"     && <GoalsTab state={state} setState={setState} />}
-        {tab === "mercados"  && <MercadosTab setTab={setTab} />}
+        {tab === "mercados"  && <MercadosTab state={state} setTab={setTab} />}
         {tab === "profile"   && <ProfileTab state={state} setState={setState} />}
       </main>
       <TabBar tab={tab} setTab={setTab} />
@@ -2062,12 +2062,15 @@ function SimulatorTab({
   setState: React.Dispatch<React.SetStateAction<AppState>>;
 }) {
   const sim = state.simulator;
-  const [view, setView] = useState<"mercado" | "cartera" | "historial">("mercado");
+  const [view, setView] = useState<"mercado" | "cartera" | "historial" | "carteras">("mercado");
+  const [catFilter, setCatFilter] = useState<SimAssetCategory | "todos">("todos");
   const [buyAssetId, setBuyAssetId] = useState<string | null>(null);
   const [buyAmount, setBuyAmount] = useState("100");
   const [sellAssetId, setSellAssetId] = useState<string | null>(null);
   const [loadingPrices, setLoadingPrices] = useState(false);
   const [priceError, setPriceError] = useState(false);
+  const [simRisk, setSimRisk] = useState<RiskLevel>(state.user?.riskLevel ?? "moderado");
+  const [simAmount, setSimAmount] = useState(300000);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const refreshPrices = useCallback(async () => {
@@ -2160,55 +2163,78 @@ function SimulatorTab({
 
       {/* Tabs internos */}
       <div className="segmented" style={{ margin: "0 0 12px" }}>
-        {(["mercado", "cartera", "historial"] as const).map((v) => (
+        {(["mercado", "cartera", "historial", "carteras"] as const).map((v) => (
           <button key={v} className={view === v ? "active" : ""} onClick={() => setView(v)} type="button">
-            {v === "mercado" ? "Mercado" : v === "cartera" ? "Mi cartera" : "Historial"}
+            {v === "mercado" ? "Mercado" : v === "cartera" ? "Mi cartera" : v === "historial" ? "Historial" : "Carteras"}
           </button>
         ))}
       </div>
 
       {/* ── Vista: Mercado ── */}
       {view === "mercado" && (
-        <div className="asset-list">
-          {SIM_ASSETS.map((asset) => {
-            const price = sim.prices[asset.id] ?? asset.defaultPrice;
-            const pos   = sim.positions.find((p) => p.assetId === asset.id);
-            return (
-              <article className="asset-card" key={asset.id}>
-                <div className="asset-topline">
-                  <div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <strong>{asset.symbol}</strong>
-                      <span
-                        className="eyebrow"
-                        style={{ color: CATEGORY_COLOR[asset.category], background: `${CATEGORY_COLOR[asset.category]}18`, padding: "1px 6px", borderRadius: 99 }}
-                      >
-                        {CATEGORY_LABEL[asset.category]}
-                      </span>
-                    </div>
-                    <span>{asset.name}</span>
-                  </div>
-                  <div style={{ textAlign: "right" }}>
-                    <strong style={{ fontSize: 15 }}>{formatSimPrice(price)}</strong>
-                    {pos && (
-                      <div style={{ fontSize: 12, color: "#64748b" }}>
-                        Tenés {formatSimQty(pos.quantity, asset.id)}
+        <>
+          {/* Filtro de categoría */}
+          <div className="cat-filter-row">
+            {(["todos", "crypto", "memecoin", "stock", "cedear", "bono"] as const).map((cat) => (
+              <button
+                key={cat}
+                className={`cat-chip ${catFilter === cat ? "active" : ""}`}
+                onClick={() => setCatFilter(cat)}
+                type="button"
+                style={cat !== "todos" ? {
+                  borderColor: CATEGORY_COLOR[cat as SimAssetCategory],
+                  color: catFilter === cat ? "#fff" : CATEGORY_COLOR[cat as SimAssetCategory],
+                  background: catFilter === cat ? CATEGORY_COLOR[cat as SimAssetCategory] : `${CATEGORY_COLOR[cat as SimAssetCategory]}12`,
+                } : {}}
+              >
+                {cat === "todos" ? "Todos" : CATEGORY_LABEL[cat as SimAssetCategory]}
+              </button>
+            ))}
+          </div>
+          <div className="asset-list">
+            {SIM_ASSETS.filter((a) => catFilter === "todos" || a.category === catFilter).map((asset) => {
+              const price = sim.prices[asset.id] ?? asset.defaultPrice;
+              const pos   = sim.positions.find((p) => p.assetId === asset.id);
+              return (
+                <article className="asset-card" key={asset.id}>
+                  <div className="asset-topline">
+                    <div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <strong>{asset.symbol}</strong>
+                        <span
+                          className="eyebrow"
+                          style={{ color: CATEGORY_COLOR[asset.category], background: `${CATEGORY_COLOR[asset.category]}18`, padding: "1px 6px", borderRadius: 99 }}
+                        >
+                          {CATEGORY_LABEL[asset.category]}
+                        </span>
                       </div>
-                    )}
+                      <span>{asset.name}</span>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <strong style={{ fontSize: 15 }}>{formatSimPrice(price)}</strong>
+                      {asset.category === "bono" && (
+                        <div style={{ fontSize: 10, color: "#94a3b8" }}>precio ref.</div>
+                      )}
+                      {pos && (
+                        <div style={{ fontSize: 12, color: "#64748b" }}>
+                          Tenés {formatSimQty(pos.quantity, asset.id)}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-                <p style={{ fontSize: 12, color: "#64748b", margin: "6px 0 8px" }}>{asset.lesson}</p>
-                <button
-                  className="primary"
-                  onClick={() => { setBuyAssetId(asset.id); setBuyAmount("100"); }}
-                  disabled={sim.cashUsd < 1}
-                >
-                  <ArrowDownCircle size={14} /> Comprar
-                </button>
-              </article>
-            );
-          })}
-        </div>
+                  <p style={{ fontSize: 12, color: "#64748b", margin: "6px 0 8px" }}>{asset.lesson}</p>
+                  <button
+                    className="primary"
+                    onClick={() => { setBuyAssetId(asset.id); setBuyAmount("100"); }}
+                    disabled={sim.cashUsd < 1}
+                  >
+                    <ArrowDownCircle size={14} /> Comprar
+                  </button>
+                </article>
+              );
+            })}
+          </div>
+        </>
       )}
 
       {/* ── Vista: Cartera ── */}
@@ -2301,6 +2327,50 @@ function SimulatorTab({
         </>
       )}
 
+      {/* ── Vista: Carteras ── */}
+      {view === "carteras" && (
+        <section className="panel">
+          <p className="eyebrow" style={{ marginBottom: 8 }}>Cartera sugerida por perfil</p>
+          <div className="segmented" style={{ marginBottom: 12 }}>
+            {(["conservador", "moderado", "agresivo"] as const).map((r) => (
+              <button
+                key={r}
+                className={simRisk === r ? "active" : ""}
+                type="button"
+                onClick={() => setSimRisk(r)}
+              >
+                {r}
+              </button>
+            ))}
+          </div>
+          <label style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 12 }}>
+            <span style={{ fontSize: 12, color: "#64748b" }}>Monto a distribuir</span>
+            <input
+              value={simAmount}
+              onChange={(e) => setSimAmount(Number(e.target.value) || 0)}
+              inputMode="numeric"
+            />
+          </label>
+          <div className="portfolio-list">
+            {riskPortfolios[simRisk].map((item) => (
+              <div className="portfolio-row" key={item.name}>
+                <div>
+                  <strong>{item.name}</strong>
+                  <span>{item.detail}</span>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <strong>{money((simAmount * item.pct) / 100)}</strong>
+                  <span>{item.pct}%</span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="fine-print" style={{ marginTop: 10, color: "#64748b" }}>
+            Esto es educación financiera, no asesoramiento. Ajustá los porcentajes a tu situación.
+          </p>
+        </section>
+      )}
+
       {/* ── Modal de compra ── */}
       {buyAssetId && buyAssetObj && (
         <div className="modal-overlay" onClick={() => setBuyAssetId(null)}>
@@ -2346,52 +2416,151 @@ function SimulatorTab({
   );
 }
 
-// ─── Mercados Premium ─────────────────────────────────────────────────────────
+// ─── Mercados ─────────────────────────────────────────────────────────────────
 
-function MercadosTab({ setTab }: { setTab: (tab: Tab) => void }) {
-  const features = [
-    { icon: "📡", title: "Señales IA en tiempo real", desc: "El modelo detecta régimen de mercado y genera señales sobre MERVAL, ADRs y bonos cada 30 segundos." },
-    { icon: "📊", title: "Terminal de trading", desc: "Gráficos de velas, volumen y análisis técnico sobre todos los instrumentos argentinos." },
-    { icon: "🤖", title: "Modelo ZenithNetV2", desc: "8.4M parámetros: Transformer + CNN multi-escala. Estimación de incertidumbre por señal." },
-    { icon: "💼", title: "Portfolio institucional", desc: "Seguimiento de cartera real con cálculo de Sharpe, drawdown y exposición por régimen." },
+const ARG_REF_RATES = [
+  { name: "FCI Mercado de Dinero", rate: "~110% TNA", detail: "Liquidez inmediata, rescate en 24hs" },
+  { name: "Plazo Fijo 30 días", rate: "~97% TNA", detail: "Banco privado, garantía SEDESA hasta $6M" },
+  { name: "LECAP (corto plazo)", rate: "~3.5% TEM", detail: "Letras del Tesoro en pesos, vence en meses" },
+  { name: "Caución bursátil 1d", rate: "~90% TNA", detail: "Garantizada por BYMA, muy líquida" },
+];
+
+function MercadosTab({
+  state,
+  setTab,
+}: {
+  state: AppState;
+  setTab: (tab: Tab) => void;
+}) {
+  const [riskView, setRiskView] = useState<RiskLevel>(state.user?.riskLevel ?? "moderado");
+  const [amount, setAmount] = useState(300000);
+  const rates = state.rates;
+  const portfolio = riskPortfolios[riskView];
+  const debt = totalDebt(state);
+
+  const dollarRows = [
+    { label: "Oficial", value: rates.oficial },
+    { label: "MEP (bolsa)", value: rates.mep },
+    { label: "CCL", value: rates.ccl },
+    { label: "Blue", value: rates.blue },
+    { label: "Cripto", value: rates.cripto },
   ];
+
+  const cryptoIds = ["BTC", "ADA", "DOGE", "SHIB"];
+
   return (
     <>
       <div className="page-intro">
-        <h2>Mercados Pro</h2>
-        <p>Herramientas avanzadas para cuando ya tengas base. Nada de esto es necesario para empezar.</p>
+        <h2>Mercados</h2>
+        <p>Cotizaciones en vivo y carteras educativas para Argentina.</p>
       </div>
 
-      <section className="panel" style={{ textAlign: "center", padding: "24px 16px" }}>
-        <Lock size={32} style={{ color: "#f59e0b", margin: "0 auto 12px" }} />
-        <h3>Próximamente</h3>
-        <p style={{ color: "#64748b", fontSize: 14, marginBottom: 16 }}>
-          Estamos construyendo la plataforma premium. Mientras tanto, aprendé con el simulador gratuito y cuando te sientas listo, esto va a tener mucho más sentido.
+      {/* ── Cotizaciones dólar ── */}
+      <section className="panel">
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+          <p className="eyebrow" style={{ margin: 0 }}>Dólar hoy</p>
+          <span className="fine-print" style={{ color: rates.source === "live" ? "#10b981" : "#94a3b8" }}>
+            {rates.source === "live" ? "🟢 en vivo" : "⚪ demo"}
+          </span>
+        </div>
+        <div className="dollar-grid">
+          {dollarRows.map((row) => (
+            <div key={row.label} className="dollar-row">
+              <span>{row.label}</span>
+              <strong>${row.value.toLocaleString("es-AR")}</strong>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Tasas de referencia Argentina ── */}
+      <section className="panel">
+        <p className="eyebrow" style={{ marginBottom: 8 }}>Tasas de referencia (ARS)</p>
+        {ARG_REF_RATES.map((r) => (
+          <div key={r.name} className="ref-rate-row">
+            <div>
+              <strong style={{ fontSize: 13 }}>{r.name}</strong>
+              <span style={{ display: "block", fontSize: 11, color: "#94a3b8", marginTop: 1 }}>{r.detail}</span>
+            </div>
+            <span className="rate-badge">{r.rate}</span>
+          </div>
+        ))}
+        <p className="fine-print" style={{ marginTop: 8, color: "#64748b" }}>
+          Tasas aproximadas. Consultá tu banco o broker para valores exactos del día.
         </p>
-        <button className="ghost" onClick={() => setTab("simulador")}>
-          Ir al simulador gratuito →
+      </section>
+
+      {/* ── Cripto en vivo ── */}
+      <section className="panel">
+        <p className="eyebrow" style={{ marginBottom: 8 }}>Cripto (USD en vivo)</p>
+        {cryptoIds.map((id) => {
+          const asset = SIM_ASSETS.find((a) => a.id === id);
+          const price = state.simulator.prices[id] ?? asset?.defaultPrice ?? 0;
+          return (
+            <div key={id} className="ref-rate-row">
+              <div>
+                <strong style={{ fontSize: 13 }}>{asset?.symbol}</strong>
+                <span style={{ display: "block", fontSize: 11, color: "#94a3b8" }}>{asset?.name}</span>
+              </div>
+              <strong style={{ fontVariantNumeric: "tabular-nums" }}>{formatSimPrice(price)}</strong>
+            </div>
+          );
+        })}
+        <button className="ghost small" style={{ marginTop: 10 }} onClick={() => setTab("simulador")}>
+          Practicar en el simulador →
         </button>
       </section>
 
-      <p className="eyebrow" style={{ padding: "0 4px", marginBottom: 8 }}>Qué incluye Pro</p>
-      <div className="asset-list">
-        {features.map((f) => (
-          <article className="asset-card" key={f.title} style={{ opacity: 0.7 }}>
-            <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-              <span style={{ fontSize: 24 }}>{f.icon}</span>
+      {/* ── Portfolio educativo ── */}
+      <section className="panel">
+        <p className="eyebrow" style={{ marginBottom: 8 }}>Cartera sugerida por perfil</p>
+        {debt > 100000 && (
+          <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, padding: "8px 12px", marginBottom: 12 }}>
+            <p style={{ fontSize: 12, color: "#dc2626", margin: 0 }}>
+              Tenés {money(debt)} en tarjetas. Pagar deuda suele ganarle a cualquier inversión.
+            </p>
+          </div>
+        )}
+        <div className="segmented" style={{ marginBottom: 12 }}>
+          {(["conservador", "moderado", "agresivo"] as const).map((r) => (
+            <button
+              key={r}
+              className={riskView === r ? "active" : ""}
+              type="button"
+              onClick={() => setRiskView(r)}
+            >
+              {r}
+            </button>
+          ))}
+        </div>
+        <label style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 12 }}>
+          <span style={{ fontSize: 12, color: "#64748b" }}>Monto a distribuir</span>
+          <input
+            value={amount}
+            onChange={(e) => setAmount(Number(e.target.value) || 0)}
+            inputMode="numeric"
+          />
+        </label>
+        <div className="portfolio-list">
+          {portfolio.map((item) => (
+            <div className="portfolio-row" key={item.name}>
               <div>
-                <strong>{f.title}</strong>
-                <p style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>{f.desc}</p>
+                <strong>{item.name}</strong>
+                <span>{item.detail}</span>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <strong>{money((amount * item.pct) / 100)}</strong>
+                <span>{item.pct}%</span>
               </div>
             </div>
-          </article>
-        ))}
-      </div>
+          ))}
+        </div>
+      </section>
 
       <section className="panel muted" style={{ marginTop: 8 }}>
         <ShieldCheck size={18} style={{ color: "#10b981" }} />
         <p style={{ fontSize: 13 }}>
-          Todo lo educativo — simulador, lecciones, tycoon, gestión de gastos — es y será siempre gratuito. Pro solo agrega herramientas para quienes ya operan en el mercado real.
+          Esto es educación financiera, no asesoramiento registrado. Nada es recomendación de compra.
         </p>
       </section>
     </>

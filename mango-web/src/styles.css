@@ -1185,6 +1185,69 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 .achievement-chip--earned { background: rgba(0,186,124,.12); color: var(--green); }
 .achievement-chip--locked { background: var(--surface); color: var(--muted); opacity: .45; filter: grayscale(1); }
 
+/* ── Mercados: cotizaciones dólar ───────────────────────────────────────────*/
+.dollar-grid {
+  display: flex;
+  flex-direction: column;
+}
+.dollar-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+.dollar-row:last-child { border-bottom: none; }
+.dollar-row span  { font-size: 13px; color: var(--muted); }
+.dollar-row strong { font-size: 14px; font-variant-numeric: tabular-nums; }
+
+/* Fila de tasa de referencia */
+.ref-rate-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  gap: 8px;
+}
+.ref-rate-row:last-child { border-bottom: none; }
+
+/* Badge de tasa */
+.rate-badge {
+  font-size: 12px;
+  font-weight: 700;
+  background: rgba(16,185,129,.12);
+  color: #10b981;
+  padding: 2px 8px;
+  border-radius: 99px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Filtro de categoría en Simulador */
+.cat-filter-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.cat-chip {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 99px;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.cat-chip.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
 /* ── Misc ───────────────────────────────────────────────────────────────────*/
 @media (max-width: 380px) {
   .budget-form { grid-template-columns: 1fr; }

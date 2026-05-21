@@ -7,7 +7,7 @@ const COINGECKO =
   "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,cardano,dogecoin,shiba-inu&vs_currencies=usd";
 
 const YAHOO =
-  "https://query1.finance.yahoo.com/v7/finance/quote?symbols=AAPL,TSLA,GGAL,YPF&fields=regularMarketPrice";
+  "https://query1.finance.yahoo.com/v7/finance/quote?symbols=AAPL,TSLA,GGAL,YPF,SPY,NVDA&fields=regularMarketPrice";
 
 export async function fetchSimPrices(
   current: Record<string, number>,
