@@ -21,6 +21,7 @@ import {
   ArrowDownCircle,
   ArrowUpCircle,
   Zap,
+  X,
 } from "lucide-react";
 import type React from "react";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -89,6 +90,7 @@ import { fetchSimPrices } from "../services/prices";
 import { resetState } from "../services/storage";
 import { supabase } from "../services/supabase";
 import { deleteRemoteState } from "../services/db";
+import { getIsPro, createCheckout } from "../services/billing";
 import { usePersistentState } from "./usePersistentState";
 
 type Tab = "home" | "simulador" | "learn" | "tycoon" | "expenses" | "goals" | "mercados" | "profile";
@@ -177,6 +179,8 @@ export function App() {
   const [authUserId, setAuthUserId] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(!!supabase);
   const [guestMode,   setGuestMode]   = useState(!supabase); // true si no hay Supabase configurado
+  const [isPro,       setIsPro]       = useState(false);
+  const [showUpgrade, setShowUpgrade] = useState(false);
 
   useEffect(() => {
     if (!supabase) return;
@@ -189,6 +193,21 @@ export function App() {
     });
     return () => subscription.unsubscribe();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Reload isPro when auth changes
+  useEffect(() => {
+    if (!authUserId) { setIsPro(false); return; }
+    getIsPro(authUserId).then(setIsPro);
+  }, [authUserId]);
+
+  // Handle checkout redirect result
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("checkout") === "success" && authUserId) {
+      getIsPro(authUserId).then(setIsPro);
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, [authUserId]);
 
   const userId = guestMode ? undefined : (authUserId ?? undefined);
 
@@ -260,9 +279,106 @@ export function App() {
         {tab === "expenses"  && <ExpensesTab state={state} setState={setState} />}
         {tab === "goals"     && <GoalsTab state={state} setState={setState} />}
         {tab === "mercados"  && <MercadosTab state={state} setTab={setTab} />}
-        {tab === "profile"   && <ProfileTab state={state} setState={setState} authUserId={authUserId} onSignOut={handleSignOut} />}
+        {tab === "profile"   && <ProfileTab state={state} setState={setState} authUserId={authUserId} isPro={isPro} onSignOut={handleSignOut} onUpgrade={() => setShowUpgrade(true)} />}
       </main>
       <TabBar tab={tab} setTab={setTab} />
+      {showUpgrade && <UpgradeModal onClose={() => setShowUpgrade(false)} isPro={isPro} />}
+    </div>
+  );
+}
+
+// ─── UpgradeModal ─────────────────────────────────────────────────────────────
+
+function UpgradeModal({ onClose, isPro }: { onClose: () => void; isPro: boolean }) {
+  const [loading, setLoading] = useState<"mp" | "stripe" | null>(null);
+  const [error, setError]     = useState<string | null>(null);
+
+  async function handleCheckout(provider: "mercadopago" | "stripe") {
+    setLoading(provider === "mercadopago" ? "mp" : "stripe");
+    setError(null);
+    try {
+      await createCheckout(provider, "monthly");
+    } catch (e) {
+      setError((e as Error).message);
+      setLoading(null);
+    }
+  }
+
+  return (
+    <div className="legal-overlay" onClick={onClose}>
+      <div
+        className="upgrade-modal"
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: "var(--surface)",
+          borderRadius: 20,
+          padding: 28,
+          maxWidth: 360,
+          width: "90%",
+          margin: "auto",
+          position: "relative",
+          top: "50%",
+          transform: "translateY(-50%)",
+        }}
+      >
+        <button
+          className="icon-button light"
+          style={{ position: "absolute", top: 14, right: 14 }}
+          onClick={onClose}
+        >
+          <X size={18} />
+        </button>
+
+        {isPro ? (
+          <>
+            <p style={{ fontSize: 28, margin: "0 0 8px" }}>🥭</p>
+            <h3 style={{ margin: "0 0 6px" }}>Ya sos Pro</h3>
+            <p style={{ color: "var(--muted)", fontSize: 13, margin: 0 }}>
+              Tu suscripción está activa. Disfrutá todos los beneficios.
+            </p>
+          </>
+        ) : (
+          <>
+            <p style={{ fontSize: 28, margin: "0 0 8px" }}>⭐</p>
+            <h3 style={{ margin: "0 0 4px" }}>Mango Pro</h3>
+            <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 18 }}>
+              Sincronizá desde cualquier dispositivo, exportá tus datos y desbloqueá el historial completo.
+            </p>
+
+            <ul style={{ listStyle: "none", padding: 0, margin: "0 0 20px", display: "flex", flexDirection: "column", gap: 8 }}>
+              {["☁️ Sync en la nube", "📊 Historial ilimitado", "📥 Exportar a CSV", "🔔 Alertas de patrimonio"].map((f) => (
+                <li key={f} style={{ fontSize: 14 }}>{f}</li>
+              ))}
+            </ul>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <button
+                className="primary"
+                disabled={!!loading}
+                onClick={() => handleCheckout("mercadopago")}
+                style={{ position: "relative" }}
+              >
+                {loading === "mp" ? "Redirigiendo…" : "💳 Pagar con MercadoPago · $499/mes"}
+              </button>
+              <button
+                className="ghost"
+                disabled={!!loading}
+                onClick={() => handleCheckout("stripe")}
+              >
+                {loading === "stripe" ? "Redirigiendo…" : "🌎 Pagar con Stripe · USD 2.99/mes"}
+              </button>
+            </div>
+
+            {error && (
+              <p style={{ color: "#ef4444", fontSize: 12, marginTop: 10, textAlign: "center" }}>{error}</p>
+            )}
+
+            <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 12, textAlign: "center", lineHeight: 1.5 }}>
+              Sin contratos. Cancelás cuando quieras desde la app de cada plataforma.
+            </p>
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -2116,14 +2232,31 @@ function ProfileTab({
   state,
   setState,
   authUserId,
+  isPro,
   onSignOut,
+  onUpgrade,
 }: {
   state: AppState;
   setState: React.Dispatch<React.SetStateAction<AppState>>;
   authUserId: string | null;
+  isPro: boolean;
   onSignOut: () => void;
+  onUpgrade: () => void;
 }) {
   const [legalModal, setLegalModal] = useState<"tos" | "privacy" | null>(null);
+
+  function exportCSV() {
+    const rows = [
+      ["Fecha", "Categoría", "Monto", "Descripción"],
+      ...state.expenses.map((e) => [e.date, e.category, String(e.amount), e.description]),
+    ];
+    const csv = rows.map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(",")).join("\n");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
+    a.download = "mango-gastos.csv";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
   const history = state.netWorthHistory ?? [];
   const growth = history.length >= 2 ? netWorthGrowth(history) : null;
   const currentNW = netWorth(state);
@@ -2232,6 +2365,34 @@ function ProfileTab({
           ))}
         </div>
       </section>
+      {/* Pro status */}
+      <section className="panel">
+        <p className="eyebrow" style={{ marginBottom: 10 }}>Mango Pro</p>
+        {isPro ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <p style={{ fontSize: 13, color: "#10b981", fontWeight: 700, margin: 0 }}>⭐ Suscripción activa</p>
+            <p className="fine-print" style={{ margin: 0 }}>Sync en la nube, historial ilimitado y exportar CSV habilitados.</p>
+            <button className="ghost small" style={{ justifyContent: "flex-start" }} onClick={exportCSV}>
+              📥 Exportar gastos a CSV
+            </button>
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <p className="fine-print" style={{ margin: 0 }}>
+              Sincronizá tus datos desde cualquier dispositivo, exportá a CSV y desbloqueá historial ilimitado.
+            </p>
+            <button className="primary small" onClick={onUpgrade}>
+              ⭐ Ver planes Pro
+            </button>
+            {state.expenses.length > 0 && (
+              <p className="fine-print" style={{ margin: 0, color: "var(--muted)" }}>
+                Exportar CSV requiere plan Pro.
+              </p>
+            )}
+          </div>
+        )}
+      </section>
+
       <section className="panel">
         <p className="eyebrow" style={{ marginBottom: 10 }}>Legal</p>
         <p className="fine-print" style={{ marginBottom: 12, lineHeight: 1.5 }}>
