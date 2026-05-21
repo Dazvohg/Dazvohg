@@ -1,0 +1,14 @@
+name = "mango-prices"
+main = "index.ts"
+compatibility_date = "2025-05-01"
+
+# Para deployar:
+#   1. npm install -g wrangler  (o npx wrangler)
+#   2. wrangler login
+#   3. wrangler deploy
+#
+# Te va a dar una URL como:
+#   https://mango-prices.TU-USUARIO.workers.dev
+#
+# Copiá esa URL en mango-web/.env.production:
+#   VITE_PRICES_WORKER_URL=https://mango-prices.TU-USUARIO.workers.dev
