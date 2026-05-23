@@ -168,6 +168,7 @@ export const initialSimulatorState: SimulatorState = {
   trades: [],
   prices: Object.fromEntries(SIM_ASSETS.map((a) => [a.id, a.defaultPrice])),
   priceHistory: {},
+  dailyPriceHistory: {},
 };
 
 export function simPortfolioValue(state: SimulatorState): number {
@@ -292,22 +293,38 @@ export function resetSimulator(state: AppState): AppState {
 
 const MAX_HISTORY = 48;
 
+const MAX_DAILY_HISTORY = 720; // 30 días a 1 punto/hora
+
 export function updateSimPrices(
   state: AppState,
   prices: Record<string, number>,
 ): AppState {
   const now = Date.now();
+  const ONE_HOUR = 3_600_000;
+
   const history = { ...(state.simulator.priceHistory ?? {}) };
+  const daily   = { ...(state.simulator.dailyPriceHistory ?? {}) };
+
   for (const [id, price] of Object.entries(prices)) {
+    // 60s sparkline
     const prev = history[id] ?? [];
     history[id] = [...prev, { t: now, p: price }].slice(-MAX_HISTORY);
+
+    // hourly history (push only if ≥1h since last point)
+    const dprev = daily[id] ?? [];
+    const lastT = dprev.length > 0 ? dprev[dprev.length - 1].t : 0;
+    if (now - lastT >= ONE_HOUR) {
+      daily[id] = [...dprev, { t: now, p: price }].slice(-MAX_DAILY_HISTORY);
+    }
   }
+
   return {
     ...state,
     simulator: {
       ...state.simulator,
       prices: { ...state.simulator.prices, ...prices },
       priceHistory: history,
+      dailyPriceHistory: daily,
       pricesUpdatedAt: now,
     },
   };

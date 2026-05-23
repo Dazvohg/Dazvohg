@@ -25,6 +25,8 @@ import {
   Users,
   Copy,
   Check,
+  Sun,
+  Moon,
 } from "lucide-react";
 import type React from "react";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -94,6 +96,7 @@ import { resetState } from "../services/storage";
 import { supabase } from "../services/supabase";
 import { deleteRemoteState } from "../services/db";
 import { getIsPro, createCheckout } from "../services/billing";
+import { scheduleAlerts, notificationPermission, requestNotificationPermission } from "../services/notifications";
 import {
   createGroup, joinGroupByToken, getMyGroup, leaveGroup,
   getGroupMembers, getGroupExpenses, addGroupExpense, deleteGroupExpense,
@@ -269,6 +272,14 @@ export function App() {
     }));
   }, [state.user, state.tycoon.gameMonth, state.tycoon.gameYear, state.rates.updatedAt]);  // eslint-disable-line react-hooks/exhaustive-deps
 
+  const [notifPermission, setNotifPermission] = useState(notificationPermission);
+
+  // Schedule local push notifications when state changes (daily refresh)
+  useEffect(() => {
+    if (!state.user || notifPermission !== "granted") return;
+    scheduleAlerts(state);
+  }, [state.user, notifPermission, state.cards, state.goals, state.expenses.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
   async function handleSignOut() {
     if (authUserId) await deleteRemoteState(authUserId);
     await supabase?.auth.signOut();
@@ -357,7 +368,7 @@ function UpgradeModal({ onClose, isPro }: { onClose: () => void; isPro: boolean 
         ) : (
           <>
             <p style={{ fontSize: 28, margin: "0 0 8px" }}>⭐</p>
-            <h3 style={{ margin: "0 0 4px" }}>Mango Pro</h3>
+            <h3 style={{ margin: "0 0 4px" }}>CheMonei Pro</h3>
             <p style={{ color: "var(--muted)", fontSize: 13, marginBottom: 18 }}>
               Sincronizá desde cualquier dispositivo, exportá tus datos y desbloqueá el historial completo.
             </p>
@@ -490,7 +501,7 @@ function Onboarding({
       {step === 1 && (
         <div className="onboard-body step-anim">
           <div className="step-header">
-            <h2>¿Para qué vas a usar Mango?</h2>
+            <h2>¿Para qué vas a usar CheMonei?</h2>
             <p>Elegí tu objetivo principal. Después podés usar todo.</p>
           </div>
 
@@ -520,7 +531,7 @@ function Onboarding({
         <form className="onboard-body step-anim" onSubmit={(e) => { e.preventDefault(); setStep(3); }}>
           <div className="step-header">
             <h2>Tu perfil</h2>
-            <p>Solo necesitamos lo básico para personalizar Mango.</p>
+            <p>Solo necesitamos lo básico para personalizar CheMonei.</p>
           </div>
 
           <div className="step-form">
@@ -603,7 +614,7 @@ function Onboarding({
               <button type="button" className="link-btn" onClick={() => setLegalModal("privacy")}>
                 Política de Privacidad
               </button>
-              . Entiendo que Mango es educativo y no constituye asesoramiento financiero.
+              . Entiendo que CheMonei es educativo y no constituye asesoramiento financiero.
             </span>
           </label>
 
@@ -630,28 +641,28 @@ function TosContent() {
       <p className="legal-updated">Última actualización: {TERMS_DATE}</p>
 
       <h3>1. Servicio educativo</h3>
-      <p>Mango es una aplicación de educación financiera personal. La información, precios, tasas y proyecciones que muestra son de carácter exclusivamente educativo e informativo. No somos un broker, banco, asesor financiero ni entidad regulada.</p>
+      <p>CheMonei es una aplicación de educación financiera personal. La información, precios, tasas y proyecciones que muestra son de carácter exclusivamente educativo e informativo. No somos un broker, banco, asesor financiero ni entidad regulada.</p>
 
       <h3>2. No asesoramiento financiero</h3>
-      <p>Nada en Mango constituye asesoramiento financiero, bursátil, legal ni impositivo. Los datos mostrados no deben interpretarse como recomendaciones de inversión. Consultá a un profesional habilitado (asesor financiero, contador, abogado) antes de tomar decisiones financieras reales.</p>
+      <p>Nada en CheMonei constituye asesoramiento financiero, bursátil, legal ni impositivo. Los datos mostrados no deben interpretarse como recomendaciones de inversión. Consultá a un profesional habilitado (asesor financiero, contador, abogado) antes de tomar decisiones financieras reales.</p>
 
       <h3>3. Exactitud de la información</h3>
-      <p>Los precios y tasas provienen de APIs públicas (dolarapi.com, CoinGecko, Yahoo Finance, BCRA) y pueden presentar demoras, diferencias o errores respecto al mercado real. Mango no garantiza la exactitud, completitud ni disponibilidad de estos datos en ningún momento.</p>
+      <p>Los precios y tasas provienen de APIs públicas (dolarapi.com, CoinGecko, Yahoo Finance, BCRA) y pueden presentar demoras, diferencias o errores respecto al mercado real. CheMonei no garantiza la exactitud, completitud ni disponibilidad de estos datos en ningún momento.</p>
 
       <h3>4. Simulador de inversiones</h3>
       <p>El simulador opera con dinero ficticio. Las ganancias o pérdidas que se muestran no tienen valor económico real, no pueden retirarse ni transferirse. Su único fin es educativo y de práctica.</p>
 
       <h3>5. Elegibilidad</h3>
-      <p>Al usar Mango confirmás que tenés 18 años o más, o que contás con la autorización expresa de tu tutor legal para utilizar la aplicación.</p>
+      <p>Al usar CheMonei confirmás que tenés 18 años o más, o que contás con la autorización expresa de tu tutor legal para utilizar la aplicación.</p>
 
       <h3>6. Uso aceptable</h3>
-      <p>No podés usar Mango para actividades ilegales, fraudulentas ni para inducir a error a terceros. Está prohibido intentar acceder a datos de otros usuarios o comprometer la seguridad de la aplicación.</p>
+      <p>No podés usar CheMonei para actividades ilegales, fraudulentas ni para inducir a error a terceros. Está prohibido intentar acceder a datos de otros usuarios o comprometer la seguridad de la aplicación.</p>
 
       <h3>7. Propiedad intelectual</h3>
-      <p>El código, diseño, textos y contenido educativo de Mango son propiedad de sus creadores. Podés usar la aplicación para tu uso personal pero no podés reproducir ni distribuir su contenido sin autorización.</p>
+      <p>El código, diseño, textos y contenido educativo de CheMonei son propiedad de sus creadores. Podés usar la aplicación para tu uso personal pero no podés reproducir ni distribuir su contenido sin autorización.</p>
 
       <h3>8. Limitación de responsabilidad</h3>
-      <p>En ningún caso Mango ni sus creadores serán responsables por pérdidas financieras, daños directos, indirectos, incidentales o consecuentes derivados del uso de la aplicación o de decisiones tomadas en base a su información.</p>
+      <p>En ningún caso CheMonei ni sus creadores serán responsables por pérdidas financieras, daños directos, indirectos, incidentales o consecuentes derivados del uso de la aplicación o de decisiones tomadas en base a su información.</p>
 
       <h3>9. Modificaciones</h3>
       <p>Podemos actualizar estos Términos con aviso previo en la aplicación. El uso continuado implica aceptación de los nuevos términos.</p>
@@ -673,7 +684,7 @@ function PrivacyContent() {
       <p><strong>Datos técnicos:</strong> no recopilamos analytics de comportamiento, no usamos cookies de seguimiento ni fingerprinting.</p>
 
       <h3>2. Cómo usamos la información</h3>
-      <p>Exclusivamente para brindar y personalizar el servicio de Mango. No usamos tus datos para publicidad, no los cruzamos con bases de datos externas ni los vendemos o cedemos a terceros con fines comerciales.</p>
+      <p>Exclusivamente para brindar y personalizar el servicio de CheMonei. No usamos tus datos para publicidad, no los cruzamos con bases de datos externas ni los vendemos o cedemos a terceros con fines comerciales.</p>
 
       <h3>3. Almacenamiento</h3>
       <p><strong>Sin cuenta:</strong> todos los datos se guardan solo en el almacenamiento local de tu dispositivo (localStorage). Si borrás los datos del navegador o la app, la información se pierde.</p>
@@ -689,7 +700,7 @@ function PrivacyContent() {
       <p>Implementamos medidas técnicas razonables para proteger tu información. Sin embargo, ningún sistema es 100% seguro. Te recomendamos usar contraseñas fuertes y no compartir tu acceso.</p>
 
       <h3>7. Menores de edad</h3>
-      <p>Mango no está dirigido a menores de 18 años. Si tenemos conocimiento de que un menor usa la aplicación sin autorización, eliminaremos su cuenta y datos.</p>
+      <p>CheMonei no está dirigido a menores de 18 años. Si tenemos conocimiento de que un menor usa la aplicación sin autorización, eliminaremos su cuenta y datos.</p>
 
       <h3>8. Cambios a esta política</h3>
       <p>Notificaremos cambios significativos a través de la aplicación con al menos 15 días de anticipación.</p>
@@ -816,6 +827,17 @@ function AuthScreen({ onGuest }: { onGuest: () => void }) {
   );
 }
 
+function useTheme() {
+  const [theme, setTheme] = useState<"dark" | "light">(() => {
+    return (localStorage.getItem("cm-theme") as "dark" | "light") ?? "dark";
+  });
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("cm-theme", theme);
+  }, [theme]);
+  return { theme, toggle: () => setTheme((t) => t === "dark" ? "light" : "dark") };
+}
+
 function Header({
   state,
   setState,
@@ -824,22 +846,28 @@ function Header({
   setState: React.Dispatch<React.SetStateAction<AppState>>;
 }) {
   const hidden = state.user?.hidden ?? false;
+  const { theme, toggle: toggleTheme } = useTheme();
   return (
     <header className="topbar">
       <div className="topbar-row">
         <Brand />
-        <button
-          className="icon-button"
-          onClick={() =>
-            setState((current) => ({
-              ...current,
-              user: current.user ? { ...current.user, hidden: !current.user.hidden } : null,
-            }))
-          }
-          title="Ocultar saldos"
-        >
-          {hidden ? <EyeOff size={18} /> : <Eye size={18} />}
-        </button>
+        <div style={{ display: "flex", gap: 4 }}>
+          <button className="icon-button" onClick={toggleTheme} title="Cambiar tema">
+            {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+          <button
+            className="icon-button"
+            onClick={() =>
+              setState((current) => ({
+                ...current,
+                user: current.user ? { ...current.user, hidden: !current.user.hidden } : null,
+              }))
+            }
+            title="Ocultar saldos"
+          >
+            {hidden ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
+        </div>
       </div>
       <p className="eyebrow">Hola, {state.user?.name}</p>
       <h2>{money(netWorth(state), hidden)}</h2>
@@ -1001,7 +1029,7 @@ function HomeTab({
         style={{ borderLeft: `3px solid ${urgencyBorder[currentAdvice.urgency]}` }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-          <p className="eyebrow">Asesor Mango</p>
+          <p className="eyebrow">Asesor CheMonei</p>
           {advices.length > 1 && (
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <button
@@ -1032,11 +1060,11 @@ function HomeTab({
       <button className="tycoon-entry" onClick={() => setTab("tycoon")}>
         <div>
           <p className="eyebrow">Juego interno</p>
-          <h3>Mango Tycoon</h3>
+          <h3>Monei Tycoon</h3>
           <div className="tycoon-entry-level">
             <span className="level-badge-sm">Nv {state.tycoon.level}</span>
             <span className="tycoon-entry-levelname">
-              {LEVEL_NAMES[state.tycoon.level] ?? "Mango Master"}
+              {LEVEL_NAMES[state.tycoon.level] ?? "Monei Master"}
             </span>
           </div>
           <span>
@@ -1095,7 +1123,7 @@ function HomeTab({
             </h3>
             <p>
               {budget.status === "empty"
-                ? "Arma presupuestos por categoria y Mango Tycoon te premia por cumplirlos."
+                ? "Arma presupuestos por categoria y Monei Tycoon te premia por cumplirlos."
                 : `${money(budget.totalSpent)} de ${money(budget.totalLimit)} este mes.`}
             </p>
           </div>
@@ -1212,7 +1240,7 @@ function LearnTab({
               disabled={!answeredCorrectly || completed}
               onClick={() => setState((current) => completeLesson(current, selected.id))}
             >
-              {completed ? "Recompensa cobrada" : `Cobrar ${lessonReward} Mangos`}
+              {completed ? "Recompensa cobrada" : `Cobrar ${lessonReward} Moneis`}
             </button>
           </section>
 
@@ -1643,7 +1671,7 @@ function TycoonTab({
     xpNext === Infinity
       ? 100
       : Math.round(((xp - xpCurrent) / (xpNext - xpCurrent)) * 100);
-  const levelName = LEVEL_NAMES[level] ?? "Mango Master";
+  const levelName = LEVEL_NAMES[level] ?? "Monei Master";
 
   const owned = state.tycoon.ownedAssets
     .map((item) => ({ owned: item, asset: tycoonAssets.find((a) => a.id === item.assetId) }))
@@ -1680,7 +1708,7 @@ function TycoonTab({
   return (
     <>
       <PageIntro
-        title="Mango Tycoon"
+        title="Monei Tycoon"
         text="Tomá decisiones de finanzas argentinas reales. Subí de nivel, desbloqueá logros."
       />
 
@@ -1772,7 +1800,7 @@ function TycoonTab({
                     <span>
                       {asset.city}, {asset.province}
                     </span>
-                    <p>Renta: {asset.rent.toLocaleString("es-AR")} Mangos</p>
+                    <p>Renta: {asset.rent.toLocaleString("es-AR")} Moneis</p>
                   </div>
                   <button
                     className="ghost small"
@@ -1815,7 +1843,7 @@ function TycoonTab({
                   disabled={!canBuy}
                   onClick={() => setState((current) => buyAsset(current, asset.id))}
                 >
-                  {canBuy ? "Comprar" : "Faltan Mangos"}
+                  {canBuy ? "Comprar" : "Faltan Moneis"}
                 </button>
               </article>
             );
@@ -2261,18 +2289,27 @@ function ProfileTab({
   onUpgrade: () => void;
 }) {
   const [legalModal, setLegalModal] = useState<"tos" | "privacy" | null>(null);
+  const [notifPerm, setNotifPerm] = useState(notificationPermission);
+
+  async function handleEnableNotifications() {
+    const granted = await requestNotificationPermission();
+    setNotifPerm(granted ? "granted" : "denied");
+    if (granted) scheduleAlerts(state);
+  }
 
   function exportCSV() {
     const rows = [
       ["Fecha", "Categoría", "Monto", "Descripción"],
       ...state.expenses.map((e) => [e.date, e.category, String(e.amount), e.description]),
     ];
-    const csv = rows.map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(",")).join("\n");
+    const csv = "﻿" + rows.map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(",")).join("\n");
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
-    a.download = "mango-gastos.csv";
+    // Use data URI for iOS/Safari compatibility (Blob URLs don't trigger download on iOS)
+    a.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
+    a.download = "chemonei-gastos.csv";
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(a.href);
+    document.body.removeChild(a);
   }
   const history = state.netWorthHistory ?? [];
   const growth = history.length >= 2 ? netWorthGrowth(history) : null;
@@ -2297,7 +2334,7 @@ function ProfileTab({
           <NetWorthChart history={history} />
         ) : (
           <p style={{ fontSize: 12, color: "var(--muted)", margin: 0 }}>
-            La evolución de tu patrimonio aparecerá aquí con el tiempo. Cargá tus cuentas y avanzá en Mango Tycoon.
+            La evolución de tu patrimonio aparecerá aquí con el tiempo. Cargá tus cuentas y avanzá en Monei Tycoon.
           </p>
         )}
       </section>
@@ -2384,7 +2421,7 @@ function ProfileTab({
       </section>
       {/* Pro status */}
       <section className="panel">
-        <p className="eyebrow" style={{ marginBottom: 10 }}>Mango Pro</p>
+        <p className="eyebrow" style={{ marginBottom: 10 }}>CheMonei Pro</p>
         {isPro ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <p style={{ fontSize: 13, color: "#10b981", fontWeight: 700, margin: 0 }}>⭐ Suscripción activa</p>
@@ -2410,10 +2447,35 @@ function ProfileTab({
         )}
       </section>
 
+      {/* Notificaciones */}
+      {notifPerm !== "unsupported" && (
+        <section className="panel">
+          <p className="eyebrow" style={{ marginBottom: 10 }}>Notificaciones</p>
+          {notifPerm === "granted" ? (
+            <p className="fine-print" style={{ color: "#10b981", margin: 0 }}>
+              🔔 Activadas — te avisamos antes de vencimientos de tarjetas y metas próximas.
+            </p>
+          ) : notifPerm === "denied" ? (
+            <p className="fine-print" style={{ margin: 0 }}>
+              Las notificaciones están bloqueadas en tu navegador. Habilitálas desde Configuración del sitio.
+            </p>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <p className="fine-print" style={{ margin: 0 }}>
+                Recibí alertas antes de que venza una tarjeta, cuando una meta se acerca al deadline y recordatorios semanales.
+              </p>
+              <button className="ghost small" onClick={handleEnableNotifications}>
+                🔔 Activar notificaciones
+              </button>
+            </div>
+          )}
+        </section>
+      )}
+
       <section className="panel">
         <p className="eyebrow" style={{ marginBottom: 10 }}>Legal</p>
         <p className="fine-print" style={{ marginBottom: 12, lineHeight: 1.5 }}>
-          Mango es una herramienta educativa. Los precios y tasas son de APIs públicas y pueden
+          CheMonei es una herramienta educativa. Los precios y tasas son de APIs públicas y pueden
           tener demoras. Nada aquí constituye asesoramiento financiero.
         </p>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -2451,7 +2513,7 @@ function ProfileTab({
         <button
           className="danger-button"
           onClick={() => {
-            if (!confirm("Borrar todos los datos de Mango? Esta acción no se puede deshacer.")) return;
+            if (!confirm("Borrar todos los datos de CheMonei? Esta acción no se puede deshacer.")) return;
             onSignOut();
           }}
         >
@@ -2793,7 +2855,7 @@ function GroupTab({
         </div>
         <div style={{ marginTop: 24, padding: 16, background: "var(--surface-alt, var(--surface))", borderRadius: 14 }}>
           <p style={{ fontSize: 13, color: "var(--muted)", margin: 0, lineHeight: 1.6 }}>
-            💡 Creá un grupo → compartí el QR o el link → todos agregan sus gastos → Mango muestra quién puso qué y cómo quedar a mano.
+            💡 Creá un grupo → compartí el QR o el link → todos agregan sus gastos → CheMonei muestra quién puso qué y cómo quedar a mano.
           </p>
         </div>
       </div>
@@ -3008,7 +3070,7 @@ function MangoScoreCard({ state, setTab }: { state: AppState; setTab: (t: Tab) =
           <text x="50" y="61" textAnchor="middle" fill="var(--muted)" fontSize="9" fontFamily="inherit">/ 1000</text>
         </svg>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p className="eyebrow" style={{ margin: "0 0 2px" }}>Mango Score</p>
+          <p className="eyebrow" style={{ margin: "0 0 2px" }}>CheMonei Score</p>
           <strong style={{ display: "block", fontSize: 16, fontWeight: 800 }}>{label}</strong>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "5px 12px", marginTop: 10 }}>
             <ScorePill label="Presupuesto" pts={breakdown.budget} max={250} />
@@ -3283,6 +3345,8 @@ function SimulatorTab({
   const [buyAssetId, setBuyAssetId] = useState<string | null>(null);
   const [buyAmount, setBuyAmount] = useState("100");
   const [sellAssetId, setSellAssetId] = useState<string | null>(null);
+  const [chartAssetId, setChartAssetId] = useState<string | null>(null);
+  const [chartRange, setChartRange] = useState<7 | 30>(7);
   const [loadingPrices, setLoadingPrices] = useState(false);
   const [priceError, setPriceError] = useState(false);
   const [simRisk, setSimRisk] = useState<RiskLevel>(state.user?.riskLevel ?? "moderado");
@@ -3454,13 +3518,26 @@ function SimulatorTab({
                     </div>
                   )}
                   <p style={{ fontSize: 12, color: "#64748b", margin: "6px 0 8px" }}>{asset.lesson}</p>
-                  <button
-                    className="primary"
-                    onClick={() => { setBuyAssetId(asset.id); setBuyAmount("100"); }}
-                    disabled={sim.cashUsd < 1}
-                  >
-                    <ArrowDownCircle size={14} /> Comprar
-                  </button>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button
+                      className="primary"
+                      style={{ flex: 1 }}
+                      onClick={() => { setBuyAssetId(asset.id); setBuyAmount("100"); }}
+                      disabled={sim.cashUsd < 1}
+                    >
+                      <ArrowDownCircle size={14} /> Comprar
+                    </button>
+                    {(sim.dailyPriceHistory?.[asset.id]?.length ?? 0) >= 2 && (
+                      <button
+                        className="ghost"
+                        style={{ padding: "0 12px" }}
+                        onClick={() => { setChartAssetId(asset.id); setChartRange(7); }}
+                        title="Ver gráfico"
+                      >
+                        <LineChart size={16} />
+                      </button>
+                    )}
+                  </div>
                 </article>
               );
             })}
@@ -3605,6 +3682,58 @@ function SimulatorTab({
       <p className="fine-print" style={{ textAlign: "center", color: "var(--muted)", padding: "0 16px 8px" }}>
         Simulador con dinero ficticio · Precios de APIs públicas con posibles demoras · No constituye asesoramiento financiero
       </p>
+
+      {/* ── Modal chart histórico ── */}
+      {chartAssetId && (() => {
+        const asset = SIM_ASSETS.find((a) => a.id === chartAssetId)!;
+        const allPoints = sim.dailyPriceHistory?.[chartAssetId] ?? [];
+        const cutoff = Date.now() - chartRange * 86400000;
+        const points = allPoints.filter((p) => p.t >= cutoff);
+        const currentPrice = sim.prices[chartAssetId] ?? 0;
+        const firstPrice = points.length > 0 ? points[0].p : currentPrice;
+        const changePct = firstPrice > 0 ? ((currentPrice - firstPrice) / firstPrice) * 100 : 0;
+        const isUp = changePct >= 0;
+        return (
+          <div className="modal-overlay" onClick={() => setChartAssetId(null)}>
+            <div className="panel modal-card" onClick={(e) => e.stopPropagation()} style={{ minHeight: 280 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                <div>
+                  <p className="eyebrow" style={{ margin: 0 }}>{asset.symbol} · {asset.name}</p>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginTop: 2 }}>
+                    <strong style={{ fontSize: 20 }}>{formatSimPrice(currentPrice)}</strong>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: isUp ? "#10b981" : "#ef4444" }}>
+                      {isUp ? "▲" : "▼"} {Math.abs(changePct).toFixed(2)}% ({chartRange}d)
+                    </span>
+                  </div>
+                </div>
+                <button className="icon-button light" onClick={() => setChartAssetId(null)}><X size={18} /></button>
+              </div>
+
+              {/* Range selector */}
+              <div className="segmented" style={{ marginBottom: 14 }}>
+                <button type="button" className={chartRange === 7 ? "active" : ""} onClick={() => setChartRange(7)}>7 días</button>
+                <button type="button" className={chartRange === 30 ? "active" : ""} onClick={() => setChartRange(30)}>30 días</button>
+              </div>
+
+              {/* SVG line chart */}
+              {points.length >= 2 ? (
+                <PriceHistoryChart points={points} color={isUp ? "#10b981" : "#ef4444"} />
+              ) : (
+                <p className="fine-print" style={{ textAlign: "center", padding: "32px 0", color: "var(--muted)" }}>
+                  Todavía no hay datos para este período.<br />Los precios se acumulan cada hora.
+                </p>
+              )}
+
+              <button className="primary" style={{ marginTop: 16 }}
+                onClick={() => { setChartAssetId(null); setBuyAssetId(asset.id); setBuyAmount("100"); }}
+                disabled={sim.cashUsd < 1}
+              >
+                <ArrowDownCircle size={14} /> Comprar {asset.symbol}
+              </button>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── Modal de compra ── */}
       {buyAssetId && buyAssetObj && (
@@ -4014,12 +4143,75 @@ function Sparkline({
   );
 }
 
+function PriceHistoryChart({
+  points,
+  color = "#10b981",
+}: {
+  points: Array<{ t: number; p: number }>;
+  color?: string;
+}) {
+  const W = 320, H = 140, PAD = { top: 10, right: 10, bottom: 28, left: 48 };
+  const prices = points.map((d) => d.p);
+  const minP = Math.min(...prices);
+  const maxP = Math.max(...prices);
+  const rangeP = maxP - minP || 1;
+  const innerW = W - PAD.left - PAD.right;
+  const innerH = H - PAD.top - PAD.bottom;
+
+  const toX = (i: number) => PAD.left + (i / (points.length - 1)) * innerW;
+  const toY = (p: number) => PAD.top + innerH - ((p - minP) / rangeP) * innerH;
+
+  const pathD = points.map((d, i) => `${i === 0 ? "M" : "L"} ${toX(i).toFixed(1)} ${toY(d.p).toFixed(1)}`).join(" ");
+  const fillD = `${pathD} L ${toX(points.length - 1).toFixed(1)} ${(PAD.top + innerH).toFixed(1)} L ${PAD.left} ${(PAD.top + innerH).toFixed(1)} Z`;
+
+  // Y axis labels (3 ticks)
+  const yTicks = [minP, (minP + maxP) / 2, maxP];
+
+  // X axis labels (first, mid, last)
+  const xLabels = [0, Math.floor((points.length - 1) / 2), points.length - 1].map((i) => ({
+    x: toX(i),
+    label: new Date(points[i].t).toLocaleDateString("es-AR", { day: "numeric", month: "short" }),
+  }));
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto", display: "block" }}>
+      <defs>
+        <linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.25" />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      {/* Grid lines */}
+      {yTicks.map((tick, i) => (
+        <g key={i}>
+          <line x1={PAD.left} y1={toY(tick)} x2={W - PAD.right} y2={toY(tick)}
+            stroke="var(--border)" strokeWidth="0.5" strokeDasharray="4 4" />
+          <text x={PAD.left - 4} y={toY(tick)} textAnchor="end" dominantBaseline="middle"
+            fontSize={9} fill="var(--muted)">
+            {tick >= 1000 ? `${(tick / 1000).toFixed(1)}k` : tick.toFixed(tick < 1 ? 4 : 2)}
+          </text>
+        </g>
+      ))}
+      {/* Fill */}
+      <path d={fillD} fill="url(#chartFill)" />
+      {/* Line */}
+      <path d={pathD} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round" />
+      {/* Last price dot */}
+      <circle cx={toX(points.length - 1)} cy={toY(prices[prices.length - 1])} r="3" fill={color} />
+      {/* X axis labels */}
+      {xLabels.map(({ x, label }, i) => (
+        <text key={i} x={x} y={H - 6} textAnchor="middle" fontSize={9} fill="var(--muted)">{label}</text>
+      ))}
+    </svg>
+  );
+}
+
 function Brand() {
   return (
     <div className="brand">
       <span>M</span>
       <div>
-        <strong>Mango</strong>
+        <strong>CheMonei</strong>
         <small>hace que rinda</small>
       </div>
     </div>

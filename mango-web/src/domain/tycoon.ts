@@ -345,6 +345,6 @@ export function resolveGameEvent(
 export function realWorldBridge(state: AppState) {
   const expenses = monthlyExpenses(state);
   if (expenses === 0) return "Carga gastos reales para desbloquear misiones automaticas.";
-  if (totalDebt(state) > totalLiquid(state)) return "Tu mundo real pide bajar deuda: Mango Tycoon te premia por cortar intereses.";
+  if (totalDebt(state) > totalLiquid(state)) return "Tu mundo real pide bajar deuda: Monei Tycoon te premia por cortar intereses.";
   return "Tu mundo real esta generando datos. Eso alimenta tu progreso ficticio.";
 }

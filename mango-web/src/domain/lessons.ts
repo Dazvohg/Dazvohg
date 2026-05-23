@@ -73,7 +73,7 @@ export const lessons: Lesson[] = [
       },
       {
         title: "El minimo es tiempo caro",
-        body: "Pagar el minimo evita el problema hoy, pero compra tiempo a una tasa altisima. Por eso Mango insiste en pagar mas que el minimo cuando sea posible.",
+        body: "Pagar el minimo evita el problema hoy, pero compra tiempo a una tasa altisima. Por eso CheMonei insiste en pagar mas que el minimo cuando sea posible.",
       },
       {
         title: "Regla practica",
@@ -115,7 +115,7 @@ export const lessons: Lesson[] = [
     ],
     example: (state) => {
       const liquid = totalLiquid(state);
-      return `Hoy tenes ${money(liquid)} liquidos cargados. Mango puede ayudarte a separar que parte es colchon y que parte se puede invertir o usar para deuda.`;
+      return `Hoy tenes ${money(liquid)} liquidos cargados. CheMonei puede ayudarte a separar que parte es colchon y que parte se puede invertir o usar para deuda.`;
     },
     quiz: {
       question: "Donde NO conviene poner el colchon de emergencia?",

@@ -188,7 +188,8 @@ export type SimulatorState = {
   trades: SimTrade[];
   prices: Record<string, number>; // assetId → USD price
   pricesUpdatedAt?: number;
-  priceHistory: Record<string, Array<{ t: number; p: number }>>; // últimos 48 puntos por asset
+  priceHistory: Record<string, Array<{ t: number; p: number }>>; // últimos 48 puntos (60s) para sparkline
+  dailyPriceHistory: Record<string, Array<{ t: number; p: number }>>; // 1 punto/hora → hasta 720 (30 días)
 };
 
 export type NetWorthSnapshot = {

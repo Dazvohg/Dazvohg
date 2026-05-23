@@ -20,6 +20,35 @@
   --amber-dim:   #1C1200;
 }
 
+/* ── Light mode ─────────────────────────────────────────────────────────────*/
+[data-theme="light"] {
+  --bg:          #F5F5F7;
+  --surface:     #FFFFFF;
+  --surface2:    #F0F0F2;
+  --border:      #D1D5DB;
+  --border2:     #B8BCC4;
+  --text:        #111827;
+  --muted:       #6B7280;
+  --blue:        #2563EB;
+  --blue-dim:    #DBEAFE;
+  --blue-hover:  #1D4ED8;
+  --green:       #059669;
+  --green-dim:   #D1FAE5;
+  --red:         #DC2626;
+  --red-dim:     #FEE2E2;
+  --amber:       #D97706;
+  --amber-dim:   #FEF3C7;
+}
+
+[data-theme="light"] .tabbar {
+  background: rgba(255,255,255,.92);
+  border-top-color: var(--border);
+}
+
+[data-theme="light"] .panel {
+  box-shadow: 0 1px 4px rgba(0,0,0,.08);
+}
+
 /* ── Reset ──────────────────────────────────────────────────────────────────*/
 *, *::before, *::after { box-sizing: border-box; }
 

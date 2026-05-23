@@ -1,4 +1,4 @@
-// Pool de eventos del juego Mango Tycoon.
+// Pool de eventos del juego Monei Tycoon.
 // Cada evento enseña una situación real de finanzas argentinas.
 
 export type EventChoice = {
@@ -6,7 +6,7 @@ export type EventChoice = {
   label: string;
   desc: string;
   consequence: string;
-  baseDelta: number;   // Mangos ganados/perdidos (escala con gameYear)
+  baseDelta: number;   // Moneis ganados/perdidos (escala con gameYear)
   quality: "great" | "ok" | "bad";
   xp: number;
   requiredLessonId?: string;
@@ -62,7 +62,7 @@ export function xpForNextLevel(level: number): number {
 export const LEVEL_NAMES = [
   "", "Inversor Novato", "Ahorrista", "Estratega", "Analista",
   "Inversor Avanzado", "Trader Cripto", "Maestro de Pesos", "Gurú Financiero",
-  "Leyenda Argentina", "Mango Master",
+  "Leyenda Argentina", "Monei Master",
 ];
 
 // ── Logros ────────────────────────────────────────────────────────────────────
@@ -141,7 +141,7 @@ export const GAME_EVENTS: GameEvent[] = [
     category: "inflacion",
     categoryLabel: "INFLACIÓN",
     title: "Inflación del mes: 4.2%",
-    body: "El INDEC publicó la inflación mensual. Tus pesos sin invertir perdieron poder adquisitivo. ¿Cómo protegés tus Mangos?",
+    body: "El INDEC publicó la inflación mensual. Tus pesos sin invertir perdieron poder adquisitivo. ¿Cómo protegés tus Moneis?",
     choices: [
       {
         id: "pesos",
@@ -223,7 +223,7 @@ export const GAME_EVENTS: GameEvent[] = [
     category: "bonus",
     categoryLabel: "BONO",
     title: "¡Llegó el aguinaldo!",
-    body: "Un sueldo extra entra en tu cuenta. En Tycoon: 2.000 Mangos inesperados. Tenés tres opciones para este capital libre.",
+    body: "Un sueldo extra entra en tu cuenta. En Tycoon: 2.000 Moneis inesperados. Tenés tres opciones para este capital libre.",
     choices: [
       {
         id: "gastar",
@@ -266,7 +266,7 @@ export const GAME_EVENTS: GameEvent[] = [
     category: "deuda",
     categoryLabel: "DEUDA / TARJETA",
     title: "Tarjeta refinanciada al 90% TEA",
-    body: "Llegó el resumen. Tenés saldo refinanciado que te cobra 7.5% mensual (90% anual). También tenés Mangos disponibles. ¿Pagás?",
+    body: "Llegó el resumen. Tenés saldo refinanciado que te cobra 7.5% mensual (90% anual). También tenés Moneis disponibles. ¿Pagás?",
     choices: [
       {
         id: "minimo",
@@ -307,7 +307,7 @@ export const GAME_EVENTS: GameEvent[] = [
     category: "emergencia",
     categoryLabel: "EMERGENCIA",
     title: "Emergencia médica inesperada",
-    body: "Un familiar necesita un estudio urgente que no cubre la prepaga. Cuesta el equivalente a 800 Mangos. ¿Cómo lo resolvés?",
+    body: "Un familiar necesita un estudio urgente que no cubre la prepaga. Cuesta el equivalente a 800 Moneis. ¿Cómo lo resolvés?",
     choices: [
       {
         id: "colchon",
@@ -348,7 +348,7 @@ export const GAME_EVENTS: GameEvent[] = [
     category: "bonus",
     categoryLabel: "BONO",
     title: "Bono por desempeño inesperado",
-    body: "Tu empresa te dio un bono. En Tycoon: 1.500 Mangos extras. No estaban en el presupuesto. ¿Qué hacés con la plata que 'sobra'?",
+    body: "Tu empresa te dio un bono. En Tycoon: 1.500 Moneis extras. No estaban en el presupuesto. ¿Qué hacés con la plata que 'sobra'?",
     choices: [
       {
         id: "vacaciones",
@@ -597,20 +597,20 @@ export const GAME_EVENTS: GameEvent[] = [
     category: "oportunidad",
     categoryLabel: "RIESGO ALTO",
     title: "Un amigo te pide invertir en su startup",
-    body: "Tu amigo de confianza tiene una idea prometedora. Necesita 3.000 Mangos y promete devolverte 5.000 en 6 meses. ¿Invertís?",
+    body: "Tu amigo de confianza tiene una idea prometedora. Necesita 3.000 Moneis y promete devolverte 5.000 en 6 meses. ¿Invertís?",
     choices: [
       {
         id: "todo",
         label: "Invertir todo (3.000 M)",
         desc: "Confío en él, es una gran oportunidad.",
-        consequence: "La startup no despegó. Perdiste los Mangos y la dinámica de la amistad cambió. Las startups fallan el 90% de las veces.",
+        consequence: "La startup no despegó. Perdiste los Moneis y la dinámica de la amistad cambió. Las startups fallan el 90% de las veces.",
         baseDelta: -2000,
         quality: "bad",
         xp: 10,
       },
       {
         id: "poco",
-        label: "Solo 500 Mangos",
+        label: "Solo 500 Moneis",
         desc: "Invierto solo lo que puedo perder.",
         consequence: "Inteligente. Invertís lo que podés perder. Si falla: pérdida tolerable. Si sale bien: gran upside.",
         baseDelta: 300,
@@ -1525,7 +1525,7 @@ export const GAME_EVENTS: GameEvent[] = [
     category: "oportunidad",
     categoryLabel: "EXIT",
     title: "¡La startup de tu amigo vendió!",
-    body: "La startup de tu amigo fue adquirida. Invertiste 500 Mangos con capital de riesgo real. La valuación de exit te da un múltiplo de 3x. Cobrás 1.500 Mangos. ¿Cómo procesás esta experiencia?",
+    body: "La startup de tu amigo fue adquirida. Invertiste 500 Moneis con capital de riesgo real. La valuación de exit te da un múltiplo de 3x. Cobrás 1.500 Moneis. ¿Cómo procesás esta experiencia?",
     choices: [
       {
         id: "reinvertir-aprendizaje",

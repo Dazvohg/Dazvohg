@@ -50,7 +50,8 @@ export function loadState(): AppState {
 }
 
 export function saveState(state: AppState) {
-  const ph = state.simulator.priceHistory ?? {};
+  const ph  = state.simulator.priceHistory ?? {};
+  const dph = state.simulator.dailyPriceHistory ?? {};
   const trimmed: AppState = {
     ...state,
     rates: {
@@ -62,6 +63,9 @@ export function saveState(state: AppState) {
       trades: state.simulator.trades.slice(0, 50),
       priceHistory: Object.fromEntries(
         Object.entries(ph).map(([k, v]) => [k, v.slice(-48)]),
+      ),
+      dailyPriceHistory: Object.fromEntries(
+        Object.entries(dph).map(([k, v]) => [k, v.slice(-720)]),
       ),
     },
     tycoon: {
