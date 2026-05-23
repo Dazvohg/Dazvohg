@@ -3,7 +3,7 @@ import { initialSimulatorState } from "../domain/simulator";
 import type { AppState } from "../domain/types";
 
 // v3: agrega game loop (level, xp, events, achievements)
-const KEY = "mango:state:v3";
+const KEY = "chemonei:state:v1";
 
 export const initialState: AppState = {
   user: null,

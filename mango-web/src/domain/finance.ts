@@ -1,11 +1,11 @@
 import type { AppState, Budget, Card, ExpenseCategory, Goal, NetWorthSnapshot, Rates, RiskLevel } from "./types";
 
 export const defaultRates: Rates = {
-  oficial: 1020,
-  mep: 1185,
-  ccl: 1210,
-  blue: 1175,
-  cripto: 1195,
+  oficial: 1070,
+  mep: 1250,
+  ccl: 1270,
+  blue: 1265,
+  cripto: 1240,
   source: "demo",
 };
 

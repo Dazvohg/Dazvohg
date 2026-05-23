@@ -632,7 +632,7 @@ function Onboarding({
 
 // ─── Legal ───────────────────────────────────────────────────────────────────
 
-const CONTACT_EMAIL = "hola@usemango.app";
+const CONTACT_EMAIL = "hola@usechemonei.app";
 const TERMS_DATE    = "Mayo 2026";
 
 function TosContent() {
@@ -2653,7 +2653,7 @@ function CardForm({ setState }: { setState: React.Dispatch<React.SetStateAction<
 
 // ─── GroupTab ─────────────────────────────────────────────────────────────────
 
-const APP_BASE = typeof window !== "undefined" ? window.location.origin : "https://usemango.app";
+const APP_BASE = typeof window !== "undefined" ? window.location.origin : "https://usechemonei.app";
 
 function GroupTab({
   authUserId,
