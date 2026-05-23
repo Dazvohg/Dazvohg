@@ -22,6 +22,9 @@ import {
   ArrowUpCircle,
   Zap,
   X,
+  Users,
+  Copy,
+  Check,
 } from "lucide-react";
 import type React from "react";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -91,9 +94,15 @@ import { resetState } from "../services/storage";
 import { supabase } from "../services/supabase";
 import { deleteRemoteState } from "../services/db";
 import { getIsPro, createCheckout } from "../services/billing";
+import {
+  createGroup, joinGroupByToken, getMyGroup, leaveGroup,
+  getGroupMembers, getGroupExpenses, addGroupExpense, deleteGroupExpense,
+  computeBalance,
+} from "../services/groups";
+import type { GroupExpense, GroupMember, SharedGroup } from "../domain/types";
 import { usePersistentState } from "./usePersistentState";
 
-type Tab = "home" | "simulador" | "learn" | "tycoon" | "expenses" | "goals" | "mercados" | "profile";
+type Tab = "home" | "simulador" | "learn" | "tycoon" | "expenses" | "goals" | "mercados" | "profile" | "grupo";
 
 const categoryOptions = Object.entries(categories) as Array<
   [ExpenseCategory, { label: string; color: string }]
@@ -207,7 +216,14 @@ export function App() {
       getIsPro(authUserId).then(setIsPro);
       window.history.replaceState({}, "", window.location.pathname);
     }
+    // Handle group invite link: ?join=TOKEN
+    if (params.get("join")) {
+      setPendingGroupToken(params.get("join")!);
+      window.history.replaceState({}, "", window.location.pathname);
+    }
   }, [authUserId]);
+
+  const [pendingGroupToken, setPendingGroupToken] = useState<string | null>(null);
 
   const userId = guestMode ? undefined : (authUserId ?? undefined);
 
@@ -280,6 +296,7 @@ export function App() {
         {tab === "goals"     && <GoalsTab state={state} setState={setState} />}
         {tab === "mercados"  && <MercadosTab state={state} setTab={setTab} />}
         {tab === "profile"   && <ProfileTab state={state} setState={setState} authUserId={authUserId} isPro={isPro} onSignOut={handleSignOut} onUpgrade={() => setShowUpgrade(true)} />}
+        {tab === "grupo"     && <GroupTab authUserId={authUserId} displayName={state.user?.name ?? "Yo"} pendingToken={pendingGroupToken} onTokenConsumed={() => setPendingGroupToken(null)} rates={state.rates} />}
       </main>
       <TabBar tab={tab} setTab={setTab} />
       {showUpgrade && <UpgradeModal onClose={() => setShowUpgrade(false)} isPro={isPro} />}
@@ -2572,6 +2589,349 @@ function CardForm({ setState }: { setState: React.Dispatch<React.SetStateAction<
   );
 }
 
+// ─── GroupTab ─────────────────────────────────────────────────────────────────
+
+const APP_BASE = typeof window !== "undefined" ? window.location.origin : "https://usemango.app";
+
+function GroupTab({
+  authUserId,
+  displayName,
+  pendingToken,
+  onTokenConsumed,
+  rates,
+}: {
+  authUserId: string | null;
+  displayName: string;
+  pendingToken: string | null;
+  onTokenConsumed: () => void;
+  rates: AppState["rates"];
+}) {
+  const [group,    setGroup]    = useState<SharedGroup | null | "loading">("loading");
+  const [members,  setMembers]  = useState<GroupMember[]>([]);
+  const [expenses, setExpenses] = useState<GroupExpense[]>([]);
+  const [screen,   setScreen]   = useState<"main" | "create" | "join">("main");
+  const [copied,   setCopied]   = useState(false);
+
+  // form state
+  const [groupName,    setGroupName]    = useState("");
+  const [joinName,     setJoinName]     = useState(displayName);
+  const [newAmount,    setNewAmount]    = useState("");
+  const [newDesc,      setNewDesc]      = useState("");
+  const [newCategory,  setNewCategory]  = useState<ExpenseCategory>("otros");
+  const [newDate,      setNewDate]      = useState(new Date().toISOString().slice(0, 10));
+  const [submitting,   setSubmitting]   = useState(false);
+  const [error,        setError]        = useState<string | null>(null);
+
+  // Load group on mount
+  useEffect(() => {
+    if (!authUserId) { setGroup(null); return; }
+    getMyGroup(authUserId).then((g) => {
+      setGroup(g);
+      if (g) loadGroupData(g.id);
+    });
+  }, [authUserId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // If we arrived with a pending join token, open the join screen
+  useEffect(() => {
+    if (pendingToken && group !== "loading") setScreen("join");
+  }, [pendingToken, group]);
+
+  async function loadGroupData(groupId: string) {
+    const [m, e] = await Promise.all([getGroupMembers(groupId), getGroupExpenses(groupId)]);
+    setMembers(m);
+    setExpenses(e);
+  }
+
+  async function handleCreate(ev: FormEvent) {
+    ev.preventDefault();
+    if (!groupName.trim()) return;
+    setSubmitting(true); setError(null);
+    const g = await createGroup(groupName, displayName);
+    if (!g) { setError("No se pudo crear el grupo."); setSubmitting(false); return; }
+    setGroup(g);
+    await loadGroupData(g.id);
+    setScreen("main");
+    setGroupName("");
+    setSubmitting(false);
+  }
+
+  async function handleJoin(ev: FormEvent) {
+    ev.preventDefault();
+    const token = pendingToken ?? "";
+    if (!token || !joinName.trim()) return;
+    setSubmitting(true); setError(null);
+    const g = await joinGroupByToken(token, joinName);
+    if (!g) { setError("Invitación inválida o expirada."); setSubmitting(false); return; }
+    onTokenConsumed();
+    setGroup(g);
+    await loadGroupData(g.id);
+    setScreen("main");
+    setSubmitting(false);
+  }
+
+  async function handleAddExpense(ev: FormEvent) {
+    ev.preventDefault();
+    if (!group || group === "loading" || !newAmount) return;
+    setSubmitting(true);
+    const expense = await addGroupExpense(group.id, {
+      category: newCategory,
+      amount: Number(newAmount),
+      description: newDesc.trim() || newCategory,
+      date: newDate,
+    });
+    if (expense) {
+      setExpenses((prev) => [expense, ...prev]);
+      setNewAmount(""); setNewDesc("");
+    }
+    setSubmitting(false);
+  }
+
+  async function handleDelete(id: string) {
+    await deleteGroupExpense(id);
+    setExpenses((prev) => prev.filter((e) => e.id !== id));
+  }
+
+  async function handleLeave() {
+    if (!group || group === "loading" || !authUserId) return;
+    if (!confirm("¿Salir del grupo? Ya no verás los gastos compartidos.")) return;
+    await leaveGroup(group.id, authUserId);
+    setGroup(null); setMembers([]); setExpenses([]);
+  }
+
+  function copyInviteLink() {
+    if (!group || group === "loading") return;
+    const url = `${APP_BASE}?join=${group.invite_token}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+
+  // ── No autenticado ──
+  if (!authUserId) {
+    return (
+      <div style={{ padding: 24, textAlign: "center" }}>
+        <PageIntro title="Gastos grupales" text="Necesitás una cuenta para usar grupos." />
+        <p className="fine-print" style={{ marginTop: 8 }}>Creá tu cuenta en Perfil → Cuenta.</p>
+      </div>
+    );
+  }
+
+  // ── Cargando ──
+  if (group === "loading") {
+    return <div style={{ padding: 32, textAlign: "center", color: "var(--muted)" }}>Cargando…</div>;
+  }
+
+  // ── Crear grupo ──
+  if (screen === "create") {
+    return (
+      <div style={{ padding: 20 }}>
+        <PageIntro title="Nuevo grupo" text="Creá un espacio compartido de gastos." />
+        <form className="panel form-grid" onSubmit={handleCreate}>
+          <label>
+            Nombre del grupo
+            <input
+              placeholder="ej. Casa 2025, Viaje Bariloche..."
+              value={groupName}
+              onChange={(e) => setGroupName(e.target.value)}
+              required
+            />
+          </label>
+          {error && <p style={{ color: "#ef4444", fontSize: 13 }}>{error}</p>}
+          <div style={{ display: "flex", gap: 10 }}>
+            <button type="button" className="ghost" onClick={() => setScreen("main")}>Cancelar</button>
+            <button type="submit" className="primary" disabled={submitting} style={{ flex: 1 }}>
+              {submitting ? "Creando…" : "Crear grupo"}
+            </button>
+          </div>
+        </form>
+      </div>
+    );
+  }
+
+  // ── Unirse a grupo ──
+  if (screen === "join") {
+    return (
+      <div style={{ padding: 20 }}>
+        <PageIntro title="Unirse al grupo" text="Alguien te invitó a un espacio compartido." />
+        <form className="panel form-grid" onSubmit={handleJoin}>
+          <label>
+            Tu nombre en el grupo
+            <input
+              value={joinName}
+              onChange={(e) => setJoinName(e.target.value)}
+              placeholder="Como querés que te vean"
+              required
+            />
+          </label>
+          {error && <p style={{ color: "#ef4444", fontSize: 13 }}>{error}</p>}
+          <div style={{ display: "flex", gap: 10 }}>
+            <button type="button" className="ghost" onClick={() => { onTokenConsumed(); setScreen("main"); }}>Cancelar</button>
+            <button type="submit" className="primary" disabled={submitting} style={{ flex: 1 }}>
+              {submitting ? "Uniéndose…" : "Unirme al grupo"}
+            </button>
+          </div>
+        </form>
+      </div>
+    );
+  }
+
+  // ── Sin grupo ──
+  if (!group) {
+    return (
+      <div style={{ padding: 24 }}>
+        <PageIntro title="Grupos" text="Gastos compartidos para parejas, roomies o viajes." />
+        <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 8 }}>
+          <button className="primary" onClick={() => setScreen("create")}>
+            + Crear un grupo
+          </button>
+          {pendingToken && (
+            <button className="ghost" onClick={() => setScreen("join")}>
+              Tengo una invitación
+            </button>
+          )}
+        </div>
+        <div style={{ marginTop: 24, padding: 16, background: "var(--surface-alt, var(--surface))", borderRadius: 14 }}>
+          <p style={{ fontSize: 13, color: "var(--muted)", margin: 0, lineHeight: 1.6 }}>
+            💡 Creá un grupo → compartí el QR o el link → todos agregan sus gastos → Mango muestra quién puso qué y cómo quedar a mano.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Grupo activo ──
+  const balance = computeBalance(members, expenses);
+  const myBalance = balance.find((b) => b.userId === authUserId);
+  const total = expenses.reduce((s, e) => s + e.amount, 0);
+  const inviteUrl = `${APP_BASE}?join=${group.invite_token}`;
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(inviteUrl)}`;
+
+  return (
+    <>
+      <PageIntro title={group.name} text={`${members.length} miembro${members.length !== 1 ? "s" : ""} · ${expenses.length} gastos`} />
+
+      {/* Balance personal */}
+      {myBalance && (
+        <section className="panel" style={{ textAlign: "center" }}>
+          <p className="eyebrow">Tu balance</p>
+          <span style={{
+            fontSize: 28, fontWeight: 800,
+            color: myBalance.balance >= 0 ? "#10b981" : "#ef4444",
+          }}>
+            {myBalance.balance >= 0 ? "+" : ""}{money(myBalance.balance)}
+          </span>
+          <p className="fine-print" style={{ marginTop: 4 }}>
+            {myBalance.balance > 50 ? "El grupo te debe" : myBalance.balance < -50 ? "Debés al grupo" : "Estás a mano ✓"}
+            {" · "}Pusiste {money(myBalance.paid)} de {money(myBalance.fairShare)} que te tocan
+          </p>
+        </section>
+      )}
+
+      {/* Balance de todos */}
+      <section className="panel">
+        <p className="eyebrow">Quién puso qué</p>
+        <div className="list embedded">
+          {balance.map((b) => (
+            <div className="list-row" key={b.userId}>
+              <div>
+                <strong>{b.displayName}{b.userId === authUserId ? " (vos)" : ""}</strong>
+                <span>{money(b.paid)} pagados</span>
+              </div>
+              <span style={{
+                fontWeight: 700, fontSize: 14,
+                color: b.balance >= 0 ? "#10b981" : "#ef4444",
+              }}>
+                {b.balance >= 0 ? "+" : ""}{money(b.balance)}
+              </span>
+            </div>
+          ))}
+        </div>
+        <p className="fine-print" style={{ marginTop: 10 }}>Total del grupo: {money(total)}</p>
+      </section>
+
+      {/* Agregar gasto */}
+      <form className="panel form-grid" onSubmit={handleAddExpense}>
+        <p className="eyebrow">Agregar gasto al grupo</p>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <label>
+            Monto $
+            <input type="number" min="1" value={newAmount} onChange={(e) => setNewAmount(e.target.value)} placeholder="0" required />
+          </label>
+          <label>
+            Categoría
+            <select value={newCategory} onChange={(e) => setNewCategory(e.target.value as ExpenseCategory)}>
+              {categoryOptions.map(([id, { label }]) => (
+                <option key={id} value={id}>{label}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <label>
+          Descripción (opcional)
+          <input value={newDesc} onChange={(e) => setNewDesc(e.target.value)} placeholder="ej. Supermercado semanal" />
+        </label>
+        <label>
+          Fecha
+          <input type="date" value={newDate} onChange={(e) => setNewDate(e.target.value)} />
+        </label>
+        <button type="submit" className="primary" disabled={submitting || !newAmount}>
+          {submitting ? "Guardando…" : "Agregar gasto"}
+        </button>
+      </form>
+
+      {/* Lista de gastos */}
+      {expenses.length > 0 && (
+        <section className="panel">
+          <p className="eyebrow">Gastos compartidos</p>
+          <div className="list embedded">
+            {expenses.map((e) => {
+              const memberName = members.find((m) => m.user_id === e.added_by)?.display_name ?? "Alguien";
+              const isOwn = e.added_by === authUserId;
+              return (
+                <div className="list-row" key={e.id}>
+                  <div>
+                    <strong>{e.description}</strong>
+                    <span>{memberName} · {new Date(e.date).toLocaleDateString("es-AR", { day: "numeric", month: "short" })}</span>
+                  </div>
+                  <div className="row-actions">
+                    <strong>{money(e.amount)}</strong>
+                    {isOwn && (
+                      <button className="icon-button light" onClick={() => handleDelete(e.id)}>
+                        <Trash2 size={15} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* Invitar al grupo */}
+      <section className="panel">
+        <p className="eyebrow">Invitar al grupo</p>
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 14 }}>
+          <img src={qrUrl} alt="QR de invitación" width={160} height={160} style={{ borderRadius: 12, border: "4px solid var(--surface)" }} />
+        </div>
+        <button className="ghost" onClick={copyInviteLink} style={{ width: "100%", gap: 8 }}>
+          {copied ? <Check size={16} /> : <Copy size={16} />}
+          {copied ? "¡Link copiado!" : "Copiar link de invitación"}
+        </button>
+        <p className="fine-print" style={{ marginTop: 8, wordBreak: "break-all", opacity: 0.6 }}>{inviteUrl}</p>
+      </section>
+
+      {/* Salir del grupo */}
+      <section className="panel danger">
+        <p className="eyebrow">Zona sensible</p>
+        <button className="danger-button" onClick={handleLeave}>Salir del grupo</button>
+        <p className="fine-print" style={{ marginTop: 8 }}>Los gastos que cargaste seguirán visibles para el resto.</p>
+      </section>
+    </>
+  );
+}
+
 function TabBar({ tab, setTab }: { tab: Tab; setTab: (tab: Tab) => void }) {
   const tabs = [
     { id: "home"      as const, label: "Hoy",       icon: Home },
@@ -2580,6 +2940,7 @@ function TabBar({ tab, setTab }: { tab: Tab; setTab: (tab: Tab) => void }) {
     { id: "simulador" as const, label: "Simular",   icon: TrendingUp },
     { id: "learn"     as const, label: "Aprender",  icon: BookOpen },
     { id: "tycoon"    as const, label: "Juego",     icon: Building2 },
+    { id: "grupo"     as const, label: "Grupo",     icon: Users },
     { id: "mercados"  as const, label: "Pro",       icon: Zap, premium: true },
     { id: "profile"   as const, label: "Yo",        icon: UserRound },
   ];

@@ -196,6 +196,34 @@ export type NetWorthSnapshot = {
   value: number; // net worth in ARS at that point
 };
 
+// ── Grupos compartidos ─────────────────────────────────────────────────────────
+
+export type SharedGroup = {
+  id: string;
+  name: string;
+  created_by: string;
+  invite_token: string;
+  created_at: string;
+};
+
+export type GroupMember = {
+  group_id: string;
+  user_id: string;
+  display_name: string;
+  joined_at: string;
+};
+
+export type GroupExpense = {
+  id: string;
+  group_id: string;
+  added_by: string;
+  category: ExpenseCategory;
+  amount: number;
+  description: string;
+  date: string;
+  created_at: string;
+};
+
 export type AppState = {
   user: UserProfile | null;
   accounts: Account[];

@@ -823,11 +823,11 @@ button:disabled { opacity: .45; cursor: not-allowed; }
   gap: 4px;
   flex: 1;
   flex-shrink: 0;
-  min-width: 52px;
+  min-width: 48px;
   border: 0;
   background: transparent;
   color: var(--muted);
-  padding: 10px 4px 12px;
+  padding: 10px 2px 12px;
   font-size: 9px;
   font-weight: 700;
   text-transform: uppercase;
