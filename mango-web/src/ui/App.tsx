@@ -104,6 +104,11 @@ import {
 } from "../services/groups";
 import type { GroupExpense, GroupMember, SharedGroup } from "../domain/types";
 import { usePersistentState } from "./usePersistentState";
+import { classify } from "../ml/categorizer";
+import { smoothPrices, adaptiveMeasurementNoise } from "../ml/kalman";
+import { computePortfolioStats, runMonteCarlo } from "../ml/monteCarlo";
+import { optimizeMarkowitz, compareToOptimal } from "../ml/markowitz";
+import { detectSpendingAnomalies } from "../ml/anomaly";
 
 type Tab = "home" | "simulador" | "learn" | "tycoon" | "expenses" | "goals" | "mercados" | "profile" | "grupo";
 
@@ -1002,6 +1007,7 @@ function HomeTab({
 }) {
   const advices = advice(state);
   const [adviceIdx, setAdviceIdx] = useState(0);
+  const anomalies = useMemo(() => detectSpendingAnomalies(state.expenses), [state.expenses]);
   const currentAdvice = advices[Math.min(adviceIdx, advices.length - 1)];
   const expenses = monthlyExpenses(state);
   const budget = budgetHealth(state);
@@ -1056,6 +1062,20 @@ function HomeTab({
           Ir → {currentAdvice.tab === "profile" ? "Mi perfil" : currentAdvice.tab === "learn" ? "Aprender" : currentAdvice.tab === "expenses" ? "Gastos" : currentAdvice.tab === "goals" ? "Metas" : currentAdvice.tab === "simulador" ? "Simulador" : currentAdvice.tab === "mercados" ? "Mercados" : "Tycoon"}
         </button>
       </section>
+
+      {anomalies.length > 0 && (
+        <section className="panel" style={{ borderLeft: "3px solid #f59e0b" }}>
+          <p className="eyebrow" style={{ color: "#f59e0b" }}>Alertas de gasto</p>
+          {anomalies.slice(0, 2).map((a) => (
+            <div key={a.category} style={{ marginBottom: a === anomalies[Math.min(1, anomalies.length - 1)] ? 0 : 8 }}>
+              <p style={{ margin: 0, fontSize: 13 }}>{a.message}</p>
+            </div>
+          ))}
+          <button className="ghost small" style={{ marginTop: 8 }} onClick={() => setTab("expenses")}>
+            Ver gastos →
+          </button>
+        </section>
+      )}
 
       <button className="tycoon-entry" onClick={() => setTab("tycoon")}>
         <div>
@@ -1868,6 +1888,13 @@ function ExpensesTab({
   const [budgetLimit, setBudgetLimit] = useState("");
   const [visibleCount, setVisibleCount] = useState(12);
   const total = monthlyExpenses(state);
+
+  const suggestion = useMemo(() => {
+    if (description.length < 3) return null;
+    const result = classify(description);
+    if (!result || result.confidence < 0.35) return null;
+    return result;
+  }, [description]);
   const byCategory = useMemo(() => {
     const map = new Map<ExpenseCategory, number>();
     for (const expense of state.expenses) {
@@ -2002,6 +2029,16 @@ function ExpensesTab({
         <label>
           Descripcion
           <input value={description} onChange={(event) => setDescription(event.target.value)} />
+          {suggestion && suggestion.category !== category && (
+            <button
+              type="button"
+              className="ghost small"
+              style={{ marginTop: 4, fontSize: 11 }}
+              onClick={() => setCategory(suggestion.category)}
+            >
+              IA sugiere: {categories[suggestion.category]?.label ?? suggestion.category} ({Math.round(suggestion.confidence * 100)}%) — aplicar
+            </button>
+          )}
         </label>
         <label>
           Categoria
@@ -3386,6 +3423,26 @@ function SimulatorTab({
   const pnlPct      = simPnlPct(sim);
   const portfolioVal = simPortfolioValue(sim);
 
+  const mcResult = useMemo(() => {
+    if (sim.positions.length === 0) return null;
+    const stats = computePortfolioStats(sim.positions, sim.prices, sim.dailyPriceHistory ?? {});
+    if (!stats.hasData) return null;
+    return runMonteCarlo(stats.volatility, stats.drift, 30, 400);
+  }, [sim.positions, sim.prices, sim.dailyPriceHistory]);
+
+  const markowitzResult = useMemo(() => {
+    if (sim.positions.length < 2) return null;
+    const ids = sim.positions.map((p) => p.assetId);
+    return optimizeMarkowitz(ids, sim.dailyPriceHistory ?? {});
+  }, [sim.positions, sim.dailyPriceHistory]);
+
+  const markowitzSuggestions = useMemo(() => {
+    if (!markowitzResult || sim.positions.length === 0) return [];
+    return compareToOptimal(sim.positions, sim.prices, markowitzResult).suggestions
+      .filter((s) => s.action !== "hold")
+      .slice(0, 3);
+  }, [markowitzResult, sim.positions, sim.prices]);
+
   const buyAssetObj  = SIM_ASSETS.find((a) => a.id === buyAssetId);
   const buyUsd       = Number(buyAmount) || 0;
   const buyQtyPreview = buyAssetObj && sim.prices[buyAssetId!]
@@ -3485,6 +3542,8 @@ function SimulatorTab({
               const price   = sim.prices[asset.id] ?? asset.defaultPrice;
               const pos     = sim.positions.find((p) => p.assetId === asset.id);
               const history = sim.priceHistory?.[asset.id] ?? [];
+              const kHistory = history.length >= 5 ? smoothPrices(history, adaptiveMeasurementNoise(history)) : null;
+              const kPrice = kHistory ? kHistory[kHistory.length - 1]?.p : null;
               return (
                 <article className="asset-card" key={asset.id}>
                   <div className="asset-topline">
@@ -3502,6 +3561,9 @@ function SimulatorTab({
                     </div>
                     <div style={{ textAlign: "right" }}>
                       <strong style={{ fontSize: 15 }}>{formatSimPrice(price)}</strong>
+                      {kPrice && Math.abs(kPrice - price) / price > 0.001 && (
+                        <div style={{ fontSize: 10, color: "#94a3b8" }}>~{formatSimPrice(kPrice)} suav.</div>
+                      )}
                       {asset.category === "bono" && (
                         <div style={{ fontSize: 10, color: "#94a3b8" }}>precio ref.</div>
                       )}
@@ -3593,6 +3655,52 @@ function SimulatorTab({
               })}
             </div>
           )}
+          {mcResult && (
+            <section className="panel" style={{ marginTop: 12 }}>
+              <p className="eyebrow">Monte Carlo — próximos 30 días</p>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginTop: 8 }}>
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: mcResult.probGain >= 0.5 ? "#10b981" : "#ef4444" }}>
+                    {Math.round(mcResult.probGain * 100)}%
+                  </div>
+                  <div style={{ fontSize: 10, color: "#94a3b8" }}>P(ganancia)</div>
+                </div>
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: mcResult.expectedReturnPct >= 0 ? "#10b981" : "#ef4444" }}>
+                    {mcResult.expectedReturnPct >= 0 ? "+" : ""}{mcResult.expectedReturnPct.toFixed(1)}%
+                  </div>
+                  <div style={{ fontSize: 10, color: "#94a3b8" }}>retorno esperado</div>
+                </div>
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: "#f59e0b" }}>
+                    -{mcResult.var95Pct.toFixed(1)}%
+                  </div>
+                  <div style={{ fontSize: 10, color: "#94a3b8" }}>VaR 95%</div>
+                </div>
+              </div>
+              <p style={{ fontSize: 11, color: "#64748b", marginTop: 8, marginBottom: 0 }}>
+                Simulación GBM · 400 escenarios · no es garantía de rendimiento
+              </p>
+            </section>
+          )}
+
+          {markowitzSuggestions.length > 0 && (
+            <section className="panel" style={{ marginTop: 8 }}>
+              <p className="eyebrow">Markowitz — optimización de cartera</p>
+              {markowitzSuggestions.map((s) => (
+                <div key={s.assetId} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0", borderBottom: "1px solid var(--border)" }}>
+                  <span style={{ fontSize: 13 }}>{s.assetId}</span>
+                  <span style={{ fontSize: 12, color: s.action === "increase" ? "#10b981" : s.action === "decrease" ? "#f59e0b" : "#ef4444", fontWeight: 600 }}>
+                    {s.action === "increase" ? "↑ aumentar" : s.action === "decrease" ? "↓ reducir" : "✕ salir"} {Math.abs(Math.round(s.deltaPct))}%
+                  </span>
+                </div>
+              ))}
+              <p style={{ fontSize: 11, color: "#64748b", marginTop: 6, marginBottom: 0 }}>
+                Pesos óptimos por máximo Sharpe · tasa libre de riesgo 38% TNA
+              </p>
+            </section>
+          )}
+
           <div style={{ marginTop: 12 }}>
             <button
               className="danger-button"
