@@ -105,6 +105,9 @@ import {
 import type { GroupExpense, GroupMember, SharedGroup } from "../domain/types";
 import { usePersistentState } from "./usePersistentState";
 import { classify } from "../ml/categorizer";
+import { ensembleClassify } from "../ml/neuralnet";
+import { callSmartAdvice, callOcrReceipt, fileToBase64 } from "../services/ai";
+import type { SmartAdviceSummary } from "../services/ai";
 import { smoothPrices, adaptiveMeasurementNoise } from "../ml/kalman";
 import { computePortfolioStats, runMonteCarlo } from "../ml/monteCarlo";
 import { optimizeMarkowitz, compareToOptimal } from "../ml/markowitz";
@@ -1005,10 +1008,13 @@ function HomeTab({
   setState: React.Dispatch<React.SetStateAction<AppState>>;
   setTab: (tab: Tab) => void;
 }) {
-  const advices = advice(state);
+  const localAdvices = advice(state);
+  const [aiAdvices, setAiAdvices] = useState<typeof localAdvices>([]);
+  const [loadingAi, setLoadingAi] = useState(false);
+  const allAdvices = aiAdvices.length > 0 ? aiAdvices : localAdvices;
   const [adviceIdx, setAdviceIdx] = useState(0);
   const anomalies = useMemo(() => detectSpendingAnomalies(state.expenses), [state.expenses]);
-  const currentAdvice = advices[Math.min(adviceIdx, advices.length - 1)];
+  const currentAdvice = allAdvices[Math.min(adviceIdx, allAdvices.length - 1)];
   const expenses = monthlyExpenses(state);
   const budget = budgetHealth(state);
   const nextCard = [...state.cards].sort((a, b) => cardUrgency(a) - cardUrgency(b))[0];
@@ -1016,6 +1022,40 @@ function HomeTab({
   async function refresh() {
     const rates = await fetchRates(state.rates);
     setState((current) => ({ ...current, rates }));
+  }
+
+  async function refreshAiAdvice() {
+    if (loadingAi || !state.user) return;
+    setLoadingAi(true);
+    try {
+      const byCategory = [...state.expenses].reduce((m, e) => {
+        m.set(e.category, (m.get(e.category) ?? 0) + e.myShare);
+        return m;
+      }, new Map<string, number>());
+      const topCat = [...byCategory.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+      const summary: SmartAdviceSummary = {
+        salary: state.user.salary,
+        totalExpenses: expenses,
+        totalDebt: totalDebt(state),
+        totalLiquid: totalLiquid(state),
+        inflationMonthly: state.live.inflationMonthly ?? null,
+        countryRisk: state.live.countryRisk ?? null,
+        blueDolar: state.rates.blue,
+        mepDolar: state.rates.mep,
+        riskLevel: state.user.riskLevel,
+        simPnlPct: state.simulator.positions.length > 0 ? simPnlPct(state.simulator) : null,
+        topExpenseCategory: topCat,
+        goalsCount: state.goals.length,
+        hasCards: state.cards.length > 0,
+      };
+      const result = await callSmartAdvice(summary);
+      if (result.length > 0) {
+        setAiAdvices(result);
+        setAdviceIdx(0);
+      }
+    } finally {
+      setLoadingAi(false);
+    }
   }
 
   const urgencyBorder: Record<string, string> = {
@@ -1035,22 +1075,40 @@ function HomeTab({
         style={{ borderLeft: `3px solid ${urgencyBorder[currentAdvice.urgency]}` }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-          <p className="eyebrow">Asesor CheMonei</p>
-          {advices.length > 1 && (
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <div>
+            <p className="eyebrow">
+              Asesor CheMonei
+              {aiAdvices.length > 0 && <span style={{ marginLeft: 6, color: "#6366f1", fontSize: 10 }}>IA</span>}
+            </p>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            {state.user && (
               <button
                 className="ghost small"
-                style={{ padding: "2px 6px", minHeight: 0 }}
-                onClick={() => setAdviceIdx((i) => (i - 1 + advices.length) % advices.length)}
-              >‹</button>
-              <span className="fine-print">{adviceIdx + 1}/{advices.length}</span>
-              <button
-                className="ghost small"
-                style={{ padding: "2px 6px", minHeight: 0 }}
-                onClick={() => setAdviceIdx((i) => (i + 1) % advices.length)}
-              >›</button>
-            </div>
-          )}
+                style={{ padding: "2px 6px", minHeight: 0, fontSize: 12 }}
+                onClick={refreshAiAdvice}
+                disabled={loadingAi}
+                title="Consejo con IA"
+              >
+                {loadingAi ? "..." : "✦ IA"}
+              </button>
+            )}
+            {allAdvices.length > 1 && (
+              <>
+                <button
+                  className="ghost small"
+                  style={{ padding: "2px 6px", minHeight: 0 }}
+                  onClick={() => setAdviceIdx((i) => (i - 1 + allAdvices.length) % allAdvices.length)}
+                >‹</button>
+                <span className="fine-print">{adviceIdx + 1}/{allAdvices.length}</span>
+                <button
+                  className="ghost small"
+                  style={{ padding: "2px 6px", minHeight: 0 }}
+                  onClick={() => setAdviceIdx((i) => (i + 1) % allAdvices.length)}
+                >›</button>
+              </>
+            )}
+          </div>
         </div>
         <h3>{currentAdvice.title}</h3>
         <p>{currentAdvice.body}</p>
@@ -1887,11 +1945,14 @@ function ExpensesTab({
   const [budgetCategory, setBudgetCategory] = useState<ExpenseCategory>("super");
   const [budgetLimit, setBudgetLimit] = useState("");
   const [visibleCount, setVisibleCount] = useState(12);
+  const [ocrLoading, setOcrLoading] = useState(false);
+  const [ocrError, setOcrError] = useState(false);
+  const ocrInputRef = useRef<HTMLInputElement>(null);
   const total = monthlyExpenses(state);
 
   const suggestion = useMemo(() => {
     if (description.length < 3) return null;
-    const result = classify(description);
+    const result = ensembleClassify(description);
     if (!result || result.confidence < 0.35) return null;
     return result;
   }, [description]);
@@ -1924,6 +1985,30 @@ function ExpensesTab({
     }));
     setAmount("");
     setDescription("");
+  }
+
+  async function handleOcrScan(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setOcrLoading(true);
+    setOcrError(false);
+    try {
+      const base64 = await fileToBase64(file);
+      const mime = file.type as "image/jpeg" | "image/png" | "image/webp";
+      const result = await callOcrReceipt(base64, mime);
+      if (result) {
+        setAmount(String(result.amount));
+        setDescription(result.description);
+        setCategory(result.category);
+      } else {
+        setOcrError(true);
+      }
+    } catch {
+      setOcrError(true);
+    } finally {
+      setOcrLoading(false);
+      if (ocrInputRef.current) ocrInputRef.current.value = "";
+    }
   }
 
   function submitBudget(event: FormEvent) {
@@ -2053,6 +2138,25 @@ function ExpensesTab({
         <button className="primary" type="submit">
           <Plus size={16} /> Agregar gasto
         </button>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <input
+            ref={ocrInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            style={{ display: "none" }}
+            onChange={handleOcrScan}
+          />
+          <button
+            type="button"
+            className="ghost small"
+            style={{ fontSize: 13 }}
+            disabled={ocrLoading}
+            onClick={() => ocrInputRef.current?.click()}
+          >
+            {ocrLoading ? "Leyendo ticket..." : "📷 Escanear ticket con IA"}
+          </button>
+          {ocrError && <span style={{ fontSize: 11, color: "#ef4444" }}>No se pudo leer</span>}
+        </div>
       </form>
       <div className="list">
         {state.expenses.slice(0, visibleCount).map((expense) => (
