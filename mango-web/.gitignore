@@ -3,3 +3,11 @@ dist/
 *.tsbuildinfo
 .env
 .env.local
+
+# Capacitor Android (generado por: npx cap add android)
+android/
+ios/
+
+# Keystore — NUNCA commitear
+*.jks
+*.keystore
