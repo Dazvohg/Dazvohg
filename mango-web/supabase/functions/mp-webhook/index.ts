@@ -21,7 +21,13 @@ serve(async (req) => {
   const url = new URL(req.url);
   const dataId = url.searchParams.get("data.id") ?? "";
 
-  if (MP_WEBHOOK_SECRET) {
+  // Firma obligatoria: si el secret no está configurado, rechazamos (fail-closed)
+  // para evitar que un atacante forje eventos de suscripción.
+  if (!MP_WEBHOOK_SECRET) {
+    console.error("MP_WEBHOOK_SECRET no configurado — webhook rechazado");
+    return new Response("Webhook secret not configured", { status: 503 });
+  }
+  {
     const manifest = `id:${dataId};request-id:${xRequestId};ts:${sig.split(",").find(p => p.startsWith("ts="))?.slice(3) ?? ""}`;
     const key = await crypto.subtle.importKey(
       "raw", new TextEncoder().encode(MP_WEBHOOK_SECRET),

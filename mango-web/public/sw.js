@@ -1,5 +1,8 @@
-const CACHE_NAME = "chemonei-shell-v1";
-const APP_SHELL = ["/", "/index.html", "/manifest.webmanifest", "/icons/icon.svg"];
+const CACHE_NAME = "chemonei-shell-v2";
+// Precache mínimo (el 512 se cachea on-demand vía fetch para no inflar la instalación)
+const APP_SHELL = [
+  "/", "/index.html", "/manifest.webmanifest", "/icons/icon-192.png",
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
@@ -38,8 +41,8 @@ self.addEventListener("push", (event) => {
   const title = data.title ?? "CheMonei";
   const options = {
     body:    data.body ?? "",
-    icon:    "/icons/icon.svg",
-    badge:   "/icons/icon.svg",
+    icon:    "/icons/icon-192.png",
+    badge:   "/icons/icon-192.png",
     tag:     data.tag ?? "chemonei-alert",
     data:    { url: data.url ?? "/" },
     vibrate: [200, 100, 200],
@@ -73,8 +76,8 @@ self.addEventListener("message", (event) => {
         setTimeout(() => {
           self.registration.showNotification(alert.title, {
             body:  alert.body,
-            icon:  "/icons/icon.svg",
-            badge: "/icons/icon.svg",
+            icon:  "/icons/icon-192.png",
+            badge: "/icons/icon-192.png",
             tag:   alert.tag,
             data:  { url: "/" },
           });

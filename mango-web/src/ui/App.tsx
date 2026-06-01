@@ -2155,7 +2155,19 @@ function ExpensesTab({
           >
             {ocrLoading ? "Leyendo ticket..." : "📷 Escanear ticket con IA"}
           </button>
-          {ocrError && <span style={{ fontSize: 11, color: "#ef4444" }}>No se pudo leer</span>}
+          {ocrError && (
+            <span style={{ fontSize: 11, color: "#ef4444", display: "flex", gap: 6, alignItems: "center" }}>
+              No se pudo leer.
+              <button
+                type="button"
+                className="link-btn"
+                style={{ fontSize: 11 }}
+                onClick={() => { setOcrError(false); ocrInputRef.current?.click(); }}
+              >
+                Reintentar
+              </button>
+            </span>
+          )}
         </div>
       </form>
       <div className="list">

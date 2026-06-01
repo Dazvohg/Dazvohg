@@ -13,7 +13,7 @@ const CORS = {
 
 const MP_ACCESS_TOKEN  = Deno.env.get("MP_ACCESS_TOKEN")  ?? "";
 const STRIPE_SECRET    = Deno.env.get("STRIPE_SECRET_KEY") ?? "";
-const APP_URL          = Deno.env.get("APP_URL")           ?? "https://usemango.app";
+const APP_URL          = Deno.env.get("APP_URL")           ?? "https://usechemonei.app";
 const SUPABASE_URL     = Deno.env.get("SUPABASE_URL")      ?? "";
 const SUPABASE_SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
